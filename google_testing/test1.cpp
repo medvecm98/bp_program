@@ -13,6 +13,8 @@ TEST(TrimTest, Regular) {
 	ASSERT_EQ(StringHelpers::Trim("a ha"), "a ha");
 	ASSERT_EQ(StringHelpers::Trim("   ah a    "), "ah a");
 	ASSERT_EQ(StringHelpers::Trim("   a  ha  "), "a  ha");
+
+	ASSERT_EQ(StringHelpers::Trim("   \t   \t\t\t\t\t\n\n\n\n\n\n   \t "), "");
 }
 
 TEST(SplitTest, Regular) {
@@ -28,7 +30,7 @@ TEST(SplitTest, OneWord) {
 	auto single_word_v = std::vector<std::string>();
 	single_word_v.push_back("kapral");
 	ASSERT_EQ(StringHelpers::Split("kapral:", ':'), single_word_v);
-	ASSERT_EQ(StringHelpers::Split("kapral", ':'), single_word_v);
+	ASSERT_EQ(StringHelpers::Split(":kapral", ':', 0, true), single_word_v);
 }
 
 TEST(RemoveWhiteSpace, Regular) {
