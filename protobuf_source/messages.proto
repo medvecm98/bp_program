@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package np2ps;
+
+enum MessageType {
+  EMPTY = 0;
+  ARTICLE_ALL = 10;
+  ARTICLE_HEADER = 20;
+  USER_IS_MEMBER = 30;
+  ARTICLE_DOWNLOAD = 40;
+  ARTICLE_REMOVAL = 50;
+  HANDSHAKE = 60;
+  UPDATE_MARGIN_ADD = 70;
+  UPDATE_MARGIN_REMOVE = 80;
+  UPDATE_ARTICLE = 90;
+  IP_ADDRESS = 100;
+}
+
+enum MessageContext {
+  NOTHING = 0;
+  REQUEST = 10;
+  RESPONSE = 20;
+}
+
+message Message {
+
+}
