@@ -82,6 +82,7 @@ private:
 	pk_t _news_id;
 	hash_t _main_hash;
 	my_string _heading;
+	//map <paragraph_position, hash>
 	hashes_container _hashes;
 	std::uint64_t _length;
 	article_format _format;
