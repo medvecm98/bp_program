@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package np2ps;
+
+message HashWrapper {
+  uint64 hash = 1;
+  uint32 level = 2;
+}
+
+message Margins {
+  string type = 1;
+  string content = 2;
+}
+
+message Article {
+  optional string author_name = 1;
+  uint64 author_id = 2;
+  optional string news_name = 3;
+  string news_id = 4;
+  uint64 main_hash = 5;
+  string heading = 6;
+  map<int32, HashWrapper> paragraph_hashes = 7;
+  uint64 length = 8; //?
+  repeated string categories = 9;
+  map<uint64, Margins> margins = 10;
+  /*
+    Left out `notes` and `article path`, since those are only relevant for client.
+    Length could be irrelevant as well, we'll see about that.
+  */
+}

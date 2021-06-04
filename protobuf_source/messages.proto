@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package np2ps;
+import "articles.proto";
 
 enum MessageType {
   EMPTY = 0;
@@ -23,5 +24,19 @@ enum MessageContext {
 }
 
 message Message {
+  uint64 from = 1;
+  uint64 to = 2;
+  MessageType msg_type = 3;
+  MessageContext msg_ctx = 4;
+}
+
+message ArticleHeaderMessage {
+  Message message = 1;
+  uint64 article_hash = 2;
+  uint32 level = 3;
+  Article article = 4;
+}
+
+message IpAddressMessage {
 
 }
