@@ -5,16 +5,16 @@ import "articles.proto";
 
 enum MessageType {
   EMPTY = 0;
-  ARTICLE_ALL = 10;
-  ARTICLE_HEADER = 20;
+  ARTICLE_ALL = 10; //done
+  ARTICLE_HEADER = 20; //done
+  ARTICLE_LIST = 25;
   USER_IS_MEMBER = 30;
   ARTICLE_DOWNLOAD = 40;
   ARTICLE_REMOVAL = 50;
   HANDSHAKE = 60;
-  UPDATE_MARGIN_ADD = 70;
-  UPDATE_MARGIN_REMOVE = 80;
+  UPDATE_MARGIN = 70;
   UPDATE_ARTICLE = 90;
-  IP_ADDRESS = 100;
+  IP_ADDRESS = 100; //done
 }
 
 enum MessageContext {
@@ -23,20 +23,79 @@ enum MessageContext {
   RESPONSE = 20;
 }
 
+enum MarginAction {
+  REMOVE = 0;
+  ADD = 1;
+}
+
 message Message {
   uint64 from = 1;
   uint64 to = 2;
   MessageType msg_type = 3;
   MessageContext msg_ctx = 4;
+  oneof message_oneof {
+    ArticleAll article_all = 110;
+    ArticleHeader article_header = 120;
+    ArticleList article_list = 125;
+    UserIsMember user_is_member = 130;
+
+  }
 }
 
-message ArticleHeaderMessage {
-  Message message = 1;
+message ArticleAll {
+  uint64 article_hash = 1;
+  //response
+  optional Article article_header = 2;
+  optional string article_actual = 3;
+}
+
+message ArticleHeader {
   uint64 article_hash = 2;
   uint32 level = 3;
-  Article article = 4;
+  //response
+  optional Article article = 4;
 }
 
-message IpAddressMessage {
-
+message ArticleList {
+  bool all_articles = 1;
+  //request
+  repeated string categories = 2;
+  //response
+  repeated Article response = 3;
 }
+
+message UserIsMember {
+  uint64 user_pk = 1;
+  //request
+  uint32 level = 2;
+  //response
+  bool is_member = 3;
+}
+
+message ArticleDownload {
+  uint64 article_pk = 1;
+  //response
+  bool ack = 2;
+}
+
+message ArticleRemoval {
+  uint64 article_pk = 1;
+  //response
+  bool ack = 2;
+}
+
+message UpdateMargin {
+  uint64 article_pk = 1;
+  MarginAction m_action = 2;
+  Margins margin = 3;
+}
+
+message UpdateArticle {
+  uint64 article_pk = 1;
+}
+
+message IpAddress {
+  string ipv4 = 1;
+  string ipv6 = 2;
+}
+
