@@ -18,7 +18,7 @@ public:
 private:
 	void send_message();
 	void receive_message();
-	const std::string port_ = "50000";
+	const std::string port_ = "14128";
 
 	std::queue<std::unique_ptr<Message>> to_send_msg;
 	std::queue<std::unique_ptr<Message>> received_msg;
