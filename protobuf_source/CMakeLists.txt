@@ -1,0 +1,5 @@
+include_directories(${PROTOBUF_INCLUDE_DIR})
+protobuf_generate_cpp(PROTO_MSG_SRC PROTO_MSG_HEADER messages.proto)
+protobuf_generate_cpp(PROTO_ART_SRC PROTO_ART_HEADER articles.proto)
+add_library(proto_msg ${PROTO_MSG_HEADER} ${PROTO_MSG_SRC})
+add_library(proto_art ${PROTO_ART_HEADER} ${PROTO_ART_SRC})
