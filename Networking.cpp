@@ -5,20 +5,32 @@ bool Networking::enroll_message_to_be_sent(Message&& message) {
     return true;
 }
 
-void Networking::send_message() {
+void Networking::send_message(tcp::socket& tcp_socket) {
     //serialize message
-    my_vector serialized_message = to_send_msg.front()->Serialize();
+    std::string serialized_msg;
+    to_send_msg.front()->SerializeToString(&serialized_msg);
     to_send_msg.pop();
+
+    //append length of message to the message, without the length itself
+    std::stringstream length_plus_msg;
+    length_plus_msg << std::setfill('0') << std::setw(16) << std::hex << serialized_msg.size();
+    length_plus_msg << serialized_msg;
+
     //send message
-    boost::asio::write( socket_, boost::asio::buffer( serialized_message, serialized_message.size()));
+    boost::asio::write( tcp_socket, boost::asio::buffer( length_plus_msg.str(), length_plus_msg.str().size()));
 }
 
-void Networking::receive_message() {
-	my_vector msg_length;
-	my_vector serialized_message;
-    boost::asio::read( socket_, boost::asio::buffer( msg_length, 8));
-    auto msg_length_uint = (std::size_t *)msg_length.data();
+Message Networking::receive_message(tcp::socket& tcp_socket) {
+	//receive
+	std::string recv_msg_len;
+	boost::asio::read( tcp_socket, boost::asio::buffer( recv_msg_len, 16));
+	std::size_t msg_len = std::stoll(recv_msg_len, 0, 16);
+	std::string msg;
+	msg.reserve(msg_len);
+	boost::asio::read( tcp_socket, boost::asio::buffer( msg, msg_len));
 
-    boost::asio::read( socket_, boost::asio::buffer(serialized_message, *msg_length_uint));
-    serialized_message.
+	//deserialize
+	Message m;
+	m.ParseFromString(msg);
+	return m;
 }

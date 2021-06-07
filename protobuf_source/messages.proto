@@ -4,16 +4,16 @@ package np2ps;
 import "articles.proto";
 
 enum MessageType {
-  EMPTY = 0;
+  EMPTY = 0; //done
   ARTICLE_ALL = 10; //done
   ARTICLE_HEADER = 20; //done
-  ARTICLE_LIST = 25;
-  USER_IS_MEMBER = 30;
-  ARTICLE_DOWNLOAD = 40;
-  ARTICLE_REMOVAL = 50;
+  ARTICLE_LIST = 25; //done
+  USER_IS_MEMBER = 30; //done
+  ARTICLE_DOWNLOAD = 40; //done
+  ARTICLE_REMOVAL = 50; //done
   HANDSHAKE = 60;
-  UPDATE_MARGIN = 70;
-  UPDATE_ARTICLE = 90;
+  UPDATE_MARGIN = 70; //done
+  UPDATE_ARTICLE = 90; //done
   IP_ADDRESS = 100; //done
 }
 
@@ -38,7 +38,12 @@ message Message {
     ArticleHeader article_header = 120;
     ArticleList article_list = 125;
     UserIsMember user_is_member = 130;
-
+    ArticleDownload article_download = 140;
+    ArticleDownload article_removal = 150;
+    //handshake here
+    UpdateMargin update_margin = 170;
+    UpdateArticle update_article = 180;
+    IpAddress ip_address = 200;
   }
 }
 
