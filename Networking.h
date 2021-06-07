@@ -12,21 +12,21 @@
 
 using boost::asio::ip::tcp;
 
-using Message = np2ps::Message;
+using ProtoMessage = np2ps::Message;
 
 class Networking {
 public:
 	//template<class MSG>
-	bool enroll_message_to_be_sent(Message&& message);
+	bool enroll_message_to_be_sent(ProtoMessage&& message);
 
 	IpMap ip_map_;
 private:
 	void send_message(tcp::socket& tcp_socket);
-	Message receive_message(tcp::socket& tcp_socket);
+	ProtoMessage receive_message(tcp::socket& tcp_socket);
 	const std::string port_ = "14128";
 
-	std::queue< std::unique_ptr< Message>> to_send_msg;
-	std::queue< std::unique_ptr< Message>> received_msg;
+	std::queue< std::unique_ptr< ProtoMessage>> to_send_msg;
+	std::queue< std::unique_ptr< ProtoMessage>> received_msg;
 	
 	//boost::asio necessities
 	boost::asio::io_context io_ctx;
