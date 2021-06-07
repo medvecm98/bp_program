@@ -17,8 +17,8 @@ public:
 		//add news ip to map
 		networking_.ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip));
 		//request public key of chief editor
-		auto ip_msg = IpAddressMessage(public_key_, newspaper_key);
-		networking_.enroll_message_to_be_sent(std::move(ip_msg));
+		//auto ip_msg = IpAddressMessage(public_key_, newspaper_key);
+		//networking_.enroll_message_to_be_sent(std::move(ip_msg));
 	}
 private:
 	//reader part
