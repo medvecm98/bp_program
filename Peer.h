@@ -5,30 +5,37 @@
 #include "Networking.h"
 #include "NewspaperEntry.h"
 #include <unordered_map>
+#include "Message.h"
+#include <functional>
 
 using news_database = std::unordered_map<pk_t, NewspaperEntry>;
+using MFW = MessageFactoryWrapper;
+using reader_database = std::unordered_multimap<hash_t, pk_t>;
 
 class Peer {
 public:
-	int load_ip_authorities(); //to load the IPs of authorities
-	void enroll_new_article(Article article); //add new article to list of cat. -> article
-	bool request_margin(hash_t article, Margin margin); //request margin addition
-	void add_new_newspaper(pk_t newspaper_key, const std::string& newspaper_ip) {
-		//add news ip to map
-		networking_.ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip));
-		//request public key of chief editor
-		//auto ip_msg = IpAddressMessage(public_key_, newspaper_key);
-		//networking_.enroll_message_to_be_sent(std::move(ip_msg));
+	Peer() {
+		public_key_ = 0;
+		newspaper_id_ = 0;
 	}
+	void load_ip_authorities(pk_t newspaper_key); //to load the IPs of authorities
+	void enroll_new_article(Article article); //add new article to list of category -> article
+	bool request_margin_add(hash_t article, const Margin& margin); //request margin addition
+	void add_new_newspaper(pk_t newspaper_key, const std::string& newspaper_ip);
+	size_t list_all_articles_from_news(std::vector<article_ptr>& articles, const std::set<category_t>& categories);
+	size_t list_all_articles_from_news(std::vector<article_ptr>& articles);
+	size_t list_all_articles_by_me(std::vector<article_ptr>& articles, const std::set<category_t>& categories, pk_t news_id = 0);
+	size_t list_all_articles_by_me(std::vector<article_ptr>& articles, pk_t news_id = 0);
+	article_optional find_article(hash_t article_hash);
 private:
 	//reader part
 	pk_t public_key_;
 	my_string name_;
 	Networking networking_;
-	news_database news_; //all downloaded articles
+	news_database news_; //list of all articles and their sources (their "News")
 
-	//reporter part
-	std::unordered_multimap<hash_t, pk_t> readers_; //list of article readers
+	//journalist part
+	reader_database readers_; //list of article readers
 
 	//chief editor
 	category_multimap_container articles_categories_;
@@ -39,6 +46,8 @@ private:
 
 	//other
 	std::map<hash_t, Margin> margins_added_; //map of Article <-> Margin, that this peer added, or requested to add
+
+	std::optional<Article> find_article_in_database(hash_t article_hash);
 };
 
 #endif //PROGRAM_PEER_H
