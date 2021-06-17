@@ -15,6 +15,7 @@
 #include "StringSplitter.h"
 #include "GlobalUsing.h"
 #include "Margins.h"
+#include <optional>
 
 #define COMMENT_ "[NScomment]:"
 #define BEGIN_HEADER_ "**BEGIN_HEADER**"
@@ -53,11 +54,11 @@ using hashes_vt = hashes_container::value_type;
 using string_hash = std::hash<std::string>;
 
 
-
 class Article {
 public:
 	explicit Article() {};
 	explicit Article(const my_string&);
+	pk_t get_author() {return _author_id;}
 	void open_fstream();
 	void load_information();
 	std::uint64_t get_length();
@@ -72,6 +73,10 @@ public:
 	void calculate_hashes(hashes_container&);
 	template<typename T>
 	void initialize_article(const my_string&, const my_string&, std::size_t, const T&);
+	[[nodiscard]] bool is_in_category(const std::string& category) const;
+	[[nodiscard]] pk_t get_author() const {
+		return _author_id;
+	}
 
 	friend class ArticleDatabase;
 
@@ -92,6 +97,24 @@ private:
 	my_string _notes;
 };
 
+using article_ptr = std::shared_ptr<Article>;
+using article_optional = std::optional<article_ptr>;
+
 using article_database_container = std::map<hash_t, Article>;
+
+struct AuthorPeers {
+	Article article;
+	std::set<pk_t> peers;
+	explicit AuthorPeers(Article a) {
+		article = std::move(a);
+	}
+};
+
+/*
+ * Category -> Article(hash) -> Article(actual), Readers (those, who downloaded those articles)
+ */
+using category_t = std::string;
+using user_multimap_container = std::unordered_map<hash_t, AuthorPeers>;
+using category_multimap_container = std::unordered_multimap<my_string, user_multimap_container>;
 
 #endif //PROGRAM_ARTICLE_H

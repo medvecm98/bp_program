@@ -66,3 +66,10 @@ my_string Article::get_path_to_file() {
 std::uint64_t Article::get_length() {
 	return _length;
 }
+
+bool Article::is_in_category(const std::string& category) const {
+	if (_categories.find(category) != _categories.end())
+		return true;
+
+	return false;
+}
