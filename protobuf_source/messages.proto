@@ -26,6 +26,7 @@ enum MessageContext {
 enum MarginAction {
   REMOVE = 0;
   ADD = 1;
+  UPDATE = 2;
 }
 
 message Message {
@@ -47,6 +48,11 @@ message Message {
   }
 }
 
+
+/**
+ * ALL following messages are just "extensions"
+ * of Message message.
+ */
 message ArticleAll {
   uint64 article_hash = 1;
   //response
@@ -100,7 +106,8 @@ message UpdateArticle {
 }
 
 message IpAddress {
-  string ipv4 = 1;
-  string ipv6 = 2;
+  //response
+  optional string ipv4 = 1;
+  optional string ipv6 = 2;
 }
 
