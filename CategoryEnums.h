@@ -1,6 +1,8 @@
 #ifndef PROGRAM_CATEGORYENUMS_H
 #define PROGRAM_CATEGORYENUMS_H
 
+//UNUSED
+
 enum standard_categories {
 	sport = 1,
 	history = 2,
