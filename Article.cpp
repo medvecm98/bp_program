@@ -73,3 +73,11 @@ bool Article::is_in_category(const std::string& category) const {
 
 	return false;
 }
+
+void Article::open_fstream(std::fstream& stream) {
+	stream.open(_path_to_article_file);
+}
+
+category_container_const_iter Article::get_categories() {
+	return _categories.cbegin();
+}

@@ -52,6 +52,8 @@ struct HashWrapper {
 using hashes_container = std::map<std::int32_t, HashWrapper>;
 using hashes_vt = hashes_container::value_type;
 using string_hash = std::hash<std::string>;
+using category_container = std::set<my_string>;
+using category_container_const_iter = category_container::const_iterator;
 
 
 class Article {
@@ -59,15 +61,15 @@ public:
 	explicit Article() {};
 	explicit Article(const my_string&);
 	pk_t get_author() {return _author_id;}
-	void open_fstream();
+	void open_fstream(std::fstream& stream);
 	void load_information();
 	std::uint64_t get_length();
-	article_format get_format();
-	std::set<my_string> get_categories();
+	[[nodiscard]] article_format get_format() const {
+		return _format;
+	}
+	category_container_const_iter get_categories();
 	my_string get_path_to_file();
-	std::ifstream& get_ifstream_file();
-	std::ofstream& get_ofstream_file();
-	hash_t get_main_hash() const {
+	[[nodiscard]] hash_t get_main_hash() const {
 		return _main_hash;
 	}
 	void calculate_hashes(hashes_container&);
