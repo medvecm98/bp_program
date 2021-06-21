@@ -9,7 +9,7 @@ void IpMap::remove_from_map(pk_t pk) {
 }
 
 /**
- *
+ *	Update given IP.
  * @param pk
  * @param ip
  * @return True, if update took place.
@@ -17,6 +17,7 @@ void IpMap::remove_from_map(pk_t pk) {
 bool IpMap::update_ip(pk_t pk, IpWrapper&& ip) {
 	if (map_.find(pk) == map_.end()) {
 		map_.insert({pk, ip});
+		return true;
 	}
 	return false;
 }
