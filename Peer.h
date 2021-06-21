@@ -47,7 +47,7 @@ private:
 	//other
 	std::map<hash_t, Margin> margins_added_; //map of Article <-> Margin, that this peer added, or requested to add
 
-	std::optional<Article> find_article_in_database(hash_t article_hash);
+	std::optional<article_ptr> find_article_in_database(hash_t article_hash);
 };
 
 #endif //PROGRAM_PEER_H

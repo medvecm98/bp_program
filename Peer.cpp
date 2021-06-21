@@ -18,15 +18,15 @@ bool Peer::request_margin_add(hash_t article, const Margin& margin) {
 	auto found_article = find_article_in_database(article);
 
 	if (found_article.has_value()) {
-		networking_.enroll_message_to_be_sent(MFW::MarginAddFactory(public_key_, found_article.value().get_author(),
+		networking_.enroll_message_to_be_sent(MFW::MarginAddFactory(public_key_,
+																	found_article.value()->get_author(),
 																	article, margin));
-		//margins_added_.insert({article, margin});
 		return true;
 	}
 	return false;
 }
 
-std::optional<Article> Peer::find_article_in_database(hash_t article_hash) {
+std::optional<article_ptr> Peer::find_article_in_database(hash_t article_hash) {
 	for(auto&& news : news_) {
 		auto& [hash, news_entry] = news;
 		auto search = news_entry.find_article_header(article_hash);
