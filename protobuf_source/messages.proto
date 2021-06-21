@@ -9,8 +9,7 @@ enum MessageType {
   ARTICLE_HEADER = 20; //done
   ARTICLE_LIST = 25; //done
   USER_IS_MEMBER = 30; //done
-  ARTICLE_DOWNLOAD = 40; //done
-  ARTICLE_REMOVAL = 50; //done
+  ARTICLE_DATA_UPDATE = 40; //done
   HANDSHAKE = 60;
   UPDATE_MARGIN = 70; //done
   UPDATE_ARTICLE = 90; //done
@@ -29,6 +28,11 @@ enum MarginAction {
   UPDATE = 2;
 }
 
+enum ArticleAction {
+  DOWNLOAD = 0;
+  REMOVAL = 1;
+}
+
 message Message {
   uint64 from = 1;
   uint64 to = 2;
@@ -39,8 +43,7 @@ message Message {
     ArticleHeader article_header = 120;
     ArticleList article_list = 125;
     UserIsMember user_is_member = 130;
-    ArticleDownload article_download = 140;
-    ArticleDownload article_removal = 150;
+    ArticleDataUpdate article_data_update = 140;
     //handshake here
     UpdateMargin update_margin = 170;
     UpdateArticle update_article = 180;
@@ -55,8 +58,8 @@ message Message {
  */
 message ArticleAll {
   uint64 article_hash = 1;
+  uint32 level = 2;
   //response
-  optional Article article_header = 2;
   optional string article_actual = 3;
 }
 
@@ -83,16 +86,9 @@ message UserIsMember {
   bool is_member = 3;
 }
 
-message ArticleDownload {
+message ArticleDataUpdate {
   uint64 article_pk = 1;
-  //response
-  bool ack = 2;
-}
-
-message ArticleRemoval {
-  uint64 article_pk = 1;
-  //response
-  bool ack = 2;
+  ArticleAction article_action = 3;
 }
 
 message UpdateMargin {
