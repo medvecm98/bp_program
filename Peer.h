@@ -27,6 +27,8 @@ public:
 	size_t list_all_articles_by_me(std::vector<article_ptr>& articles, const std::set<category_t>& categories, pk_t news_id = 0);
 	size_t list_all_articles_by_me(std::vector<article_ptr>& articles, pk_t news_id = 0);
 	article_optional find_article(hash_t article_hash);
+	void download_article(pk_t article_author, hash_t article_hash);
+
 private:
 	//reader part
 	pk_t public_key_;

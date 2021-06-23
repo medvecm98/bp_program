@@ -11,7 +11,7 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const std::string &newspaper_ip
 }
 
 void Peer::load_ip_authorities(pk_t newspaper_key) {
-	networking_.enroll_message_to_be_sent(MFW::IpAddressFactory(public_key_, newspaper_key));
+	networking_.enroll_message_to_be_sent(std::move(MFW::IpAddressFactory(public_key_, newspaper_key)));
 }
 
 bool Peer::request_margin_add(hash_t article, const Margin& margin) {
@@ -26,7 +26,7 @@ bool Peer::request_margin_add(hash_t article, const Margin& margin) {
 	return false;
 }
 
-std::optional<article_ptr> Peer::find_article_in_database(hash_t article_hash) {
+article_optional Peer::find_article_in_database(hash_t article_hash) {
 	for(auto&& news : news_) {
 		auto& [hash, news_entry] = news;
 		auto search = news_entry.find_article_header(article_hash);
@@ -156,4 +156,10 @@ article_optional Peer::find_article(hash_t article_hash) {
 	}
 
 	return article_optional();
+}
+
+void Peer::download_article(pk_t article_author, hash_t article_hash) {
+	//TODO: set level properly
+	networking_.enroll_message_to_be_sent(MFW::ArticleDownloadFactory(public_key_, article_author,
+																	  article_hash, 255));
 }
