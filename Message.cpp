@@ -12,18 +12,18 @@ unique_ptr_message upm_factory() {
 }
 
 unique_ptr_message MFW::IpAddressFactory(pk_t from, pk_t to) {
-	unique_ptr_message msg = std::make_unique<proto_message>();
-	msg->set_from(from);
-	msg->set_to(to);
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
 	msg->set_msg_type(np2ps::IP_ADDRESS);
 	msg->set_msg_ctx(np2ps::REQUEST);
 	return std::move(msg);
 }
 
 unique_ptr_message MFW::MarginAddFactory(pk_t from, pk_t to, hash_t article_hash, const Margin& margin) {
-	unique_ptr_message msg = std::make_unique<proto_message>();
-	msg->set_from(from);
-	msg->set_to(to);
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
 	msg->set_msg_type(np2ps::UPDATE_MARGIN);
 	msg->set_msg_ctx(np2ps::REQUEST);
 
@@ -36,9 +36,9 @@ unique_ptr_message MFW::MarginAddFactory(pk_t from, pk_t to, hash_t article_hash
 }
 
 unique_ptr_message MFW::ArticleDataChangeFactory(pk_t from, pk_t to, hash_t article_hash, bool download) {
-	unique_ptr_message msg = std::make_unique<proto_message>();
-	msg->set_from(from);
-	msg->set_to(to);
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
 	msg->set_msg_type(np2ps::ARTICLE_DATA_UPDATE);
 	msg->set_msg_ctx(np2ps::REQUEST);
 	msg->mutable_article_data_update()->set_article_pk(article_hash);
@@ -55,10 +55,9 @@ unique_ptr_message MFW::ArticleDataChangeFactory(pk_t from, pk_t to, hash_t arti
 }
 
 unique_ptr_message MFW::ArticleDownloadFactory(pk_t from, pk_t to, hash_t article_hash, level_t level) {
-	unique_ptr_message msg = std::make_unique<proto_message>();
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
 
-	msg->set_from(from);
-	msg->set_to(to);
 	msg->set_msg_ctx(np2ps::REQUEST);
 	msg->set_msg_type(np2ps::ARTICLE_ALL);
 
@@ -68,7 +67,7 @@ unique_ptr_message MFW::ArticleDownloadFactory(pk_t from, pk_t to, hash_t articl
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::ArticleListFactory(pk_t from, pk_t to, category_container categories) {
+unique_ptr_message MFW::ArticleListFactory(pk_t from, pk_t to, category_container_const_ref categories) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -140,6 +139,15 @@ unique_ptr_message MFW::UpdateMarginUpdateFactory(pk_t from, pk_t to, hash_t art
 	auto msg = update_margin_factory(from, to, article_hash, margin);
 
 	msg->mutable_update_margin()->set_m_action(np2ps::UPDATE);
+
+	return std::move(msg);
+}
+
+unique_ptr_message MFW::UpdateArticleFactory(pk_t from, pk_t to, hash_t article_hash) {
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
+	msg->mutable_update_article()->set_article_pk(article_hash);
 
 	return std::move(msg);
 }
