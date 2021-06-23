@@ -1,7 +1,7 @@
 #include "Networking.h"
 
-bool Networking::enroll_message_to_be_sent(ProtoMessage&& message) {
-    to_send_msg.push(std::make_unique< ProtoMessage>( message));
+bool Networking::enroll_message_to_be_sent(unique_ptr_message message) {
+    to_send_msg.push(std::move(message));
     return true;
 }
 
@@ -20,7 +20,7 @@ void Networking::send_message(tcp::socket& tcp_socket, msg_queue& send_mq) {
     boost::asio::write( tcp_socket, boost::asio::buffer( length_plus_msg.str(), length_plus_msg.str().size()));
 }
 
-ProtoMessage Networking::receive_message(tcp::socket& tcp_socket) {
+pk_t Networking::receive_message(tcp::socket& tcp_socket, msg_queue& recv_mq) {
 	//receive message length
 	char recv_msg_len[16 + 1];
 	boost::asio::read( tcp_socket, boost::asio::buffer( recv_msg_len, 16));
@@ -36,7 +36,9 @@ ProtoMessage Networking::receive_message(tcp::socket& tcp_socket) {
 	std::string s_msg(msg);
 
 	//deserialize
-	ProtoMessage m;
-	m.ParseFromString(s_msg);
-	return m;
+	unique_ptr_message m = std::make_unique<proto_message>();
+	m->ParseFromString(s_msg);
+	pk_t rv = m->from();
+	recv_mq.push(std::move(m));
+	return rv;
 }
