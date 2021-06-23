@@ -53,6 +53,7 @@ using hashes_container = std::map<std::int32_t, HashWrapper>;
 using hashes_vt = hashes_container::value_type;
 using string_hash = std::hash<std::string>;
 using category_container = std::set<my_string>;
+using category_container_const_ref = const category_container&;
 using category_container_const_iter = category_container::const_iterator;
 
 
