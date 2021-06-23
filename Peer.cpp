@@ -11,14 +11,14 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const std::string &newspaper_ip
 }
 
 void Peer::load_ip_authorities(pk_t newspaper_key) {
-	networking_.enroll_message_to_be_sent(std::move(MFW::IpAddressFactory(public_key_, newspaper_key)));
+	networking_.enroll_message_to_be_sent(std::move(MFW::IpAddressFactory(np2ps::REQUEST, public_key_, newspaper_key)));
 }
 
 bool Peer::request_margin_add(hash_t article, const Margin& margin) {
 	auto found_article = find_article_in_database(article);
 
 	if (found_article.has_value()) {
-		networking_.enroll_message_to_be_sent(MFW::MarginAddFactory(public_key_,
+		networking_.enroll_message_to_be_sent(MFW::MarginAddFactory(np2ps::REQUEST, public_key_,
 																	found_article.value()->get_author(),
 																	article, margin));
 		return true;
@@ -160,6 +160,21 @@ article_optional Peer::find_article(hash_t article_hash) {
 
 void Peer::download_article(pk_t article_author, hash_t article_hash) {
 	//TODO: set level properly
-	networking_.enroll_message_to_be_sent(MFW::ArticleDownloadFactory(public_key_, article_author,
+	networking_.enroll_message_to_be_sent(MFW::ArticleDownloadFactory(np2ps::REQUEST, public_key_, article_author,
 																	  article_hash, 255));
+}
+
+void Peer::handle_message() {
+	auto message = networking_.pop_message();
+	auto type = message->msg_type();
+
+	switch (type)
+	{
+		case np2ps::ARTICLE_ALL:
+
+			break;
+		
+		default:
+			break;
+	}
 }
