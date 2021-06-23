@@ -1,11 +1,11 @@
 # Co este treba
 
 ## Networking
-- [ ] posielanie sprav, podobne ako prijimanie
+- [x] posielanie sprav, podobne ako prijimanie
 - [ ] vytvorit vlakna pre networking
 
 ## Serializacia
-- [ ] pouzit boost serializaciu, alebo si vytorit vlastnu --> problem s prenosnostou!!!, to najskor vyriesi ten boost
+- [ ] pouzit boost serializaciu, alebo si vytorit vlastnu -> problem s prenosnostou!!!, to najskor vyriesi ten boost
 
 ## Zapnutie / vypnutie
 - [ ] (suvisi so serializaciou) nacitanie a ukladanie
@@ -13,4 +13,3 @@
 
 ## UI
 - [ ] zatial nejake jednoduche UI
-
