@@ -60,7 +60,8 @@ message ArticleAll {
   uint64 article_hash = 1;
   uint32 level = 2;
   //response
-  optional string article_actual = 3;
+  optional Article header = 3;
+  optional string article_actual = 4;
 }
 
 message ArticleHeader {
