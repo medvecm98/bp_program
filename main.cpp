@@ -27,13 +27,13 @@ public:
 	}
 private:
 	PeerInfoSingleton() {
-
+		peer_created_ = false;
 	}
 	~PeerInfoSingleton() {
 
 	}
 
-	bool peer_created_ = false;
+	bool peer_created_;
 };
 
 void print_help() {
@@ -61,9 +61,8 @@ void handle_input() {
 
 	if (c) {
 		switch (c) {
+
 			case 'h':
-				print_help();
-				break;
 			default:
 				print_help();
 				break;
