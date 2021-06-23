@@ -30,6 +30,12 @@ public:
 	IpMap ip_map_;
 	static void send_message(tcp::socket&, msg_queue&);
 	static pk_t receive_message(tcp::socket& tcp_socket, msg_queue& recv_mq);
+	
+	unique_ptr_message pop_message() {
+		auto msg = std::move(received_msg.front());
+		received_msg.pop();
+		return std::move(msg);
+	}
 private:
 	const std::string port_ = "14128";
 
