@@ -13,3 +13,6 @@
 
 ## UI
 - [ ] zatial nejake jednoduche UI
+
+## Clanky
+- [ ] vybrat z clanku take odseky, co splnuju pozadovany level
