@@ -99,3 +99,7 @@ void Article::open_fstream(std::fstream& stream) {
 category_container_const_iter Article::get_categories() {
 	return _categories.cbegin();
 }
+
+my_string Article::select_level(level_t level) {
+	
+}

@@ -60,6 +60,49 @@ using category_container = std::set<my_string>;
 using category_container_const_ref = const category_container&;
 using category_container_const_iter = category_container::const_iterator;
 
+class ParagraphIterator {
+public:
+	ParagraphIterator(std::string source_file_path, level_t l, hashes_container::iterator h) :
+		source_file(source_file_path), level(l), hash_iter_(std::move(h))
+	{
+		if (source_file.is_open()) 
+			loaded = true;
+	}
+
+	void operator++() {
+		std::string line;
+		bool paragraph_found = false;
+		bool wrong_level_para_found = false;
+		while (std::getline(source_file, line)) {
+			if ((line.find_first_not_of(" \t\r\n\v\f") != std::string::npos) && 
+				(hash_iter_->second.paragraph_level <= level)) 
+			{
+				if (hash_iter_->second.paragraph_level <= level) {
+					//found paragraph and level checks out
+					paragraph_found = true;
+					paragraph.append(line);
+				}
+				else {
+					
+				}
+			}
+			else if ((line.find_first_of(" \t\r\n\v\f") != std::string::npos) && paragraph_found) {
+				//found first empty after paragraph
+				break;
+			}
+			else if ((line.find_first_of(" \t\r\n\v\f") != std::string::npos) && !paragraph_found) {
+				//found empty line, but paragarph wasn't processed
+				hash_iter_++;
+			}
+		}
+	}
+private:
+	std::fstream source_file;
+	my_string paragraph;
+	level_t level;
+	hashes_container::iterator hash_iter_;
+	bool loaded = false;
+};
 
 class Article {
 public:
@@ -88,9 +131,7 @@ public:
 		return _author_id;
 	}
 
-	my_string select_level(level_t level) {
-		_hashes.begin();
-	}
+	my_string select_level(level_t level);
 
 	/**
 	 * Serialize using boost archive.
