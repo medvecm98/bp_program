@@ -13,19 +13,33 @@ Article::Article(const my_string& path_file) {
  * @param author_id
  * @param categories
  */
-template <typename T>
-void Article::initialize_article(const my_string & path_header, const my_string & author_name, std::size_t author_id,
-								 const T &categories) {
-	std::fstream header_file = std::fstream(path_header);
+template<class Peer_t, class NewspaperEntry_t>
+void Article::initialize_article(const category_container &categories, const std::string& file_path, 
+	const Peer_t& me, const NewspaperEntry_t& news_entry )
+{
+
+	_path_to_article_file = file_path;
 
 	for (auto&& i : categories) {
 		_categories.insert(i);
 	}
 
-	_author_name = author_name;
-	_author_id = author_id;
+	_news_name = news_entry.get_name();
+	_news_id = news_entry.get_id();
+	_author_name = me.get_name();
+	_author_id = me.get_public_key();
 	_heading = "";
+
+	/* main hash, hashes, length and heading are calculated and found here: */
 	calculate_hashes(_hashes);
+
+	if (!categories.empty()) {
+		for (T&& cat : categories) {
+			_categories.insert(cat);
+		}
+	}
+
+
 }
 
 /**

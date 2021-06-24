@@ -1,5 +1,3 @@
-
-
 #ifndef PROGRAM_ARTICLE_H
 #define PROGRAM_ARTICLE_H
 
@@ -12,10 +10,11 @@
 #include <sstream>
 #include <map>
 #include <regex>
+#include <optional>
+
 #include "StringSplitter.h"
 #include "GlobalUsing.h"
 #include "Margins.h"
-#include <optional>
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -64,7 +63,7 @@ using category_container_const_iter = category_container::const_iterator;
 
 class Article {
 public:
-	//explicit Article() = default;
+	explicit Article() = default;
 	explicit Article(const my_string&);
 	pk_t get_author() {return _author_id;}
 	void open_fstream(std::fstream& stream);
@@ -79,28 +78,34 @@ public:
 		return _main_hash;
 	}
 	void calculate_hashes(hashes_container&);
-	template<typename T>
-	void initialize_article(const my_string&, const my_string&, std::size_t, const T&);
+
+	template<class Peer_t, class NewspaperEntry_t>
+	void initialize_article(const category_container &categories, const std::string& file_path, 
+							const Peer_t& me, const NewspaperEntry_t& news_entry );
+
 	[[nodiscard]] bool is_in_category(const std::string& category) const;
 	[[nodiscard]] pk_t get_author() const {
 		return _author_id;
 	}
 
+	/**
+	 * Serialize using boost archive.
+	 */
 	template <class Archive>
-	void serialize(Archive& ar) {
-		ar << _author_name;
-		ar << _author_id;
-		ar << _news_name;
-		ar << _news_id;
-		ar << _main_hash;
-		ar << _heading;
-		ar << _hashes;
-		ar << _length;
-		ar << _format;
-		ar << _categories;
-		ar << _path_to_article_file;
-		ar << _margins;
-		ar << _notes;
+	void serialize(Archive& ar, const unsigned int version) {
+		ar & _author_name;
+		ar & _author_id;
+		ar & _news_name;
+		ar & _news_id;
+		ar & _main_hash;
+		ar & _heading;
+		ar & _hashes;
+		ar & _length;
+		ar & _format;
+		ar & _categories;
+		ar & _path_to_article_file;
+		ar & _margins;
+		ar & _notes;
 	}
 
 	friend class ArticleDatabase;
@@ -130,9 +135,8 @@ using article_database_container = std::map<hash_t, Article>;
 struct AuthorPeers {
 	Article article;
 	std::set<pk_t> peers;
-	explicit AuthorPeers(Article a) {
-		article = std::move(a);
-	}
+	explicit AuthorPeers(Article a) :
+		article(std::move(a)) {}
 };
 
 /*
