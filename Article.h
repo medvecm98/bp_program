@@ -65,7 +65,7 @@ class Article {
 public:
 	explicit Article() = default;
 	explicit Article(const my_string&);
-	pk_t get_author() {return _author_id;}
+	pk_t get_author() { return _author_id; }
 	void open_fstream(std::fstream& stream);
 	void load_information();
 	std::uint64_t get_length();
@@ -86,6 +86,10 @@ public:
 	[[nodiscard]] bool is_in_category(const std::string& category) const;
 	[[nodiscard]] pk_t get_author() const {
 		return _author_id;
+	}
+
+	my_string select_level(level_t level) {
+		_hashes.begin();
 	}
 
 	/**

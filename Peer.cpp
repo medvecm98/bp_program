@@ -164,6 +164,9 @@ void Peer::download_article(pk_t article_author, hash_t article_hash) {
 																	  article_hash, 255));
 }
 
+/**
+ * Universal method to handle the message from the top of the message queue.
+ */
 void Peer::handle_message() {
 	auto message = networking_.pop_message();
 	auto type = message->msg_type();
