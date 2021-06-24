@@ -17,6 +17,11 @@
 #include "Margins.h"
 #include <optional>
 
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/set.hpp>
+
 #define COMMENT_ "[NScomment]:"
 #define BEGIN_HEADER_ "**BEGIN_HEADER**"
 #define END_HEADER_ "**END_HEADER**"
@@ -59,7 +64,7 @@ using category_container_const_iter = category_container::const_iterator;
 
 class Article {
 public:
-	explicit Article() {};
+	//explicit Article() = default;
 	explicit Article(const my_string&);
 	pk_t get_author() {return _author_id;}
 	void open_fstream(std::fstream& stream);
@@ -79,6 +84,23 @@ public:
 	[[nodiscard]] bool is_in_category(const std::string& category) const;
 	[[nodiscard]] pk_t get_author() const {
 		return _author_id;
+	}
+
+	template <class Archive>
+	void serialize(Archive& ar) {
+		ar << _author_name;
+		ar << _author_id;
+		ar << _news_name;
+		ar << _news_id;
+		ar << _main_hash;
+		ar << _heading;
+		ar << _hashes;
+		ar << _length;
+		ar << _format;
+		ar << _categories;
+		ar << _path_to_article_file;
+		ar << _margins;
+		ar << _notes;
 	}
 
 	friend class ArticleDatabase;

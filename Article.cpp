@@ -28,12 +28,16 @@ void Article::initialize_article(const my_string & path_header, const my_string 
 	calculate_hashes(_hashes);
 }
 
+/**
+ * Calculated hashes for various paragraphs. Will also fill in heading_ member.
+ * @param hashes Where to put hashes.
+ */
 void Article::calculate_hashes(hashes_container& hashes) {
 	std::fstream article_file(_path_to_article_file);
 
 	my_string line, paragraph;
 	int h_counter = 0;
-	std::regex r("[ ]*#[ ]+");
+	std::regex r("[ ]*#[ ]+"); //heading (in markdown) regex
 	while (std::getline(article_file, line)) {
 		if (_heading.empty()) {
 			std::smatch m;
@@ -45,7 +49,7 @@ void Article::calculate_hashes(hashes_container& hashes) {
 		}
 
 		if (line.empty() && !paragraph.empty()) {
-			auto new_hash = hashes.insert(hashes_container::value_type(h_counter++, HashWrapper(255, std::hash<std::string>{}(paragraph))));
+			auto new_hash = hashes.insert(hashes_container::value_type(h_counter++, HashWrapper(std::hash<std::string>{}(paragraph), 0)));
 			_length += paragraph.length();
 			_main_hash += new_hash.first->second.hash;
 		}
