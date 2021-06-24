@@ -4,8 +4,10 @@
 
 #include "NewspaperEntry.h"
 
-NewspaperEntry::NewspaperEntry(pk_t first_key) {
+NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name) {
 	_authorities.insert(first_key);
+	news_id_ = id;
+	news_name_= name;
 }
 
 void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
