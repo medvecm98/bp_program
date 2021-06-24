@@ -21,7 +21,7 @@ public:
 	void load_ip_authorities(pk_t newspaper_key); //to load the IPs of authorities
 	void enroll_new_article(Article article); //add new article to list of category -> article
 	bool request_margin_add(hash_t article, const Margin& margin); //request margin addition
-	void add_new_newspaper(pk_t newspaper_key, const std::string& newspaper_ip);
+	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string& newspaper_ip);
 	size_t list_all_articles_from_news(std::vector<article_ptr>& articles, const std::set<category_t>& categories);
 	size_t list_all_articles_from_news(std::vector<article_ptr>& articles);
 	size_t list_all_articles_by_me(std::vector<article_ptr>& articles, const std::set<category_t>& categories, pk_t news_id = 0);
@@ -29,6 +29,16 @@ public:
 	article_optional find_article(hash_t article_hash);
 	void download_article(pk_t article_author, hash_t article_hash);
 	void handle_message();
+
+	pk_t get_public_key() {
+		return public_key_;
+	}
+
+	my_string get_name() {
+		return name_;
+	}
+
+
 private:
 	//reader part
 	pk_t public_key_;

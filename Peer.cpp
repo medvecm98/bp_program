@@ -5,8 +5,8 @@
  * @param newspaper_key Public key of newspaper.
  * @param newspaper_ip_domain IP, or domain name, of the newspaper.
  */
-void Peer::add_new_newspaper(pk_t newspaper_key, const std::string &newspaper_ip_domain) {
-	news_.insert({newspaper_key, NewspaperEntry(newspaper_key)});
+void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain) {
+	news_.insert({newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name)});
 	networking_.ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
 }
 
