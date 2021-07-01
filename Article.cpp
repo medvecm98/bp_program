@@ -34,7 +34,7 @@ void Article::initialize_article(const category_container &categories, const std
 	calculate_hashes(_hashes);
 
 	if (!categories.empty()) {
-		for (T&& cat : categories) {
+		for (auto&& cat : categories) {
 			_categories.insert(cat);
 		}
 	}
@@ -81,10 +81,6 @@ my_string Article::get_path_to_file() {
 	return _path_to_article_file;
 }
 
-std::uint64_t Article::get_length() {
-	return _length;
-}
-
 bool Article::is_in_category(const std::string& category) const {
 	if (_categories.find(category) != _categories.end())
 		return true;
@@ -100,6 +96,14 @@ category_container_const_iter Article::get_categories() {
 	return _categories.cbegin();
 }
 
-my_string Article::select_level(level_t level) {
-	
+void Article::select_level(my_string& rv, level_t level) {
+	std::stringstream rv_stream;
+	ParagraphIterator pi(_path_to_article_file, level, _hashes.begin());
+	++pi;
+	while (pi.get().has_value()) {
+		rv_stream << (pi.get().value());
+		rv_stream << std::endl;
+		++pi;
+	}
+	rv = std::move(rv_stream.str());
 }
