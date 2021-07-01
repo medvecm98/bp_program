@@ -35,6 +35,8 @@
 #define HASH_ "[NShash]:"
 #define CATEGORY_DELIMITER_ ';'
 
+#define WHITESPACE " \t\r\n\v\f"
+
 enum article_format {
 	NoFormat = -1,
 	PlainText = 0,
@@ -59,79 +61,123 @@ using string_hash = std::hash<std::string>;
 using category_container = std::set<my_string>;
 using category_container_const_ref = const category_container&;
 using category_container_const_iter = category_container::const_iterator;
+using margin_container = std::unordered_multimap<pk_t, Margin>;
+using margin_vector = std::vector<Margin>;
 
 class ParagraphIterator {
 public:
+//TODO: use stringstream
 	ParagraphIterator(std::string source_file_path, level_t l, hashes_container::iterator h) :
-		source_file(source_file_path), level(l), hash_iter_(std::move(h))
+		source_file_(source_file_path), level_(l), hash_iter_(std::move(h))
 	{
-		if (source_file.is_open()) 
-			loaded = true;
+		if (source_file_.is_open()) 
+			loaded_ = true;
 	}
 
 	void operator++() {
 		std::string line;
+		paragraph_.clear();
 		bool paragraph_found = false;
 		bool wrong_level_para_found = false;
-		while (std::getline(source_file, line)) {
-			if ((line.find_first_not_of(" \t\r\n\v\f") != std::string::npos) && 
-				(hash_iter_->second.paragraph_level <= level)) 
-			{
-				if (hash_iter_->second.paragraph_level <= level) {
+		while (std::getline(source_file_, line)) {
+			if (line.find_first_not_of( WHITESPACE ) != std::string::npos) {
+				if (hash_iter_->second.paragraph_level <= level_) {
 					//found paragraph and level checks out
 					paragraph_found = true;
-					paragraph.append(line);
+					paragraph_.append(line);
 				}
 				else {
-					
+					wrong_level_para_found = true;
 				}
 			}
-			else if ((line.find_first_of(" \t\r\n\v\f") != std::string::npos) && paragraph_found) {
+			else if ((line.find_first_not_of( WHITESPACE ) == std::string::npos) && paragraph_found) {
 				//found first empty after paragraph
 				break;
 			}
-			else if ((line.find_first_of(" \t\r\n\v\f") != std::string::npos) && !paragraph_found) {
+			else if ((line.find_first_not_of( WHITESPACE ) == std::string::npos) && wrong_level_para_found) {
 				//found empty line, but paragarph wasn't processed
+				wrong_level_para_found = false;
 				hash_iter_++;
 			}
 		}
 	}
+
+	optional_my_string get() {
+		if (!paragraph_.empty())
+			return optional_my_string(paragraph_);
+		else
+			return optional_my_string();
+	}
+
+	level_t get_level() {
+		return level_;
+	}
+
+	void reset() {
+		if (source_file_.is_open())
+			source_file_.seekg(0);
+	}
 private:
-	std::fstream source_file;
-	my_string paragraph;
-	level_t level;
+	std::fstream source_file_;
+	my_string paragraph_;
+	level_t level_;
 	hashes_container::iterator hash_iter_;
-	bool loaded = false;
+	bool loaded_ = false;
 };
 
 class Article {
 public:
 	explicit Article() = default;
 	explicit Article(const my_string&);
-	pk_t get_author() { return _author_id; }
 	void open_fstream(std::fstream& stream);
 	void load_information();
-	std::uint64_t get_length();
 	[[nodiscard]] article_format get_format() const {
 		return _format;
 	}
 	category_container_const_iter get_categories();
 	my_string get_path_to_file();
-	[[nodiscard]] hash_t get_main_hash() const {
-		return _main_hash;
-	}
+	
 	void calculate_hashes(hashes_container&);
 
 	template<class Peer_t, class NewspaperEntry_t>
 	void initialize_article(const category_container &categories, const std::string& file_path, 
 							const Peer_t& me, const NewspaperEntry_t& news_entry );
 
-	[[nodiscard]] bool is_in_category(const std::string& category) const;
-	[[nodiscard]] pk_t get_author() const {
-		return _author_id;
+	bool is_in_category(const std::string& category) const;
+
+	pk_t author_id() const { return _author_id; }
+
+	my_string author_name() const { return _author_name; }
+
+	pk_t news_id() const { return _news_id; }
+
+	my_string news_name() const { return _news_name; }
+
+	hash_t main_hash() const { return _main_hash; }
+
+	my_string heading() const { return _heading; }
+
+	std::pair<hashes_container::const_iterator, hashes_container::const_iterator> hashes() const { return {_hashes.cbegin(), _hashes.cend()}; }
+
+	std::size_t length() const { return _length; }
+
+	std::pair<category_container::const_iterator, category_container::const_iterator> categories() const { return {_categories.cbegin(), _categories.cend()}; }
+
+	std::pair<margin_container::const_iterator, margin_container::const_iterator> margins() const { return {_margins.cbegin(), _margins.cend()}; }
+
+	void select_level(my_string& rv, level_t level);
+
+	void add_margin(pk_t pk, Margin&& margin) {
+		_margins.insert({pk, std::move(margin)});
 	}
 
-	my_string select_level(level_t level);
+	void remove_margin(margin_container::iterator what) {
+		_margins.erase(what);
+	}
+
+	std::pair<margin_container::iterator, margin_container::iterator> get_range_iterators(pk_t pk) {
+		return _margins.equal_range(pk);
+	}
 
 	/**
 	 * Serialize using boost archive.
@@ -168,27 +214,28 @@ private:
 	article_format _format;
 	std::set<my_string> _categories;
 	my_string _path_to_article_file;
-	std::map<pk_t, Margin> _margins;
+	margin_container _margins;
 	my_string _notes;
 };
 
 using article_ptr = std::shared_ptr<Article>;
 using article_optional = std::optional<article_ptr>;
-
+using article_container = std::unordered_set<article_ptr>;
 using article_database_container = std::map<hash_t, Article>;
 
 struct AuthorPeers {
 	Article article;
-	std::set<pk_t> peers;
+	std::unordered_map<pk_t, user_variant> peers;
 	explicit AuthorPeers(Article a) :
 		article(std::move(a)) {}
 };
 
 /*
- * Category -> Article(hash) -> Article(actual), Readers (those, who downloaded those articles)
+ * Category -> Article(hash) >-AuthorPeers-> Article(actual), Readers (those, who downloaded those articles)
  */
 using category_t = std::string;
 using user_multimap_container = std::unordered_map<hash_t, AuthorPeers>;
-using category_multimap_container = std::unordered_multimap<my_string, user_multimap_container>;
+using category_multimap_container = std::unordered_multimap<my_string, user_multimap_container::iterator>;
+using optional_author_peers = std::optional<std::shared_ptr<AuthorPeers>>;
 
 #endif //PROGRAM_ARTICLE_H
