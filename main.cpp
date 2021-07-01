@@ -55,13 +55,18 @@ void find_what_is_missing(std::unordered_set<std::string>& what_created) {
 	}
 }
 
+void create_new_user() {
+	
+}
+
 void handle_input() {
 	char c;
 	std::cin.get(c);
 
 	if (c) {
 		switch (c) {
-
+			case 'c':
+				create_new_user();
 			case 'h':
 			default:
 				print_help();
