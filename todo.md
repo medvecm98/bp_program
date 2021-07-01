@@ -15,4 +15,7 @@
 - [ ] zatial nejake jednoduche UI
 
 ## Clanky
-- [ ] vybrat z clanku take odseky, co splnuju pozadovany level
+- [x] vybrat z clanku take odseky, co splnuju pozadovany level
+
+## Marginalie
+- [x] prerobit na podporu multimapy, alebo odstranit podporu pre type a content a nechat len content s tym, ze typ bude vzdy pred spravou
