@@ -7,16 +7,21 @@ message HashWrapper {
   uint32 level = 2;
 }
 
-message Margins {
+message Margin {
+  uint32 id = 3;
   string type = 1;
   string content = 2;
+}
+
+message Margins {
+  repeated Margin margins = 1;
 }
 
 message Article {
   optional string author_name = 1;
   uint64 author_id = 2;
   optional string news_name = 3;
-  string news_id = 4;
+  uint64 news_id = 4;
   uint64 main_hash = 5;
   string heading = 6;
   map<int32, HashWrapper> paragraph_hashes = 7;

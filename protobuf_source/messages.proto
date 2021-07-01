@@ -4,107 +4,106 @@ package np2ps;
 import "articles.proto";
 
 enum MessageType {
-  EMPTY = 0; //done
-  ARTICLE_ALL = 10; //done
-  ARTICLE_HEADER = 20; //done
-  ARTICLE_LIST = 25; //done
-  USER_IS_MEMBER = 30; //done
-  ARTICLE_DATA_UPDATE = 40; //done
-  HANDSHAKE = 60;
-  UPDATE_MARGIN = 70; //done
-  UPDATE_ARTICLE = 90; //done
-  IP_ADDRESS = 100; //done
+	EMPTY = 0;                // done
+	ARTICLE_ALL = 10;         // done
+	ARTICLE_HEADER = 20;      // done
+	ARTICLE_LIST = 25;        // done
+	USER_IS_MEMBER = 30;      // done
+	ARTICLE_DATA_UPDATE = 40; // done
+	HANDSHAKE = 60;
+	UPDATE_MARGIN = 70;  // done
+	UPDATE_ARTICLE = 90; // done
+	IP_ADDRESS = 100;    // done
 }
 
 enum MessageContext {
-  NOTHING = 0;
-  REQUEST = 10;
-  RESPONSE = 20;
+	ERROR = 0;
+	REQUEST = 10;
+	RESPONSE = 20;
+	ONE_WAY = 30;
 }
 
 enum MarginAction {
-  REMOVE = 0;
-  ADD = 1;
-  UPDATE = 2;
+	REMOVE = 0;
+	ADD = 10;
+	UPDATE = 20;
 }
 
 enum ArticleAction {
-  DOWNLOAD = 0;
-  REMOVAL = 1;
+	DOWNLOAD = 0;
+	REMOVAL = 10;
 }
 
 message Message {
-  uint64 from = 1;
-  uint64 to = 2;
-  MessageType msg_type = 3;
-  MessageContext msg_ctx = 4;
-  oneof message_oneof {
-    ArticleAll article_all = 110;
-    ArticleHeader article_header = 120;
-    ArticleList article_list = 125;
-    UserIsMember user_is_member = 130;
-    ArticleDataUpdate article_data_update = 140;
-    //handshake here
-    UpdateMargin update_margin = 170;
-    UpdateArticle update_article = 180;
-    IpAddress ip_address = 200;
-  }
+	uint64 from = 1;
+	uint64 to = 2;
+	uint64 seq = 5;
+	MessageType msg_type = 3;
+	MessageContext msg_ctx = 4;
+	oneof message_oneof {
+		ArticleAll article_all = 110;
+		ArticleHeader article_header = 120;
+		ArticleList article_list = 125;
+		UserIsMember user_is_member = 130;
+		ArticleDataUpdate article_data_update = 140;
+		// handshake here
+		UpdateMargin update_margin = 170;
+		UpdateArticle update_article = 180;
+		IpAddress ip_address = 200;
+	}
 }
-
 
 /**
  * ALL following messages are just "extensions"
  * of Message message.
  */
 message ArticleAll {
-  uint64 article_hash = 1;
-  uint32 level = 2;
-  //response
-  optional Article header = 3;
-  optional string article_actual = 4;
+	uint64 article_hash = 1;
+	uint32 level = 2;
+	// response
+	optional Article header = 3;
+	optional string article_actual = 4;
 }
 
 message ArticleHeader {
-  uint64 article_hash = 2;
-  uint32 level = 3;
-  //response
-  optional Article article = 4;
+	uint64 article_hash = 2;
+	// response
+	optional Article article = 4;
 }
 
 message ArticleList {
-  bool all_articles = 1;
-  //request
-  repeated string categories = 2;
-  //response
-  repeated Article response = 3;
+	bool all_articles = 1;
+	// request
+	repeated string categories = 2;
+	// response
+	repeated Article response = 3;
 }
 
 message UserIsMember {
-  uint64 user_pk = 1;
-  //request
-  uint32 level = 2;
-  //response
-  bool is_member = 3;
+	uint64 user_pk = 1;
+	// request
+	uint32 level = 2;
+	// response
+	bool is_member = 3;
 }
 
 message ArticleDataUpdate {
-  uint64 article_pk = 1;
-  ArticleAction article_action = 3;
+	uint64 article_pk = 1;
+	ArticleAction article_action = 3;
 }
 
 message UpdateMargin {
-  uint64 article_pk = 1;
-  MarginAction m_action = 2;
-  Margins margin = 3;
+	uint64 article_pk = 1;
+	MarginAction m_action = 2;
+	Margins margin = 3;
 }
 
-message UpdateArticle {
-  uint64 article_pk = 1;
+message UpdateArticle { 
+	uint64 article_pk = 1; 
 }
 
 message IpAddress {
-  //response
-  optional string ipv4 = 1;
-  optional string ipv6 = 2;
+	// response
+	optional string ipv4 = 1;
+	optional string ipv6 = 2;
 }
-
