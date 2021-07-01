@@ -19,6 +19,7 @@ using unique_ptr_message = std::unique_ptr< proto_message>;
 using msg_session_pair = std::pair< unique_ptr_message, PeerSession>;
 using msg_session_queue = std::queue< msg_session_pair>;
 using msg_queue = std::queue< unique_ptr_message>;
+using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
 using PeerSession_ptr = std::shared_ptr<PeerSession>;
 using session_map = std::unordered_map< pk_t, PeerSession_ptr>;
 
@@ -36,10 +37,26 @@ public:
 		received_msg.pop();
 		return std::move(msg);
 	}
+
+	void store_to_map(unique_ptr_message&& msg) {
+		waiting_messages.insert( {msg->seq(), std::move(msg)} );
+	}
+
+	bool check_if_in_map(std::size_t seq) {
+		return waiting_messages.find(seq) != waiting_messages.end();
+	}
+
+	unique_ptr_message load_from_map(std::size_t seq) {
+		auto msg_iter = waiting_messages.find(seq);
+		unique_ptr_message rv = std::move(msg_iter->second);
+		waiting_messages.erase(msg_iter);
+		return std::move(rv);
+	}
 private:
 	const std::string port_ = "14128";
 
 	msg_queue to_send_msg, received_msg;
+	msg_map waiting_messages;
 	
 	//boost::asio necessities
 	boost::asio::io_context io_ctx;
