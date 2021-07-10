@@ -9,6 +9,7 @@
 #include "GlobalUsing.h"
 #include <sstream>
 #include <iomanip>
+#include "cryptopp/rsa.h"
 
 using tcp = boost::asio::ip::tcp;
 
@@ -23,14 +24,14 @@ using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
 using PeerSession_ptr = std::shared_ptr<PeerSession>;
 using session_map = std::unordered_map< pk_t, PeerSession_ptr>;
 
+
 class Networking {
 public:
 	//template<class MSG>
 	bool enroll_message_to_be_sent(unique_ptr_message message);
 
-	IpMap ip_map_;
 	static void send_message(tcp::socket&, msg_queue&);
-	static pk_t receive_message(tcp::socket& tcp_socket, msg_queue& recv_mq);
+	static std::optional<seq_t> receive_message(tcp::socket& tcp_socket, msg_queue& recv_mq);
 	
 	unique_ptr_message pop_message() {
 		auto msg = std::move(received_msg.front());
@@ -52,6 +53,9 @@ public:
 		waiting_messages.erase(msg_iter);
 		return std::move(rv);
 	}
+	
+	IpMap ip_map_;
+	IpWrapper my_ip;
 private:
 	const std::string port_ = "14128";
 
@@ -72,8 +76,10 @@ public:
 	{}
 
 	void start_read() {
+		auto msg_seq = read_message_from_network();
 
-		sessions_.insert({read_message_from_network(), shared_from_this()});
+		if (msg_seq.has_value())
+			sessions_.insert({msg_seq.value(), shared_from_this()});
 	}
 
 	void start_write() {
@@ -84,7 +90,7 @@ public:
 		return socket_;
 	}
 private:
-	pk_t read_message_from_network() {
+	std::optional<seq_t> read_message_from_network() {
 		return Networking::receive_message(socket_, mq_);
 	}
 
@@ -135,12 +141,19 @@ public:
 				const tcp::resolver::results_type& results) {
 			//TODO: pop ASAP, this won't work with multiple threads
 			if (!ec) {
-				if (sessions_.find(send_mq_.front()->to()) == sessions_.end()) {
+				if (sessions_.find(send_mq_.front()->seq()) == sessions_.end()) {
 					//we initialize new session
-					boost::asio::async_connect(socket_, results, [this](const boost::system::error_code &ec,
-																		const tcp::endpoint &endpoint) {
-						std::make_shared<PeerSession>(std::move(socket_), send_mq_, sessions_)->start_write();
-					});
+					boost::asio::async_connect(
+						socket_, 
+						results, 
+						[this](
+							const boost::system::error_code &ec,
+							const tcp::endpoint &endpoint
+							) {
+								
+								std::make_shared<PeerSession>(std::move(socket_), send_mq_, sessions_)->start_write();
+							}
+					);
 				}
 				else {
 					//there is active session waiting for response
