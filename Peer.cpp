@@ -11,7 +11,17 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 }
 
 void Peer::load_ip_authorities(pk_t newspaper_key) {
-	networking_.enroll_message_to_be_sent(std::move(MFW::SetMessageContextRequest(MFW::IpAddressFactory(public_key_, newspaper_key))));
+	networking_.enroll_message_to_be_sent(
+		MFW::ReqCredentialsFactory(
+			MFW::CredentialsFactory(
+				public_key_, 
+				newspaper_key
+			),
+			true, false, false, false,
+			string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv4)), 
+			string_ptr_optional(), rsa_public_ptr_optional(), eax_ptr_optional()
+		)
+	);
 }
 
 bool Peer::request_margin_add(hash_t article, margin_vector& margin) {
@@ -73,37 +83,7 @@ size_t Peer::list_all_articles_from_news(article_container &articles) {
 	return article_counter;
 }
 
-/**
- * Functor, that covers one news company.
- */
-struct TheSameNews {
-	TheSameNews() = default;
-	news_database::const_iterator entry;
-	news_database::const_iterator end_iterator;
-	bool used = false;
-	news_database::const_iterator operator() () {
-		if (!used) {
-			used = true;
-			return entry;
-		}
-		else {
-			return end_iterator;
-		}
-	}
-};
 
-/**
- * Functor, that covers all the various news companies.
- */
-struct AllTheNews {
-	explicit AllTheNews(news_database::const_iterator nd) {
-		data = nd;
-	}
-	news_database::const_iterator data;
-	news_database::const_iterator operator() () {
-		return data++;
-	}
-};
 
 //TODO: try to implement this as extensible as possible, e. g. using POLICIES
 /**
@@ -186,7 +166,7 @@ void Peer::download_article(pk_t article_author, hash_t article_hash) {
 }
 
 /**
- * @brief Returns pointer to AuthorPeers, if it was found in main category, article, peers database.
+ * @brief Returns pointer to ArticleReaders, if it was found in main category, article, readers database.
  * 
  * @param article_hash Hash of article.
  * @return std::optional. AuthorPeer pointer, if it was found, no value, if it didn't.
@@ -198,7 +178,7 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
 			auto bucket_end = articles_categories_.end(articles_categories_.bucket(cat));
 			for (; bucket_begin != bucket_end; bucket_begin++) {
 				if (bucket_begin->second->first == article_hash) {
-					return optional_author_peers(std::make_shared<AuthorPeers>(bucket_begin->second->second));
+					return optional_author_peers(std::make_shared<ArticleReaders>(bucket_begin->second->second));
 				}
 			}
 		}
@@ -207,7 +187,7 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
 }
 
 /**
- * @brief Returns pointer to AuthorPeers, if it was found in main category, article, peers database.
+ * @brief Returns pointer to ArticleReaders, if it was found in main category, article, readers database.
  * 
  * @param article_hash Hash of article.
  * @return std::optional. AuthorPeer pointer, if it was found, no value, if it didn't.
@@ -218,7 +198,7 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
 		auto bucket_end = articles_categories_.end(articles_categories_.bucket(cat.first));
 		for (; bucket_begin != bucket_end; bucket_begin++) {
 			if (bucket_begin->second->first == article_hash) {
-				return optional_author_peers(std::make_shared<AuthorPeers>(bucket_begin->second->second));
+				return optional_author_peers(std::make_shared<ArticleReaders>(bucket_begin->second->second));
 			}
 		}
 	}
@@ -236,6 +216,9 @@ void Peer::handle_message() {
 	unique_ptr_message message = networking_.pop_message();
 	if (message->msg_ctx() == np2ps::REQUEST) {
 		handle_requests( std::move( message));
+	}
+	else if (message->msg_ctx() == np2ps::RESPONSE) {
+		
 	}
 }
 
@@ -277,8 +260,13 @@ void Peer::handle_requests(unique_ptr_message message) {
 
 				//send message
 				networking_.enroll_message_to_be_sent(MFW::RespArticleDownloadFactory(
-					MFW::ArticleDownloadFactory(public_key_, message->from(), article.value()->main_hash(), article_readers_iterator->second.peer_level),
-					article.value(), std::move(article_whole)
+					MFW::ArticleDownloadFactory(
+						public_key_, 
+						message->from(), 
+						article.value()->main_hash(), 
+						article_readers_iterator->second.peer_level),
+					article.value(), 
+					std::move(article_whole)
 				));
 			}
 			else {
@@ -367,14 +355,14 @@ void Peer::handle_requests(unique_ptr_message message) {
 			if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
 				if (user == user_map.end()) {
 					auto ins = basic_users.insert(message->from());
-					article_author_peers.value()->peers.insert({*ins.first, user_variant(ins.first)});
+					article_author_peers.value()->readers.insert({*ins.first, user_variant(ins.first)});
 				}
 				else {
-					article_author_peers.value()->peers.insert({user->first, user_variant(user)});
+					article_author_peers.value()->readers.insert({user->first, user_variant(user)});
 				}
 			}
 			else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
-				article_author_peers.value()->peers.erase(message->from());
+				article_author_peers.value()->readers.erase(message->from());
 			}
 		}
 	}
@@ -422,7 +410,28 @@ void Peer::handle_requests(unique_ptr_message message) {
 	else if (type == np2ps::UPDATE_ARTICLE) {
 		//TODO: send unsupported error
 	}
-	else if (type == np2ps::IP_ADDRESS) {
-		
+	else if (type == np2ps::CREDENTIALS) {
+		string_ptr_optional resp_ip4, resp_ip6;
+		rsa_public_ptr_optional resp_rsa_public;
+
+		if (message->credentials().req_ipv4()) {
+			resp_ip4 = string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv4));
+		}
+		if (message->credentials().req_ipv6()) {
+			resp_ip6 = string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv6));
+		}
+		if (message->credentials().req_rsa_public_key()) {
+			resp_rsa_public = rsa_public_ptr_optional(std::make_shared<CryptoPP::RSA::PublicKey>(networking_.ip_map_.my_ip.key_pair.first.value()));
+		}
+
+		networking_.enroll_message_to_be_sent(
+			MFW::RespCredentialsFactory(
+				MFW::CredentialsFactory(
+					public_key_,
+					message->from()
+				),
+				resp_ip4, resp_ip6, resp_rsa_public, eax_ptr_optional()
+			)
+		);
 	}
 }

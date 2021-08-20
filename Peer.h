@@ -23,7 +23,7 @@ struct PeerInfo {
 	/* timestamp of info */
 };
 
-using news_database = std::unordered_map<pk_t, NewspaperEntry>;
+
 using MFW = MessageFactoryWrapper;
 using reader_database = std::unordered_multimap<hash_t, PeerInfo>;
 
@@ -34,6 +34,7 @@ public:
 		public_key_ = 0;
 		newspaper_id_ = 0;
 	}
+
 	void load_ip_authorities(pk_t newspaper_key); //to load the IPs of authorities
 	void enroll_new_article(Article article); //add new article to list of category -> article
 	bool request_margin_add(hash_t article, margin_vector& margin); //request margin addition
@@ -62,9 +63,11 @@ public:
 private:
 	//reader part
 	pk_t public_key_;
+	public_private_key_pair pub_pri_pair_;
 	my_string name_;
 	Networking networking_;
-	news_database news_; //list of all articles and their sources (their "News")
+	news_database news_; //list of all downloaded articles, mapped by their Newspapers
+	std::unordered_multimap<hash_t, Margin> margins_added_; //multimap of Article -> Margins, that this peer added, or requested to add
 
 	//journalist part
 	reader_database readers_; //list of article readers
@@ -74,14 +77,12 @@ private:
 	user_level_map user_map;
 
 	//chief editor
-	category_multimap_container articles_categories_;
+	user_multimap_container newspaper_all_readers; //list of all readers of all articles
+	category_multimap_container articles_categories_; //articles mapped by categories, maps to `newspaper_all_readers`
 	my_string newspaper_name_;
 	pk_t newspaper_id_;
 	user_container authorities_;
 	user_container journalists_;
-
-	//other
-	std::unordered_multimap<hash_t, Margin> margins_added_; //multimap of Article -> Margins, that this peer added, or requested to add
 
 	article_optional find_article_in_database(hash_t article_hash);
 };

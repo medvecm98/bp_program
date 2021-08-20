@@ -10,10 +10,10 @@ enum MessageType {
 	ARTICLE_LIST = 25;        // done
 	USER_IS_MEMBER = 30;      // done
 	ARTICLE_DATA_UPDATE = 40; // done
-	HANDSHAKE = 60;
 	UPDATE_MARGIN = 70;  // done
 	UPDATE_ARTICLE = 90; // done
-	IP_ADDRESS = 100;    // done
+	CREDENTIALS = 100;   // done
+	SYMMETRIC_KEY = 110; // done
 }
 
 enum MessageContext {
@@ -49,7 +49,8 @@ message Message {
 		// handshake here
 		UpdateMargin update_margin = 170;
 		UpdateArticle update_article = 180;
-		IpAddress ip_address = 200;
+		Credentials credentials = 200;
+		SymmetricKey symmetric_key = 210;
 	}
 }
 
@@ -102,8 +103,22 @@ message UpdateArticle {
 	uint64 article_pk = 1; 
 }
 
-message IpAddress {
-	// response
+message Credentials {
+	// in request: which fields are requested
+	// in response: which fields are filled 
+	bool req_ipv4 = 5;
+	bool req_ipv6 = 6;
+	bool req_rsa_public_key = 7;
+	bool req_eax_key = 8;
+	// in request: advertising your information
+	// in response: response to requested fields
 	optional string ipv4 = 1;
 	optional string ipv6 = 2;
+	optional string rsa_public_key = 3;
+	optional string eax_key = 4;
+}
+
+message SymmetricKey {
+	string key = 1;
+	string signature = 2;
 }

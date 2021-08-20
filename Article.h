@@ -223,19 +223,24 @@ using article_optional = std::optional<article_ptr>;
 using article_container = std::unordered_set<article_ptr>;
 using article_database_container = std::map<hash_t, Article>;
 
-struct AuthorPeers {
+/**
+ * @brief Struct for encapsulation of all the readers of one specific article.
+ * 
+ * Contains all the readers of given article and article header.
+ */
+struct ArticleReaders {
 	Article article;
-	std::unordered_map<pk_t, user_variant> peers;
-	explicit AuthorPeers(Article a) :
+	std::unordered_map<pk_t, user_variant> readers;
+	explicit ArticleReaders(Article a) :
 		article(std::move(a)) {}
 };
 
 /*
- * Category -> Article(hash) >-AuthorPeers-> Article(actual), Readers (those, who downloaded those articles)
+ * Category -> Article(hash) >-ArticleReaders-> Article(actual), Readers (those, who downloaded those articles)
  */
 using category_t = std::string;
-using user_multimap_container = std::unordered_map<hash_t, AuthorPeers>;
+using user_multimap_container = std::unordered_map<hash_t, ArticleReaders>;
 using category_multimap_container = std::unordered_multimap<my_string, user_multimap_container::iterator>;
-using optional_author_peers = std::optional<std::shared_ptr<AuthorPeers>>;
+using optional_author_peers = std::optional<std::shared_ptr<ArticleReaders>>;
 
 #endif //PROGRAM_ARTICLE_H

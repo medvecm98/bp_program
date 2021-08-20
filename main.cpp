@@ -78,9 +78,6 @@ void handle_input() {
 int main() {
 	std::cout << "Nothing in main so far..." << std::endl;
 
-	char c;
-	std::cin >> c;
-
 	handle_input();
 
 	return 0;

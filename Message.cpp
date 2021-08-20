@@ -14,15 +14,6 @@ unique_ptr_message upm_factory() {
 	return std::make_unique<proto_message>();
 }
 
-unique_ptr_message MFW::IpAddressFactory(pk_t from, pk_t to) {
-	auto msg = upm_factory();
-	set_from_to(msg, from, to);
-
-	msg->set_msg_type(np2ps::IP_ADDRESS);
-
-	return std::move(msg);
-}
-
 unique_ptr_message MFW::ArticleDataChangeFactory(pk_t from, pk_t to, hash_t article_hash, bool download) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
@@ -135,6 +126,15 @@ unique_ptr_message MFW::UpdateArticleFactory(pk_t from, pk_t to, hash_t article_
 	return std::move(msg);
 }
 
+unique_ptr_message MFW::CredentialsFactory(pk_t from, pk_t to) {
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
+	msg->set_msg_type(np2ps::CREDENTIALS);
+
+	return std::move(msg);
+}
+
 /* Requests: */
 unique_ptr_message MFW::ReqArticleListFactory(unique_ptr_message&& msg, category_container& categories) { 
 	if (!categories.empty()) {
@@ -154,18 +154,38 @@ unique_ptr_message MFW::ReqUserIsMemberFactory(unique_ptr_message&& msg, level_t
 	return std::move(msg);
 }
 
+unique_ptr_message MFW::ReqCredentialsFactory(unique_ptr_message&& msg, bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
+	string_ptr_optional ip4, string_ptr_optional ip6, rsa_public_ptr_optional public_key, eax_ptr_optional eax_key) {
+
+		msg->mutable_credentials()->set_req_ipv4(req_ip4);
+		msg->mutable_credentials()->set_req_ipv6(req_ip6);
+		msg->mutable_credentials()->set_req_rsa_public_key(req_public_key);
+		msg->mutable_credentials()->set_req_eax_key(req_eax_key);
+
+		if (ip4.has_value()) {
+			msg->mutable_credentials()->set_ipv4(*ip4.value());
+		}
+
+		if (ip6.has_value()) {
+			msg->mutable_credentials()->set_ipv6(*ip6.value());
+		}
+
+		if (public_key.has_value()) {
+			std::string string_key;
+			CryptoPP::StringSink rsa_pub_sink(string_key);
+			public_key.value()->DEREncode(rsa_pub_sink);
+			msg->mutable_credentials()->set_rsa_public_key(string_key);
+		}
+
+		if (eax_key.has_value()) {
+			std::string string_key(reinterpret_cast<const char*>(&(*eax_key.value())[0]), eax_key.value()->size());
+			msg->mutable_credentials()->set_eax_key(string_key);
+		}
+
+		return std::move(msg);
+	}
+
 /* Responses: */
-unique_ptr_message MFW::RespIpAddressFactory(unique_ptr_message&& msg, const std::string& ip4) { 
-	msg->mutable_ip_address()->set_ipv4(ip4);
-	return std::move(msg);
-}
-
-unique_ptr_message MFW::RespIpAddressFactory(unique_ptr_message&& msg, const std::string& ip4, const std::string& ip6) { 
-	msg->mutable_ip_address()->set_ipv6(ip6);
-	msg->mutable_ip_address()->set_ipv4(ip4);
-	return std::move(msg);
-}
-
 /**
  * @brief Converts article from internal representation to protocol buffer representation.
  */
@@ -245,6 +265,44 @@ unique_ptr_message MFW::RespUserIsMemberFactory(unique_ptr_message&& msg, bool i
 	msg->mutable_user_is_member()->set_is_member(true);
 	return std::move(msg);
 }
+
+unique_ptr_message MFW::RespCredentialsFactory(unique_ptr_message&& msg, string_ptr_optional ip4, string_ptr_optional ip6, 
+	rsa_public_ptr_optional public_key, eax_ptr_optional eax_key) {
+
+		if (ip4.has_value()) {
+			msg->mutable_credentials()->set_ipv4(*ip4.value());
+			msg->mutable_credentials()->set_req_ipv4(true);
+		}
+		else
+			msg->mutable_credentials()->set_req_ipv4(false);
+
+		if (ip6.has_value()) {
+			msg->mutable_credentials()->set_req_ipv6(true);
+			msg->mutable_credentials()->set_ipv6(*ip6.value());
+		}
+		else 
+			msg->mutable_credentials()->set_req_ipv6(false);
+
+		if (public_key.has_value()) {
+			std::string string_key;
+			CryptoPP::StringSink rsa_pub_sink(string_key);
+			public_key.value()->DEREncode(rsa_pub_sink);
+			msg->mutable_credentials()->set_rsa_public_key(string_key);
+			msg->mutable_credentials()->set_req_rsa_public_key(true);
+		}
+		else
+			msg->mutable_credentials()->set_req_rsa_public_key(false);
+
+		if (eax_key.has_value()) {
+			std::string string_key(reinterpret_cast<const char*>(&(*eax_key.value())[0]), eax_key.value()->size());
+			msg->mutable_credentials()->set_eax_key(string_key);
+			msg->mutable_credentials()->set_req_eax_key(true);
+		}
+		else
+			msg->mutable_credentials()->set_req_eax_key(false);
+
+		return std::move(msg);
+	}
 
 unique_ptr_message MFW::UpdateSeqNumber(unique_ptr_message&& msg, unsigned int seq) {
 	msg->set_seq(seq);
