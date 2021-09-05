@@ -30,11 +30,16 @@ public:
 	const my_string& get_name() {
 		return news_name_;
 	}
+
+	level_t level() {
+		return level_;
+	}
 private:
 	pk_t news_id_;
 	my_string news_name_;
 	article_database_container _articles; //downloaded articles from these newspapers
 	user_container _authorities; //authorities of these newspapers
+	level_t level_; //level for given newspaper
 };
 
 using news_database = std::unordered_map<pk_t, NewspaperEntry>;

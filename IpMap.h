@@ -8,8 +8,10 @@ class IpMap {
 public:
 	bool add_to_map(pk_t, IpWrapper&& ip);
 	void remove_from_map(pk_t);
-	bool update_ip(pk_t, std::string&& ip);
-	bool update_ip(pk_t, std::string&& ip4, std::string&& ip6);
+	bool update_ip(pk_t, const std::string& ip);
+	bool update_ip(pk_t, const std::string& ip4, const std::string& ip6);
+	bool update_rsa_public(pk_t, const std::string&);
+	bool update_eax(pk_t, const std::string&);
 	std::string get_ip(pk_t);
 	bool have_ip(pk_t);
 	ip_map::iterator get_map_end() {

@@ -1,11 +1,13 @@
 #include <iostream>
 #include <filesystem>
+#include <cstdlib>
 #include "Article.h"
 #include "ArticleDatabase.h"
 #include "Message.h"
 #include "Peer.h"
 #include "Networking.h"
 #include "openssl/rsa.h"
+
 
 #define ARTICLE_DIR "./articles"
 #define PEER_INFO "./peer_info.nfs"
@@ -55,10 +57,6 @@ void find_what_is_missing(std::unordered_set<std::string>& what_created) {
 	}
 }
 
-void create_new_user() {
-	
-}
-
 void handle_input() {
 	char c;
 	std::cin.get(c);
@@ -66,7 +64,7 @@ void handle_input() {
 	if (c) {
 		switch (c) {
 			case 'c':
-				create_new_user();
+				
 			case 'h':
 			default:
 				print_help();
@@ -75,10 +73,21 @@ void handle_input() {
 	}
 }
 
-int main() {
-	std::cout << "Nothing in main so far..." << std::endl;
+struct ProgramContext {
+	Peer p;
+};
 
-	handle_input();
+#define ENV_VAR "XDG_DATA_HOME"
+
+int main() {
+	//std::cout << "Nothing in main so far..." << std::endl;
+
+	if(const char* env_p = std::getenv(ENV_VAR))
+        std::cout << "Your "<< ENV_VAR << " is: " << env_p << '\n';
+	else
+		std::cout << ENV_VAR << " is empty" << '\n';
+
+	//handle_input();
 
 	return 0;
 }

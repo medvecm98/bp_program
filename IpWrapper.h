@@ -30,9 +30,21 @@ struct IpWrapper {
 		ipv6 = ip6;
 	}
 
+	void add_rsa_key(const std::string& pkey_str) {
+		CryptoPP::RSA::PublicKey pub_key;
+		CryptoPP::StringSource s(pkey_str, true);
+		pub_key.BERDecode(s);
+		key_pair.first = {std::move(pub_key)};
+	}
+
 	void add_rsa_key(CryptoPP::RSA::PublicKey&& pkey) {
 		key_pair.first = rsa_public_optional(pkey);
 	}
+
+	void add_eax_key(const std::string& ekey_str) {
+		key_pair.second = {CryptoPP::SecByteBlock(reinterpret_cast<const CryptoPP::byte*>(&ekey_str[0]), ekey_str.size())};
+	}
+
 
 	void add_eax_key(CryptoPP::SecByteBlock&& ekey) {
 		key_pair.second = eax_optional(ekey);

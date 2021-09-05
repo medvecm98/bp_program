@@ -11,7 +11,7 @@ NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name) {
 }
 
 void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
-	_articles.insert({article_hash, article});
+	_articles.insert_or_assign(article_hash, article);
 }
 
 void NewspaperEntry::remove_article(hash_t article_hash) {

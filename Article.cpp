@@ -5,6 +5,54 @@ Article::Article(const my_string& path_file) {
 }
 
 /**
+ * @brief Construct a new Article::Article object from protobuf Article.
+ * 
+ * Used when saving received article as a conversion between format used for transfer and one used for storage.
+ * 
+ * @param protobuf_article Protobuf Article to convert from.
+ */
+Article::Article(const np2ps::Article& protobuf_article, const std::string& article_actual) :
+	_author_name(protobuf_article.author_name()),
+	_author_id(protobuf_article.author_id()),
+	_news_name(protobuf_article.news_name()),
+	_news_id(protobuf_article.news_id()),
+	_main_hash(protobuf_article.main_hash()),
+	_heading(protobuf_article.heading()),
+	article_present_(false)
+{
+	//load categories
+	if (!protobuf_article.categories().empty()) {
+		for(auto it = protobuf_article.categories().begin(); it != protobuf_article.categories().end(); it++) {
+			_categories.insert(*it);	
+		}
+	}
+
+	//load paragraph hashes
+	for (auto it = protobuf_article.paragraph_hashes().begin(); it != protobuf_article.paragraph_hashes().end(); it++) {
+		_hashes.insert(std::make_pair<int32_t, HashWrapper>((int32_t)it->first, HashWrapper(it->second.hash(), it->second.level())));
+	}
+
+	//load margins
+	for (auto it = protobuf_article.margins().begin(); it != protobuf_article.margins().end(); it++) {
+		for (auto jt = it->second.margins().begin(); jt != it->second.margins().end(); jt++) {
+			_margins.insert(std::make_pair<pk_t, Margin>((pk_t)it->first, Margin(jt->type(), jt->content(), jt->id())));
+		}
+	}
+
+	_notes = "";
+
+	if (!article_actual.empty()) 
+	{
+		article_present_ = true;
+		//TODO: create file for article on filesystem
+	} 
+
+}
+
+Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_article, ""){}
+
+
+/**
  * \brief Used to initialize a new article, from "scratch".
  *
  * @tparam T Container of categories.

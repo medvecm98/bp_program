@@ -15,6 +15,7 @@
 #include "StringSplitter.h"
 #include "GlobalUsing.h"
 #include "Margins.h"
+#include "protobuf_source/articles.pb.h"
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -129,6 +130,8 @@ class Article {
 public:
 	explicit Article() = default;
 	explicit Article(const my_string&);
+	explicit Article(const np2ps::Article& protobuf_article);
+	explicit Article(const np2ps::Article& protobuf_article_header, const std::string& article_actual);
 	void open_fstream(std::fstream& stream);
 	void load_information();
 	[[nodiscard]] article_format get_format() const {
@@ -156,6 +159,8 @@ public:
 	hash_t main_hash() const { return _main_hash; }
 
 	my_string heading() const { return _heading; }
+
+	bool article_present() const { return article_present_; }
 
 	std::pair<hashes_container::const_iterator, hashes_container::const_iterator> hashes() const { return {_hashes.cbegin(), _hashes.cend()}; }
 
@@ -216,6 +221,7 @@ private:
 	my_string _path_to_article_file;
 	margin_container _margins;
 	my_string _notes;
+	bool article_present_;
 };
 
 using article_ptr = std::shared_ptr<Article>;

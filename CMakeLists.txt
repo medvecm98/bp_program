@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.17)
 project(news_p2p_sharing)
 
 set(CMAKE_CXX_STANDARD 17)
+add_compile_options(-pedantic -O0 -g)
 
 include(FindProtobuf)
 find_package(Protobuf REQUIRED)

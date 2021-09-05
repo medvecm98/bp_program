@@ -99,6 +99,7 @@ public:
 	}
 	
 	IpMap ip_map_;
+	std::map<hash_t, std::vector<pk_t>> soliciting_articles;
 
 	friend PeerSession;
 	friend PeerClient;

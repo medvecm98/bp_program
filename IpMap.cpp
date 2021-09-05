@@ -15,7 +15,7 @@ void IpMap::remove_from_map(pk_t pk) {
  * @param ip IP to use.
  * @return True, if update took place.
  */
-bool IpMap::update_ip(pk_t pk, std::string&& ip) {
+bool IpMap::update_ip(pk_t pk, const std::string& ip) {
 	if (map_.find(pk) == map_.end()) {
 		return map_.insert({pk, IpWrapper(ip)}).second;
 	}
@@ -33,13 +33,33 @@ bool IpMap::update_ip(pk_t pk, std::string&& ip) {
  * @param ip6 IPv6 to use.
  * @return True, if update took place.
  */
-bool IpMap::update_ip(pk_t pk, std::string&& ip4, std::string&& ip6) {
+bool IpMap::update_ip(pk_t pk, const std::string& ip4, const std::string& ip6) {
 	if (map_.find(pk) == map_.end()) {
 		return map_.insert({pk, IpWrapper(ip4, ip6)}).second;
 	}
 	else {
 		map_.at(pk).ipv4 = ip4;
 		map_.at(pk).ipv6 = ip6;
+		return true;
+	}
+}
+
+bool IpMap::update_rsa_public(pk_t pk, const std::string& eax) {
+	if (map_.find(pk) == map_.end()) {
+		return false;
+	}
+	else {
+		map_.at(pk).add_rsa_key(eax);
+		return true;
+	}
+}
+
+bool IpMap::update_eax(pk_t pk, const std::string& rsa) {
+	if (map_.find(pk) == map_.end()) {
+		return false;
+	}
+	else {
+		map_.at(pk).add_rsa_key(rsa);
 		return true;
 	}
 }

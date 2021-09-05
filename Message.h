@@ -22,8 +22,30 @@ using eax_ptr_optional = std::optional<std::shared_ptr<CryptoPP::SecByteBlock>>;
 class MessageFactoryWrapper {
 public:
 
+	static void set_from_to(unique_ptr_message& upm, pk_t from, pk_t to) {
+		upm->set_from(from);
+		upm->set_to(to);
+
+		std::random_device rd("/dev/urandom");
+		upm->set_seq(rd());
+	}
+
+	static unique_ptr_message upm_factory() {
+		return std::make_unique<proto_message>();
+	}
+
 	/* Requests: */
-	static unique_ptr_message ReqArticleListFactory(unique_ptr_message&& msg, category_container& categories);
+	template <typename CategoryContainer>
+	static unique_ptr_message ReqArticleListFactory(unique_ptr_message&& msg, const CategoryContainer& categories) {
+		msg->mutable_article_list()->set_all_articles(true);
+		
+		for (auto &&cat : categories) {
+			msg->mutable_article_list()->set_all_articles(false);
+			msg->mutable_article_list()->add_categories(cat);
+		}
+		return std::move(msg);
+	}
+	
 	static unique_ptr_message ReqUserIsMemberFactory(unique_ptr_message&& msg, level_t level);
 	static unique_ptr_message ReqNewPublicKeyFactory(unique_ptr_message&& msg, const CryptoPP::RSA::PublicKey& public_key);
 	static unique_ptr_message ReqCredentialsFactory(unique_ptr_message&& msg, bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
@@ -35,7 +57,7 @@ public:
 	static unique_ptr_message RespArticleDownloadFactory(unique_ptr_message&& msg, article_ptr article_header, std::string&& article);
 	static unique_ptr_message RespArticleHeaderFactory(unique_ptr_message&& msg, article_ptr article_header);
 	static unique_ptr_message RespArticleListFactory(unique_ptr_message&& msg, article_container& articles);
-	static unique_ptr_message RespUserIsMemberFactory(unique_ptr_message&& msg, bool is_member);
+	static unique_ptr_message RespUserIsMemberFactory(unique_ptr_message&& msg, bool is_member, level_t req_level);
 	//static unique_ptr_message RespNewPublicKeyFactory(unique_ptr_message&& msg, const CryptoPP::RSA::PublicKey& public_key);
 	static unique_ptr_message RespCredentialsFactory(unique_ptr_message&& msg, string_ptr_optional ip4, string_ptr_optional ip6, 
 		rsa_public_ptr_optional public_key, eax_ptr_optional eax_key);
@@ -51,10 +73,27 @@ public:
 	static unique_ptr_message UpdateMarginUpdateFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin);
 	static unique_ptr_message UpdateArticleFactory(pk_t from, pk_t to, hash_t article_hash);
 	static unique_ptr_message CredentialsFactory(pk_t from, pk_t to);
+
+	template<typename PeerContainer>
+	static unique_ptr_message ArticleSolicitationFactory(pk_t from, pk_t to, hash_t article_hash, const PeerContainer& peers, std::int32_t level = 127) {
+		unique_ptr_message msg = upm_factory();
+		set_from_to(msg, from, to);
+
+		msg->set_msg_type(np2ps::ARTICLE_SOLICITATION);
+
+		msg->mutable_article_sol()->set_article_hash(article_hash);
+		for (auto&& peer : peers) {
+			msg->mutable_article_sol()->add_possible_owners(peer);
+		}
+		msg->mutable_article_sol()->set_level(level);
+		return std::move(msg);
+	}
 	
 	static unique_ptr_message UpdateSeqNumber(unique_ptr_message&& msg, unsigned int seq);
 
-	/* For those messages that don't have special factories for request or response, or both. */
+	static unique_ptr_message update_margin_factory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margins);
+
+	/* For those messages that don't have special factories for request and/or response. */
 	static unique_ptr_message SetMessageContextRequest(unique_ptr_message&& msg);
 	static unique_ptr_message SetMessageContextResponse(unique_ptr_message&& msg);
 	static unique_ptr_message SetMessageContextOneWay(unique_ptr_message&& msg);

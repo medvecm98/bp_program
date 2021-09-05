@@ -155,16 +155,6 @@ article_optional Peer::find_article(hash_t article_hash) {
 	return article_optional();
 }
 
-void Peer::download_article(pk_t article_author, hash_t article_hash) {
-	//TODO: set level properly
-	networking_.enroll_message_to_be_sent(MFW::SetMessageContextRequest(
-		MFW::ArticleDownloadFactory(
-			public_key_, 
-			article_author,
-			article_hash, 
-			255)));
-}
-
 /**
  * @brief Returns pointer to ArticleReaders, if it was found in main category, article, readers database.
  * 
@@ -205,10 +195,6 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
 	return {};
 }
 
-void add_article_to_articles_categories_db() {
-
-}
-
 /**
  * Universal method to handle the message from the top of the message queue.
  */
@@ -218,7 +204,13 @@ void Peer::handle_message() {
 		handle_requests( std::move( message));
 	}
 	else if (message->msg_ctx() == np2ps::RESPONSE) {
-		
+		handle_responses( std::move( message));
+	}
+	else if (message->msg_ctx() == np2ps::ONE_WAY) {
+		handle_one_way( std::move( message));
+	}
+	else if (message->msg_ctx() == np2ps::ERROR) {
+		handle_error( std::move( message));
 	}
 }
 
@@ -226,6 +218,9 @@ void Peer::handle_requests(unique_ptr_message message) {
 	auto type = message->msg_type();
 
 	if (type == np2ps::ARTICLE_ALL) {
+		//first we will determine what is the level of the peer that requested article
+		//TODO: redo this without using .bucket()
+
 		auto article_bucket = readers_.bucket(message->article_all().header().main_hash());
 		auto article_readers_iterator = readers_.begin(article_bucket);
 
@@ -240,6 +235,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 
 		if (user_not_found) {
 			/* if no user was found in database, we need to check with authority, what his level is */
+
 			auto user_check_msg = MFW::UpdateSeqNumber(
 				MFW::ReqUserIsMemberFactory(
 					MFW::UserIsMemberFactory(public_key_, 
@@ -252,8 +248,10 @@ void Peer::handle_requests(unique_ptr_message message) {
 			networking_.enroll_message_to_be_sent(std::move(user_check_msg)); //sends request for user level in given 
 		}
 		else {
-			auto article = find_article(message->article_all().header().main_hash());
-			if (article.has_value()) {
+			/* send user requested article */
+
+			auto article = find_article(message->article_all().article_hash());
+			if (article.has_value() && article.value()->article_present()) {
 				std::string article_whole;
 				//select only appropriate level
 				article.value()->select_level(article_whole, article_readers_iterator->second.peer_level);
@@ -270,7 +268,38 @@ void Peer::handle_requests(unique_ptr_message message) {
 				));
 			}
 			else {
-				/*TODO: send error back */
+				//TODO: send error back and give hint about who may have it
+				std::vector<pk_t> article_peers;
+				auto [readers_begin, readers_end] = readers_.equal_range(message->article_all().article_hash());
+				if (readers_begin != readers_end) {
+					for (; readers_begin != readers_end; readers_begin++) {
+						article_peers.push_back(readers_begin->second.peer_key);
+					}
+					networking_.enroll_message_to_be_sent(
+						MFW::SetMessageContextOneWay(
+							MFW::ArticleSolicitationFactory(
+								public_key_,
+								message->from(),
+								message->article_all().article_hash(),
+								article_peers,
+								message->article_all().level()
+							)
+						)
+					);
+				}
+				else {
+					networking_.enroll_message_to_be_sent(
+						MFW::SetMessageContextError(
+							MFW::ArticleSolicitationFactory(
+								public_key_,
+								message->from(),
+								message->article_all().article_hash(),
+								std::vector<pk_t>(),
+								0
+							)
+						)
+					);
+				}
 			}
 		}
 	}
@@ -293,19 +322,19 @@ void Peer::handle_requests(unique_ptr_message message) {
 		}
 	}
 	else if (type == np2ps::ARTICLE_LIST) {
-		article_container article_vector;
+		article_container articles;
 
 		pk_t news_id = 0;
 
 		if (message->article_list().all_articles()) {
-			list_all_articles_by_me(article_vector, news_id);
+			list_all_articles_by_me(articles, news_id);
 		}
 		else {
 			category_container categories;
 			for (int i = 0; i < message->article_list().categories_size(); i++) {
 				categories.insert(message->article_list().categories(i));
 			}
-			list_all_articles_by_me(article_vector, categories, news_id);
+			list_all_articles_by_me(articles, categories, news_id);
 		}
 
 		networking_.enroll_message_to_be_sent(
@@ -314,7 +343,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 					public_key_,
 					message->from()
 				),
-				article_vector
+				articles
 			)
 		);
 	}
@@ -332,7 +361,8 @@ void Peer::handle_requests(unique_ptr_message message) {
 					message->from(),
 					message->user_is_member().user_pk()
 				),
-				is_member
+				is_member,
+				message->user_is_member().level()
 			)
 		);
 	}
@@ -399,8 +429,8 @@ void Peer::handle_requests(unique_ptr_message message) {
 					auto proto_margin = message->update_margin().margin().margins(j);
 					for (auto i = bi; i != bie; i++) {
 						if (bi->second.id == proto_margin.id()) {
-							bi->second.type = proto_margin.type();
-							bi->second.content = proto_margin.content();
+							bi->second.type += ' ' + proto_margin.type();
+							bi->second.content += ' ' + proto_margin.content();
 						}
 					}
 				}
@@ -433,5 +463,124 @@ void Peer::handle_requests(unique_ptr_message message) {
 				resp_ip4, resp_ip6, resp_rsa_public, eax_ptr_optional()
 			)
 		);
+	}
+}
+
+void Peer::handle_responses(unique_ptr_message message) {
+	auto type = message->msg_type();
+
+	if (type == np2ps::ARTICLE_ALL) {
+		if (message->has_article_all() && message->article_all().has_header() && message->article_all().has_article_actual()) {
+			hash_t recv_article_hash = message->article_all().article_hash();
+			Article recv_article(message->article_all().header());
+			if (news_.find(recv_article.news_id()) == news_.end()) {
+				//TODO: log error
+			}
+			auto news_entry = news_[recv_article.news_id()];
+			news_entry.add_article(recv_article_hash, std::move(recv_article));
+		}
+		else {
+			//TODO: log error
+		}
+	}
+	else if (type == np2ps::ARTICLE_HEADER) {
+		if (message->has_article_header()) {
+			article_headers_only.insert_or_assign(message->article_header().article_hash(), Article(message->article_header().article()));
+		}
+	}
+	else if (type == np2ps::ARTICLE_LIST) {
+		article_list_wrapper_.article_headers.clear();
+		for (auto it = message->article_list().response().begin(); it != message->article_list().response().end(); it++) {
+			article_list_wrapper_.article_headers.push_back(Article(*it));
+		}
+	}
+	else if (type == np2ps::USER_IS_MEMBER) {
+		if (message->user_is_member().is_member() && (message->user_is_member().level() > 127)) {
+			user_map.insert({message->user_is_member().user_pk(), message->user_is_member().level()});
+		}
+		if (networking_.check_if_in_map(message->seq())) {
+			if (message->user_is_member().is_member()) {
+				//user was member of given level, message can be sent
+				networking_.enroll_message_to_be_sent(networking_.load_from_map(message->seq()));
+			}
+			else {
+				//message can't be sent, user wasn't member of given level
+				networking_.load_from_map(message->seq());
+				//TODO: log error
+			}
+		}
+	}
+	else if (type == np2ps::CREDENTIALS) {
+		if (message->credentials().req_ipv4()) {
+			if (message->credentials().req_ipv6()) {
+				networking_.ip_map_.update_ip((pk_t)message->from(), message->credentials().ipv4(), message->credentials().ipv6());
+			}
+			else {
+				networking_.ip_map_.update_ip((pk_t)message->from(), message->credentials().ipv4());
+			}
+		}
+		if (message->credentials().req_rsa_public_key()) {
+			networking_.ip_map_.update_rsa_public((pk_t)message->from(), message->credentials().rsa_public_key());
+		}
+		if (message->credentials().req_eax_key()) {
+			networking_.ip_map_.update_eax((pk_t)message->from(), message->credentials().eax_key());
+		}
+	}
+}
+
+void Peer::generate_article_all_message(pk_t destination, hash_t article_hash) {
+	networking_.enroll_message_to_be_sent(
+		MFW::SetMessageContextRequest(
+			MFW::ArticleDownloadFactory(
+				public_key_,
+				destination,
+				article_hash,
+				(article_headers_only.find(article_hash) != article_headers_only.end()) 
+					&& (news_.find(article_headers_only[article_hash].news_id()) != news_.end()) 
+					? news_[article_headers_only[article_hash].news_id()].level() 
+					: 127
+			)
+		)
+	);
+}
+
+void Peer::generate_article_header_message(pk_t destination, hash_t article_hash) {
+	networking_.enroll_message_to_be_sent(
+		MFW::SetMessageContextRequest(
+			MFW::ArticleHeaderFactory(
+				public_key_,
+				destination,
+				article_hash
+			)
+		)
+	);
+}
+
+void Peer::handle_one_way(unique_ptr_message msg) {
+	auto type = msg->msg_type();
+	if (type == np2ps::ARTICLE_SOLICITATION) {
+		auto check_for_existence = networking_.soliciting_articles.find(msg->article_sol().article_hash());
+		if (check_for_existence == networking_.soliciting_articles.end()) {
+			std::vector<pk_t> potential_owners;
+			for (auto i = msg->article_sol().possible_owners().begin(); i != msg->article_sol().possible_owners().end(); i++) {
+				potential_owners.push_back(*i);
+			}
+			networking_.soliciting_articles.insert({msg->article_sol().article_hash(), std::move(potential_owners)});
+		}
+		auto destination = networking_.soliciting_articles[msg->article_sol().article_hash()].back();
+		networking_.soliciting_articles[msg->article_sol().article_hash()].pop_back();
+		generate_article_all_message(destination, msg->article_sol().article_hash());
+	}
+}
+
+void Peer::handle_error(unique_ptr_message msg) {
+	auto type = msg->msg_type();
+	if (type == np2ps::ARTICLE_SOLICITATION) {
+		auto check_for_existence = networking_.soliciting_articles.find(msg->article_sol().article_hash());
+		if (check_for_existence != networking_.soliciting_articles.end()) {
+			auto destination = networking_.soliciting_articles[msg->article_sol().article_hash()].back();
+			networking_.soliciting_articles[msg->article_sol().article_hash()].pop_back();
+			generate_article_all_message(destination, msg->article_sol().article_hash());
+		}
 	}
 }

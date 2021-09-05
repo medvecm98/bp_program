@@ -2,18 +2,6 @@
 
 using MFW = MessageFactoryWrapper;
 
-void set_from_to(unique_ptr_message& upm, pk_t from, pk_t to) {
-	upm->set_from(from);
-	upm->set_to(to);
-
-	std::random_device rd("/dev/urandom");
-	upm->set_seq(rd());
-}
-
-unique_ptr_message upm_factory() {
-	return std::make_unique<proto_message>();
-}
-
 unique_ptr_message MFW::ArticleDataChangeFactory(pk_t from, pk_t to, hash_t article_hash, bool download) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
@@ -74,7 +62,7 @@ unique_ptr_message MFW::UserIsMemberFactory(pk_t from, pk_t to, pk_t user_pk) {
 	return std::move(msg);
 }
 
-unique_ptr_message update_margin_factory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margins) {
+unique_ptr_message MFW::update_margin_factory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margins) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -136,19 +124,6 @@ unique_ptr_message MFW::CredentialsFactory(pk_t from, pk_t to) {
 }
 
 /* Requests: */
-unique_ptr_message MFW::ReqArticleListFactory(unique_ptr_message&& msg, category_container& categories) { 
-	if (!categories.empty()) {
-		msg->mutable_article_list()->set_all_articles(false);
-		for (auto &&cat : categories) {
-			msg->mutable_article_list()->add_categories(cat);
-		}
-	}
-	else {
-		msg->mutable_article_list()->set_all_articles(true);
-	}
-	return std::move(msg);
-}
-
 unique_ptr_message MFW::ReqUserIsMemberFactory(unique_ptr_message&& msg, level_t level) { 
 	msg->mutable_user_is_member()->set_level(level);
 	return std::move(msg);
@@ -261,8 +236,9 @@ unique_ptr_message MFW::RespArticleListFactory(unique_ptr_message&& msg, article
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::RespUserIsMemberFactory(unique_ptr_message&& msg, bool is_member) { 
-	msg->mutable_user_is_member()->set_is_member(true);
+unique_ptr_message MFW::RespUserIsMemberFactory(unique_ptr_message&& msg, bool is_member, level_t req_level) { 
+	msg->mutable_user_is_member()->set_is_member(is_member);
+	msg->mutable_user_is_member()->set_level(req_level);
 	return std::move(msg);
 }
 

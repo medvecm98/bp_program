@@ -27,11 +27,19 @@ struct PeerInfo {
 using MFW = MessageFactoryWrapper;
 using reader_database = std::unordered_multimap<hash_t, PeerInfo>;
 
+struct ArticleListWrapper {
+	std::set<my_string> categories;
+	std::vector<Article> article_headers; 
+};
 
 class Peer {
 public:
 	Peer() {
-		public_key_ = 0;
+		CryptoPP::AutoSeededRandomPool prng;
+		std::random_device rd("/dev/urandom");
+		public_key_ = rd();
+		pub_pri_pair_.second.GenerateRandomWithKeySize(prng, 2048);
+		pub_pri_pair_.first = std::move(CryptoPP::RSA::PublicKey(pub_pri_pair_.second));
 		newspaper_id_ = 0;
 	}
 
@@ -47,9 +55,148 @@ public:
 	optional_author_peers find_article_in_article_categories_db(hash_t article_hash);
 	optional_author_peers find_article_in_article_categories_db(hash_t article_hash, category_container categories);
 	article_optional find_article_news(hash_t article_hash, category_container categories);
-	void download_article(pk_t article_author, hash_t article_hash);
 	void handle_message();
 	void handle_requests(unique_ptr_message message);
+	void handle_responses(unique_ptr_message message);
+	void handle_one_way(unique_ptr_message message);
+	void handle_error(unique_ptr_message message);
+	void generate_article_all_message(pk_t destination, hash_t article_hash);
+	void generate_article_header_message(pk_t destination, hash_t article_hash);
+
+	void generate_article_list(pk_t destination) {
+		networking_.enroll_message_to_be_sent(
+			MFW::ReqArticleListFactory(
+				MFW::ArticleListFactory(
+					public_key_,
+					destination
+				),
+				std::vector<my_string>()
+			)
+		);
+	}
+	
+	template<typename Container>
+	void generate_article_list(pk_t destination, const Container& categories) {
+		networking_.enroll_message_to_be_sent(
+			MFW::ReqArticleListFactory<Container>(
+				MFW::ArticleListFactory(
+					public_key_,
+					destination
+				),
+				categories
+			)
+		);
+	}
+
+	void add_margin(hash_t article_hash, my_string type, my_string content) {
+		auto article = find_article(article_hash);
+		if (article.has_value()) {
+			auto author = article.value()->author_id();
+			std::vector<Margin> vm = { Margin(type, content) };
+			margins_added_.insert({article_hash, vm.back()});
+			networking_.enroll_message_to_be_sent(
+				MFW::SetMessageContextRequest(
+					MFW::UpdateMarginAddFactory(
+						public_key_,
+						author,
+						article_hash,
+						vm
+					)
+				)
+			);
+		}
+		else {
+			//TODO: log error
+		}
+	}
+
+	void add_margin(hash_t article_hash, margin_vector& vm) {
+		auto article = find_article(article_hash);
+		if (article.has_value()) {
+			auto author = article.value()->author_id();
+			networking_.enroll_message_to_be_sent(
+				MFW::SetMessageContextRequest(
+					MFW::UpdateMarginAddFactory(
+						public_key_,
+						author,
+						article_hash,
+						vm
+					)
+				)
+			);
+		}
+		else {
+			//TODO: log error
+		}
+	}
+
+	void update_margin(hash_t article_hash, unsigned int id, my_string type, my_string content) {
+		auto article = find_article(article_hash);
+		if (article.has_value()) {
+			auto author = article.value()->author_id();
+			std::vector<Margin> vm = { Margin(type, content, id) };
+			
+			auto [marginb, margine] = margins_added_.equal_range(article_hash);
+
+			for (; marginb != margine; marginb++) {
+				if (marginb->second.id == id) {
+					marginb->second.type += ' ' + type;
+					marginb->second.content += ' ' + content;
+					break;
+				}
+			}
+
+			networking_.enroll_message_to_be_sent(
+				MFW::SetMessageContextRequest(
+					MFW::UpdateMarginUpdateFactory(
+						public_key_,
+						author,
+						article_hash,
+						vm
+					)
+				)
+			);
+		}
+		else {
+			//TODO: log error
+		}
+	}
+
+	void remove_margin(hash_t article_hash, unsigned int id) {
+		auto article = find_article(article_hash);
+		if (article.has_value()) {
+			auto author = article.value()->author_id();
+			Margin m;
+			m.id = id;
+			
+			auto [marginb, margine] = margins_added_.equal_range(article_hash);
+
+			for (; marginb != margine; marginb++) {
+				if (marginb->second.id == id) {
+					m.type = marginb->second.type;
+					m.content = marginb->second.content;
+					margins_added_.erase(marginb);
+					break;
+				}
+			}
+
+			std::vector<Margin> vm = {m};
+
+			networking_.enroll_message_to_be_sent(
+				MFW::SetMessageContextRequest(
+					MFW::UpdateMarginRemoveFactory(
+						public_key_,
+						author,
+						article_hash,
+						vm
+					)
+				)
+			);
+		}
+		else {
+			//TODO: log error
+		}
+	}
 
 	pk_t get_public_key() {
 		return public_key_;
@@ -68,6 +215,8 @@ private:
 	Networking networking_;
 	news_database news_; //list of all downloaded articles, mapped by their Newspapers
 	std::unordered_multimap<hash_t, Margin> margins_added_; //multimap of Article -> Margins, that this peer added, or requested to add
+	std::unordered_map<pk_t, Article> article_headers_only; //only for article headers, so it won't interfere with regular ones
+	ArticleListWrapper article_list_wrapper_; //saving requested article list
 
 	//journalist part
 	reader_database readers_; //list of article readers

@@ -7,6 +7,7 @@ enum MessageType {
 	EMPTY = 0;                // done
 	ARTICLE_ALL = 10;         // done
 	ARTICLE_HEADER = 20;      // done
+	ARTICLE_SOLICITATION = 21;
 	ARTICLE_LIST = 25;        // done
 	USER_IS_MEMBER = 30;      // done
 	ARTICLE_DATA_UPDATE = 40; // done
@@ -43,6 +44,7 @@ message Message {
 	oneof message_oneof {
 		ArticleAll article_all = 110;
 		ArticleHeader article_header = 120;
+		ArticleSolicitation article_sol = 121;
 		ArticleList article_list = 125;
 		UserIsMember user_is_member = 130;
 		ArticleDataUpdate article_data_update = 140;
@@ -80,9 +82,14 @@ message ArticleList {
 	repeated Article response = 3;
 }
 
+message ArticleSolicitation {
+	uint64 article_hash = 1;
+	repeated uint64 possible_owners = 2;
+	optional uint32 level = 3;
+}
+
 message UserIsMember {
 	uint64 user_pk = 1;
-	// request
 	uint32 level = 2;
 	// response
 	bool is_member = 3;
