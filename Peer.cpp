@@ -18,7 +18,7 @@ void Peer::load_ip_authorities(pk_t newspaper_key) {
 				newspaper_key
 			),
 			true, false, false, false,
-			string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv4)), 
+			string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv4.toString().toStdString())), 
 			string_ptr_optional(), rsa_public_ptr_optional(), eax_ptr_optional()
 		)
 	);
@@ -445,10 +445,10 @@ void Peer::handle_requests(unique_ptr_message message) {
 		rsa_public_ptr_optional resp_rsa_public;
 
 		if (message->credentials().req_ipv4()) {
-			resp_ip4 = string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv4));
+			resp_ip4 = string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv4.toString().toStdString()));
 		}
 		if (message->credentials().req_ipv6()) {
-			resp_ip6 = string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv6));
+			resp_ip6 = string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv6.toString().toStdString()));
 		}
 		if (message->credentials().req_rsa_public_key()) {
 			resp_rsa_public = rsa_public_ptr_optional(std::make_shared<CryptoPP::RSA::PublicKey>(networking_.ip_map_.my_ip.key_pair.first.value()));
@@ -513,10 +513,10 @@ void Peer::handle_responses(unique_ptr_message message) {
 	else if (type == np2ps::CREDENTIALS) {
 		if (message->credentials().req_ipv4()) {
 			if (message->credentials().req_ipv6()) {
-				networking_.ip_map_.update_ip((pk_t)message->from(), message->credentials().ipv4(), message->credentials().ipv6());
+				networking_.ip_map_.update_ip((pk_t)message->from(), QHostAddress(QString(message->credentials().ipv4().c_str())), QHostAddress(QString(message->credentials().ipv6().c_str())));
 			}
 			else {
-				networking_.ip_map_.update_ip((pk_t)message->from(), message->credentials().ipv4());
+				networking_.ip_map_.update_ip((pk_t)message->from(), QHostAddress(QString(message->credentials().ipv4().c_str())));
 			}
 		}
 		if (message->credentials().req_rsa_public_key()) {

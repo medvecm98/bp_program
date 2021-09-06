@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include "Message.h"
 #include <functional>
+#include <QtNetwork/QHostAddress>
 
 struct PeerInfo {
 	PeerInfo() = default;

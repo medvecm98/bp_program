@@ -5,6 +5,7 @@
 
 #include "GlobalUsing.h"
 #include <unordered_map>
+#include <QtNetwork/QHostAddress>
 
 //types for map to store keys for given user
 using rsa_public_optional = std::optional< CryptoPP::RSA::PublicKey>;
@@ -21,13 +22,26 @@ using pk_t_keys_map = std::unordered_map< pk_t, rsa_eax_pair>;
 struct IpWrapper {
 	IpWrapper() = default;
 
-	explicit IpWrapper(const std::string& ip4) {
+	explicit IpWrapper(const QHostAddress& ip4) {
 		ipv4 = ip4;
 	}
 
-	IpWrapper(const std::string& ip4, const std::string& ip6) {
+	IpWrapper (const QHostAddress& ip4, const QHostAddress& ip6) {
 		ipv4 = ip4;
 		ipv6 = ip6;
+	}
+
+	explicit IpWrapper(const std::string& ip4) {
+		ipv4 = QHostAddress(QString(ip4.c_str()));
+	}
+
+	explicit IpWrapper(const QString& ip4) {
+		ipv4 = QHostAddress(ip4);
+	}
+
+	IpWrapper(const QString& ip4, const QString& ip6) {
+		ipv4 = QHostAddress(ip4);
+		ipv6 = QHostAddress(ip6);
 	}
 
 	void add_rsa_key(const std::string& pkey_str) {
@@ -50,8 +64,8 @@ struct IpWrapper {
 		key_pair.second = eax_optional(ekey);
 	}
 
-	std::string ipv4;
-	std::string ipv6;
+	QHostAddress ipv4;
+	QHostAddress ipv6;
 	rsa_eax_pair key_pair;
 };
 

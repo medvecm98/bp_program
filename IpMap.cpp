@@ -15,7 +15,7 @@ void IpMap::remove_from_map(pk_t pk) {
  * @param ip IP to use.
  * @return True, if update took place.
  */
-bool IpMap::update_ip(pk_t pk, const std::string& ip) {
+bool IpMap::update_ip(pk_t pk, const QHostAddress& ip) {
 	if (map_.find(pk) == map_.end()) {
 		return map_.insert({pk, IpWrapper(ip)}).second;
 	}
@@ -33,7 +33,7 @@ bool IpMap::update_ip(pk_t pk, const std::string& ip) {
  * @param ip6 IPv6 to use.
  * @return True, if update took place.
  */
-bool IpMap::update_ip(pk_t pk, const std::string& ip4, const std::string& ip6) {
+bool IpMap::update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6) {
 	if (map_.find(pk) == map_.end()) {
 		return map_.insert({pk, IpWrapper(ip4, ip6)}).second;
 	}
@@ -64,21 +64,21 @@ bool IpMap::update_eax(pk_t pk, const std::string& rsa) {
 	}
 }
 
-std::string IpMap::get_ip(pk_t pk) {
+QHostAddress IpMap::get_ip(pk_t pk) {
 	auto it = map_.find(pk);
 	if (it != map_.end()) {
 		//element was found in map
 		return it->second.ipv4;
 	}
 
-	return "";
+	return QHostAddress();
 }
 
 bool IpMap::have_ip(pk_t pk) {
 	auto it = map_.find(pk);
 
 	if (it != map_.end())
-		return (it->second.ipv4.empty() || it->second.ipv6.empty()) ? false : true;
+		return !(it->second.ipv4.isNull() || it->second.ipv6.isNull());
 
 	return false;
 }
