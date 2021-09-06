@@ -20,6 +20,13 @@ class Peer;
 #include "cryptopp/cryptlib.h"
 #include "cryptopp/osrng.h"
 
+#include <QObject>
+#include <QApplication>
+#include <QtNetwork/QTcpServer>
+#include <QtNetwork/QTcpSocket>
+#include <QtNetwork/QNetworkInterface>
+#include <QtCore>
+
 using tcp = boost::asio::ip::tcp;
 
 class PeerSession;
@@ -32,6 +39,7 @@ using msg_queue_ptr = std::shared_ptr< msg_queue>;
 using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
 using PeerSession_ptr = std::shared_ptr<PeerSession>;
 using session_map = std::unordered_map< pk_t, PeerSession_ptr>;
+
 
 #define PORT "14128"
 static constexpr int NORMAL_MESSAGE = 10;
@@ -124,6 +132,8 @@ private:
 	void sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver);
 };
 
+using networking_ptr = std::shared_ptr<Networking>;
+
 /**
  * Handles one session with one specific Peer.
  */
@@ -185,84 +195,19 @@ private:
 /**
  * Client side of the P2P peer.
  */
-class PeerClient {
+class PeerClient : public QObject {
+	Q_OBJECT
+
 public:
-	/**
-	 * @brief Construct a new PeerClient object.
-	 * 
-	 * Receive message queue is only for sessions, that would live long enoguh to write into it.
-	 * 
-	 * @param io_context Io_context to use with socket.
-	 * @param smq Send Message Queue. Queue containing messages to be sent.
-	 * @param rmq Receive Message Queue. Queue containing received messages, waiting to be processed.
-	 * @param sessions List of all sessions, waiting for answer.
-	 * @param peer_ip_map IpMap for sender Peer. Used for getting IpWrapper for requested receiving Peer.
-	 */
-	PeerClient(boost::asio::io_context& io_context, Networking& networking) :
-		socket_(io_context), resolver_(io_context), networking_(networking)
-	{
-		auto msg = std::move(networking_.to_send_msg.front());
-		networking_.to_send_msg.pop();
-		handle_message_send(std::move(msg));
-	}
+	PeerClient();
 
-	void handle_message_send(unique_ptr_message message) {
-		auto ip_map_iter = networking_.ip_map_.get_wrapper_for_pk(message->to());
-		if ((ip_map_iter != networking_.ip_map_.get_map_end()) && ip_map_iter->second.key_pair.first.has_value()) {
-			IpWrapper& ipw = ip_map_iter->second;
-			resolver_.async_resolve(ipw.ipv4, PORT, [this, &message, &ipw](const boost::system::error_code& ec,
-					const tcp::resolver::results_type& results) {
-				if (!ec) {
-					if (networking_.sessions_.find(message->seq()) == networking_.sessions_.end()) {
-						//we initialize new session
-						boost::asio::async_connect(
-							socket_, 
-							results, 
-							[this, &message, &ipw](
-								const boost::system::error_code &ec,
-								const tcp::endpoint &endpoint
-								) {
-									std::make_shared<PeerSession>(std::move(socket_), networking_)->start_write(std::move(message), ipw);
-								}
-						);
-					}
-					else {
-						//there is active session waiting for response
-						auto msg_to = message->to();
-						networking_.sessions_[msg_to]->start_write(std::move(message), ipw);
-						networking_.sessions_.erase(msg_to);
-					}
-				}
-			});
-		}
-		else {
-			/* 
-			 * IP and/or public key needs to be requested. Since we don't know which nespaper may hold this information
-			 * we need to ask them all. 
-			 */
-			news_database::const_iterator news_iter = networking_.news_database_begin;
+private slots:
+	void message_send();
+	void display_error();
 
-			for (; news_iter != networking_.news_database_end; news_iter++) {
-				std::shared_ptr<std::string> request_string;
-				request_string->append("r");
-				request_string->append(std::to_string(message->to()));
-				networking_.enroll_message_to_be_sent(
-					MFW::ReqCredentialsFactory(
-						MFW::CredentialsFactory(
-							networking_.ip_map_.my_public_id,
-							*(news_iter->second.get_first_authority())
-						),
-						true, true, true, false,
-						{request_string}, {}, {}, {}
-					)
-				);
-			}
-		}
-	}
 private:
-	tcp::socket socket_;
-	tcp::resolver resolver_;
-	Networking& networking_;
+	QTcpSocket* tcp_socket_ = nullptr;
+	QDataStream in_;
+	networking_ptr networking_;
 };
-
 #endif //PROGRAM_NETWORKING_H
