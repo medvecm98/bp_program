@@ -1,6 +1,12 @@
 #include <iostream>
 #include <filesystem>
 #include <cstdlib>
+
+#include "mainwindow.h"
+
+#include <QApplication>
+#include <QObject>
+
 #include "Article.h"
 #include "ArticleDatabase.h"
 #include "Message.h"
@@ -43,7 +49,7 @@ void print_help() {
 }
 
 /**
- * Finds all the missing files, that are necessary for correct behaiour.
+ * Finds all the missing files, that are necessary for correct behaviour.
  */
 void find_what_is_missing(std::unordered_set<std::string>& what_created) {
 	if (!std::filesystem::exists(ARTICLE_DIR)) {
@@ -77,17 +83,10 @@ struct ProgramContext {
 	Peer p;
 };
 
-#define ENV_VAR "XDG_DATA_HOME"
+int main(int argc, char *argv[]) {
+	QApplication a(argc, argv);
+	MainWindow w;
+	w.show();
 
-int main() {
-	//std::cout << "Nothing in main so far..." << std::endl;
-
-	if(const char* env_p = std::getenv(ENV_VAR))
-        std::cout << "Your "<< ENV_VAR << " is: " << env_p << '\n';
-	else
-		std::cout << ENV_VAR << " is empty" << '\n';
-
-	//handle_input();
-
-	return 0;
+	return a.exec();
 }
