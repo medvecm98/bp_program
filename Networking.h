@@ -29,17 +29,10 @@ class Peer;
 
 using tcp = boost::asio::ip::tcp;
 
-class PeerSession;
-
 using MFW = MessageFactoryWrapper;
-using msg_session_pair = std::pair< unique_ptr_message, PeerSession>;
-using msg_session_queue = std::queue< msg_session_pair>;
 using msg_queue = std::queue< unique_ptr_message>;
 using msg_queue_ptr = std::shared_ptr< msg_queue>;
 using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
-using PeerSession_ptr = std::shared_ptr<PeerSession>;
-using session_map = std::unordered_map< pk_t, PeerSession_ptr>;
-
 
 #define PORT 14128
 static constexpr int NORMAL_MESSAGE = 10;
@@ -70,13 +63,61 @@ using encrypted_message_map = std::unordered_multimap< pk_t, EncryptedMessageWra
 
 class PeerReceiver;
 class PeerSender;
+class Networking;
 
-class Networking {
+using networking_ptr = std::shared_ptr<Networking>;
+
+class PeerReceiver : public QObject {
+	Q_OBJECT
+
 public:
-	Networking() = default;
+	PeerReceiver(networking_ptr net);
 
-	explicit Networking(news_database::const_iterator ci) :
-		news_database_begin(ci) {}
+public slots:
+	void message_receive();
+
+private slots:
+	void display_error(QAbstractSocket::SocketError e) {
+		//TODO: implement
+		return;
+	}
+
+private:
+	QTcpServer* tcp_server_ = nullptr;
+	QTcpSocket* tcp_socket_ = nullptr;
+	QDataStream in_;
+	networking_ptr networking_;
+};
+
+/**
+ * Client side of the P2P peer.
+ */
+class PeerSender : public QObject {
+	Q_OBJECT
+
+public:
+	PeerSender(networking_ptr net);
+	void message_send(unique_ptr_message msg, IpWrapper& ipw);
+
+private slots:
+	void display_error(QAbstractSocket::SocketError) {
+		//TODO: implement
+		return;
+	}
+
+private:
+	QTcpSocket* tcp_socket_ = nullptr;
+	CryptoPP::AutoSeededRandomPool prng_;
+	networking_ptr networking_;
+};
+
+class Networking : std::enable_shared_from_this<Networking> {
+public:
+	Networking(const news_database& nd) 
+		: receiver_(PeerReceiver(shared_from_this()))
+		, sender_(PeerSender(shared_from_this()))
+		, news_db(nd)
+	{}
 
 	//template<class MSG>
 	bool enroll_message_to_be_sent(unique_ptr_message message);
@@ -123,64 +164,19 @@ public:
 private:
 	const int port_ = PORT;
 
-	const news_database::const_iterator news_database_begin;
-	const news_database::const_iterator news_database_end;
-	session_map sessions_;
+	const news_database& news_db;
 	msg_queue to_send_msg, received_msg;
 	msg_map waiting_messages;
 	encrypted_message_map messages_to_decrypt;
 	CryptoPP::AutoSeededRandomPool prng_;
-	//Peer& peer_;
+	PeerSender sender_;
+	PeerReceiver receiver_;
 	
 	QDataStream in_;
 
 	//boost::asio necessities
 	boost::asio::io_context io_ctx;
 
-};
-
-using networking_ptr = std::shared_ptr<Networking>;
-
-class PeerReceiver : public QObject {
-	Q_OBJECT
-
-public:
-	PeerReceiver(networking_ptr net);
-
-private slots:
-	void message_receive();
-	void display_error(QAbstractSocket::SocketError e) {
-		//TODO: implement
-		return;
-	}
-
-private:
-	QTcpServer* tcp_server_ = nullptr;
-	QTcpSocket* tcp_socket_ = nullptr;
-	QDataStream in_;
-	networking_ptr networking_;
-};
-
-/**
- * Client side of the P2P peer.
- */
-class PeerSender : public QObject {
-	Q_OBJECT
-
-public:
-	PeerSender(networking_ptr net);
-
-private slots:
-	void display_error(QAbstractSocket::SocketError) {
-		//TODO: implement
-		return;
-	}
-
-private:
-	void message_send(unique_ptr_message msg, IpWrapper& ipw);
-	QTcpSocket* tcp_socket_ = nullptr;
-	CryptoPP::AutoSeededRandomPool prng_;
-	networking_ptr networking_;
 };
 
 #endif //PROGRAM_NETWORKING_H

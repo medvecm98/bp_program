@@ -35,7 +35,8 @@ struct ArticleListWrapper {
 
 class Peer {
 public:
-	Peer() {
+	Peer() : networking_(news_)
+	{
 		CryptoPP::AutoSeededRandomPool prng;
 		std::random_device rd("/dev/urandom");
 		public_key_ = rd();

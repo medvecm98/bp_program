@@ -441,17 +441,36 @@ void Peer::handle_requests(unique_ptr_message message) {
 		//TODO: send unsupported error
 	}
 	else if (type == np2ps::CREDENTIALS) {
-		string_ptr_optional resp_ip4, resp_ip6;
-		rsa_public_ptr_optional resp_rsa_public;
+		QString resp_ip4, resp_ip6;
+		std::shared_ptr<rsa_public_optional> resp_rsa_public;
+		std::shared_ptr<eax_optional> resp_eax;
+
+		bool req_my_credentials = message->credentials().ipv4()[0] != 'r';
+		pk_t requested_credentials = 0;
+		if (req_my_credentials)
+			requested_credentials = QString(message->credentials().ipv4().c_str()).mid(1).toULongLong();
 
 		if (message->credentials().req_ipv4()) {
-			resp_ip4 = string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv4.toString().toStdString()));
+			if (req_my_credentials)
+				resp_ip4 = networking_.ip_map_.my_ip.ipv4.toString();
+			else if (networking_.ip_map_.have_ip4(requested_credentials))
+				resp_ip4 = networking_.ip_map_.get_ip4(requested_credentials).toString();
 		}
 		if (message->credentials().req_ipv6()) {
-			resp_ip6 = string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv6.toString().toStdString()));
+			if (req_my_credentials)
+				resp_ip6 = networking_.ip_map_.my_ip.ipv6.toString();
+			else if (networking_.ip_map_.have_ip6(requested_credentials))
+				resp_ip6 = networking_.ip_map_.get_ip6(requested_credentials).toString();
 		}
 		if (message->credentials().req_rsa_public_key()) {
-			resp_rsa_public = rsa_public_ptr_optional(std::make_shared<CryptoPP::RSA::PublicKey>(networking_.ip_map_.my_ip.key_pair.first.value()));
+			if (req_my_credentials)
+				resp_rsa_public = std::make_shared<rsa_public_optional>(networking_.ip_map_.my_ip.key_pair.first);
+			else if (networking_.ip_map_.have_rsa_public(requested_credentials))
+				resp_rsa_public = networking_.ip_map_.get_rsa_public(requested_credentials);
+		}
+		if (!req_my_credentials && message->credentials().req_eax_key()) {
+			if (networking_.ip_map_.have_eax(message->from()))
+				resp_eax = networking_.ip_map_.get_eax(message->from());
 		}
 
 		networking_.enroll_message_to_be_sent(
@@ -460,7 +479,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 					public_key_,
 					message->from()
 				),
-				resp_ip4, resp_ip6, resp_rsa_public, eax_ptr_optional()
+				resp_ip4, resp_ip6, resp_rsa_public, resp_eax
 			)
 		);
 	}

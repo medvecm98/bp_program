@@ -242,35 +242,35 @@ unique_ptr_message MFW::RespUserIsMemberFactory(unique_ptr_message&& msg, bool i
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::RespCredentialsFactory(unique_ptr_message&& msg, string_ptr_optional ip4, string_ptr_optional ip6, 
-	rsa_public_ptr_optional public_key, eax_ptr_optional eax_key) {
+unique_ptr_message MFW::RespCredentialsFactory(unique_ptr_message&& msg, QString ip4, QString ip6, 
+	std::shared_ptr<rsa_public_optional> public_key, std::shared_ptr<eax_optional> eax_key) {
 
-		if (ip4.has_value()) {
-			msg->mutable_credentials()->set_ipv4(*ip4.value());
+		if (!ip4.isEmpty()) {
+			msg->mutable_credentials()->set_ipv4(ip4.toStdString());
 			msg->mutable_credentials()->set_req_ipv4(true);
 		}
 		else
 			msg->mutable_credentials()->set_req_ipv4(false);
 
-		if (ip6.has_value()) {
+		if (!ip6.isEmpty()) {
 			msg->mutable_credentials()->set_req_ipv6(true);
-			msg->mutable_credentials()->set_ipv6(*ip6.value());
+			msg->mutable_credentials()->set_ipv6(ip6.toStdString());
 		}
 		else 
 			msg->mutable_credentials()->set_req_ipv6(false);
 
-		if (public_key.has_value()) {
+		if (public_key->has_value()) {
 			std::string string_key;
 			CryptoPP::StringSink rsa_pub_sink(string_key);
-			public_key.value()->DEREncode(rsa_pub_sink);
+			public_key->value().DEREncode(rsa_pub_sink);
 			msg->mutable_credentials()->set_rsa_public_key(string_key);
 			msg->mutable_credentials()->set_req_rsa_public_key(true);
 		}
 		else
 			msg->mutable_credentials()->set_req_rsa_public_key(false);
 
-		if (eax_key.has_value()) {
-			std::string string_key(reinterpret_cast<const char*>(&(*eax_key.value())[0]), eax_key.value()->size());
+		if (eax_key->has_value()) {
+			std::string string_key(reinterpret_cast<const char*>(&(eax_key->value())[0]), eax_key->value().size());
 			msg->mutable_credentials()->set_eax_key(string_key);
 			msg->mutable_credentials()->set_req_eax_key(true);
 		}

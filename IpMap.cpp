@@ -64,7 +64,7 @@ bool IpMap::update_eax(pk_t pk, const std::string& rsa) {
 	}
 }
 
-QHostAddress IpMap::get_ip(pk_t pk) {
+QHostAddress IpMap::get_ip4(pk_t pk) {
 	auto it = map_.find(pk);
 	if (it != map_.end()) {
 		//element was found in map
@@ -74,11 +74,69 @@ QHostAddress IpMap::get_ip(pk_t pk) {
 	return QHostAddress();
 }
 
-bool IpMap::have_ip(pk_t pk) {
+QHostAddress IpMap::get_ip6(pk_t pk) {
+	auto it = map_.find(pk);
+	if (it != map_.end()) {
+		//element was found in map
+		return it->second.ipv6;
+	}
+
+	return QHostAddress();
+}
+
+std::shared_ptr<rsa_public_optional> IpMap::get_rsa_public(pk_t pk) {
+	auto it = map_.find(pk);
+	if (it != map_.end()) {
+		//element was found in map
+		return std::make_shared<rsa_public_optional>(it->second.key_pair.first);
+	}
+
+	return {};
+}
+
+std::shared_ptr<eax_optional> IpMap::get_eax(pk_t pk) {
+	auto it = map_.find(pk);
+	if (it != map_.end()) {
+		//element was found in map
+		return std::make_shared<eax_optional>(it->second.key_pair.second);
+	}
+
+	return {};
+}
+
+
+bool IpMap::have_ip4(pk_t pk) {
 	auto it = map_.find(pk);
 
 	if (it != map_.end())
-		return !(it->second.ipv4.isNull() || it->second.ipv6.isNull());
+		return !it->second.ipv4.isNull();
+
+	return false;
+}
+
+bool IpMap::have_ip6(pk_t pk) {
+	auto it = map_.find(pk);
+
+	if (it != map_.end())
+		return !it->second.ipv6.isNull();
+
+	return false;
+}
+
+bool IpMap::have_rsa_public(pk_t pk) {
+	auto it = map_.find(pk);
+
+	if (it != map_.end())
+		return it->second.key_pair.first.has_value();
+
+	return false;
+}
+
+bool IpMap::have_eax(pk_t pk) {
+	auto it = map_.find(pk);
+
+	if (it != map_.end())
+		return it->second.key_pair.second.has_value();
 
 	return false;
 }

@@ -59,8 +59,8 @@ public:
 	static unique_ptr_message RespArticleListFactory(unique_ptr_message&& msg, article_container& articles);
 	static unique_ptr_message RespUserIsMemberFactory(unique_ptr_message&& msg, bool is_member, level_t req_level);
 	//static unique_ptr_message RespNewPublicKeyFactory(unique_ptr_message&& msg, const CryptoPP::RSA::PublicKey& public_key);
-	static unique_ptr_message RespCredentialsFactory(unique_ptr_message&& msg, string_ptr_optional ip4, string_ptr_optional ip6, 
-		rsa_public_ptr_optional public_key, eax_ptr_optional eax_key);
+	static unique_ptr_message RespCredentialsFactory(unique_ptr_message&& msg, QString ip4, QString ip6, 
+		std::shared_ptr<rsa_public_optional> public_key, std::shared_ptr<eax_optional> eax_key);
 
 	/* Basic factories: */
 	static unique_ptr_message ArticleDataChangeFactory(pk_t from, pk_t to, hash_t article_hash, bool download);

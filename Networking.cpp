@@ -117,7 +117,31 @@ void Networking::sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecBy
  * @param ipw IpWrapper of the receiver of this message.
  */
 void Networking::send_message(tcp::socket& tcp_socket, unique_ptr_message msg, IpWrapper& ipw) {
-    
+    auto ip_map_iter = ip_map_.get_wrapper_for_pk(msg->to());
+	if (ip_map_iter != ip_map_.get_map_end() && ip_map_iter->second.key_pair.first.has_value()) {
+		IpWrapper& ipw = ip_map_iter->second;
+		auto msg = std::move(to_send_msg.front());
+		to_send_msg.pop();
+		sender_.message_send(std::move(msg), ipw);
+	}
+	else {
+		auto news_end = news_db.cend();
+		for (auto news_iter = news_db.cbegin(); news_iter != news_end; news_iter++) {
+			std::shared_ptr<std::string> request_string;
+			request_string->append("r");
+			request_string->append(std::to_string(msg->to()));
+			enroll_message_to_be_sent(
+				MFW::ReqCredentialsFactory(
+					MFW::CredentialsFactory(
+						ip_map_.my_public_id,
+						*(news_iter->second.get_first_authority())
+					),
+					true, true, true, false,
+					{request_string}, {}, {}, {}
+				)
+			);
+		}
+	}
 }
 
 /**
@@ -128,7 +152,7 @@ void Networking::send_message(tcp::socket& tcp_socket, unique_ptr_message msg, I
  * @param ip_map_ IP map of where to check.
  */
 void check_ip(QTcpSocket* tcp_socket, pk_t pk_id, IpMap& ip_map_) {
-	if (!ip_map_.have_ip(pk_id)) {
+	if (!ip_map_.have_ip4(pk_id)) {
 		ip_map_.update_ip(pk_id, tcp_socket->peerAddress());
 	}
 }
@@ -196,7 +220,7 @@ std::string extract_encrypted_message(const QString& s_msg) {
  * @return Sequence number of received message, only if message was a request. Used to recycle `PeerSession` sessions. No value otherwise.
  */
 std::optional<seq_t> Networking::receive_message(QTcpSocket* tcp_socket) {
-	
+	return {1};
 }
 
 PeerReceiver::PeerReceiver(networking_ptr net) {
@@ -294,7 +318,7 @@ void PeerReceiver::message_receive() {
 	}
 	else if (msg_class == KEY_MESSAGE) {
 		auto m = std::make_unique<proto_message>();
-		m->ParseFromString(msg.mid(16).toStdString());
+		m->ParseFromString(msg.mid(1).toStdString());
 		check_ip(tcp_socket_, m->from(), networking_->ip_map_);
 		networking_->add_to_received(std::move(m));
 		return;
