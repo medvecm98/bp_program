@@ -348,6 +348,7 @@ void PeerReceiver::message_receive() {
 
 PeerSender::PeerSender(networking_ptr net) {
 	networking_ = net;
+	tcp_socket_ = new QTcpSocket();
 }
 
 void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {

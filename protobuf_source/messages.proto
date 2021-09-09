@@ -15,7 +15,7 @@ enum MessageType {
 	UPDATE_ARTICLE = 90; // done
 	CREDENTIALS = 100;   // done
 	SYMMETRIC_KEY = 110; // done
-	PUBLIC_KEY = 120; //done
+	PUBLIC_KEY = 120;    //done
 }
 
 enum MessageContext {
@@ -129,10 +129,10 @@ message Credentials {
 }
 
 message SymmetricKey {
-	string key = 1;
-	string signature = 2;
+	bytes key = 1;
+	bytes signature = 2;
 }
 
 message PublicKey {
-	string key = 1;
+	bytes key = 1;
 }
