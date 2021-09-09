@@ -22,6 +22,10 @@ find_library(CryptoPP cryptopp)
 add_subdirectory(protobuf_source)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-add_executable(news_p2p_sharing main.cpp mainwindow.cpp mainwindow.h mainwindow.ui Article.cpp Article.h CategoryEnums.h StringSplitter.h GlobalUsing.h ArticleDatabase.cpp ArticleDatabase.h Peer.cpp Peer.h IpWrapper.h IpMap.cpp IpMap.h NewspaperEntry.cpp NewspaperEntry.h Margins.h Message.cpp Message.h Networking.cpp Networking.h)
-target_link_libraries(news_p2p_sharing proto_msg proto_art ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES} Qt5::Widgets Qt5::Network Qt5::Core)
+add_executable(news_p2p_sharing main.cpp add_newspaper.h add_newspaper.cpp add_newspaper.ui form.h form.cpp form.ui
+	programcontext.h programcontext.cpp mainwindow.cpp mainwindow.h mainwindow.ui Article.cpp Article.h CategoryEnums.h
+	StringSplitter.h GlobalUsing.h ArticleDatabase.cpp ArticleDatabase.h Peer.cpp Peer.h IpWrapper.h IpMap.cpp IpMap.h
+	NewspaperEntry.cpp NewspaperEntry.h Margins.h Message.cpp Message.h Networking.cpp Networking.h)
+target_link_libraries(news_p2p_sharing proto_msg proto_art ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
+	Qt5::Widgets Qt5::Network Qt5::Core)
 #target_link_libraries(news_p2p_sharing PUBLIC ${CryptoPP})

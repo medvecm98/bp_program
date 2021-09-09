@@ -13,36 +13,14 @@
 #include "Peer.h"
 #include "Networking.h"
 #include "openssl/rsa.h"
+#include "programcontext.h"
+#include "form.h"
+#include "add_newspaper.h"
 
 
 #define ARTICLE_DIR "./articles"
 #define PEER_INFO "./peer_info.nfs"
 #define FILE_HEADER "./file_header.nfs"
-
-class PeerInfoSingleton {
-public:
-	PeerInfoSingleton& get_instance() {
-		static PeerInfoSingleton instance;
-		return instance;
-	}
-
-	bool get_peer_created() {
-		return peer_created_;
-	}
-
-	void set_peer_created(bool value) {
-		peer_created_ = value;
-	}
-private:
-	PeerInfoSingleton() {
-		peer_created_ = false;
-	}
-	~PeerInfoSingleton() {
-
-	}
-
-	bool peer_created_;
-};
 
 void print_help() {
 	std::cout << "h for help" << std::endl;
@@ -79,14 +57,26 @@ void handle_input() {
 	}
 }
 
-struct ProgramContext {
-	Peer p;
-};
-
 int main(int argc, char *argv[]) {
 	QApplication a(argc, argv);
 	MainWindow w;
+	Form* f = new Form();
+	add_newspaper* w_add_newspaper = new add_newspaper();
+
+	ProgramContext ctx;
+	w.setProgramContext(&ctx);
+
+	QObject::connect(w_add_newspaper, &add_newspaper::new_newspaper_in_db,
+					 &w, &MainWindow::newspaper_added_to_db);
+
+	f->setProgramContext(&ctx);
+	w.addForm("new_peer", f);
+	w_add_newspaper->setProgramContext(&ctx);
+	w.addForm("add_news", w_add_newspaper);
+
 	w.show();
+
+	std::cout << "B" << std::endl;
 
 	return a.exec();
 }

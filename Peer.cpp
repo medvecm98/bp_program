@@ -1,24 +1,33 @@
 #include "Peer.h"
 
 /**
+ * @brief Adds new article to its corresponding newspaper.
+ * 
+ * @param a Article to add.
+ */
+void Peer::enroll_new_article(Article a) {
+	news_[a.news_id()].add_article(a.main_hash(),std::move(a));
+}
+
+/**
  * Adds new newspaper to the collection.
  * @param newspaper_key Public key of newspaper.
  * @param newspaper_ip_domain IP, or domain name, of the newspaper.
  */
 void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain) {
-	news_.insert({newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name)});
-	networking_.ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
+	recently_added = news_.insert({newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name)}).first;
+	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
 }
 
 void Peer::load_ip_authorities(pk_t newspaper_key) {
-	networking_.enroll_message_to_be_sent(
+	networking_->enroll_message_to_be_sent(
 		MFW::ReqCredentialsFactory(
 			MFW::CredentialsFactory(
 				public_key_, 
 				newspaper_key
 			),
 			true, false, false, false,
-			string_ptr_optional(std::make_shared<std::string>(networking_.ip_map_.my_ip.ipv4.toString().toStdString())), 
+			string_ptr_optional(std::make_shared<std::string>(networking_->ip_map_.my_ip.ipv4.toString().toStdString())),
 			string_ptr_optional(), rsa_public_ptr_optional(), eax_ptr_optional()
 		)
 	);
@@ -28,7 +37,7 @@ bool Peer::request_margin_add(hash_t article, margin_vector& margin) {
 	auto found_article = find_article_in_database(article);
 
 	if (found_article.has_value()) {
-		networking_.enroll_message_to_be_sent(
+		networking_->enroll_message_to_be_sent(
 			MFW::SetMessageContextRequest(
 				MFW::UpdateMarginAddFactory(
 					public_key_,
@@ -37,6 +46,13 @@ bool Peer::request_margin_add(hash_t article, margin_vector& margin) {
 		return true;
 	}
 	return false;
+}
+
+void Peer::init_newspaper(my_string name) {
+	newspaper_name_ = name;
+	std::random_device rd("/dev/urandom");
+	newspaper_id_ = rd();
+	news_.insert({newspaper_id_, NewspaperEntry(public_key_, newspaper_id_, newspaper_name_)});
 }
 
 article_optional Peer::find_article_in_database(hash_t article_hash) {
@@ -82,8 +98,6 @@ size_t Peer::list_all_articles_from_news(article_container &articles) {
 	}
 	return article_counter;
 }
-
-
 
 //TODO: try to implement this as extensible as possible, e. g. using POLICIES
 /**
@@ -199,7 +213,7 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
  * Universal method to handle the message from the top of the message queue.
  */
 void Peer::handle_message() {
-	unique_ptr_message message = networking_.pop_message();
+	unique_ptr_message message = networking_->pop_message();
 	if (message->msg_ctx() == np2ps::REQUEST) {
 		handle_requests( std::move( message));
 	}
@@ -244,8 +258,8 @@ void Peer::handle_requests(unique_ptr_message message) {
 					message->article_all().level()),
 				message->seq());
 
-			networking_.store_to_map(std::move(message)); //stores current message, so it waits for answer
-			networking_.enroll_message_to_be_sent(std::move(user_check_msg)); //sends request for user level in given 
+			networking_->store_to_map(std::move(message)); //stores current message, so it waits for answer
+			networking_->enroll_message_to_be_sent(std::move(user_check_msg)); //sends request for user level in given
 		}
 		else {
 			/* send user requested article */
@@ -257,7 +271,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 				article.value()->select_level(article_whole, article_readers_iterator->second.peer_level);
 
 				//send message
-				networking_.enroll_message_to_be_sent(MFW::RespArticleDownloadFactory(
+				networking_->enroll_message_to_be_sent(MFW::RespArticleDownloadFactory(
 					MFW::ArticleDownloadFactory(
 						public_key_, 
 						message->from(), 
@@ -268,14 +282,33 @@ void Peer::handle_requests(unique_ptr_message message) {
 				));
 			}
 			else {
-				//TODO: send error back and give hint about who may have it
+				//article not found in database
+
 				std::vector<pk_t> article_peers;
 				auto [readers_begin, readers_end] = readers_.equal_range(message->article_all().article_hash());
 				if (readers_begin != readers_end) {
 					for (; readers_begin != readers_end; readers_begin++) {
 						article_peers.push_back(readers_begin->second.peer_key);
 					}
-					networking_.enroll_message_to_be_sent(
+					networking_->enroll_message_to_be_sent(
+						MFW::SetMessageContextOneWay(
+							MFW::ArticleSolicitationFactory(
+								public_key_,
+								message->from(),
+								message->article_all().article_hash(),
+								article_peers,
+								message->article_all().level()
+							)
+						)
+					);
+				}
+				else if (!journalists_.empty()) {
+					//TODO: redo if ArtileReaders and such are properly implemented
+
+					for (auto&& journalist : journalists_) {
+						article_peers.push_back(journalist);
+					}
+					networking_->enroll_message_to_be_sent(
 						MFW::SetMessageContextOneWay(
 							MFW::ArticleSolicitationFactory(
 								public_key_,
@@ -288,7 +321,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 					);
 				}
 				else {
-					networking_.enroll_message_to_be_sent(
+					networking_->enroll_message_to_be_sent(
 						MFW::SetMessageContextError(
 							MFW::ArticleSolicitationFactory(
 								public_key_,
@@ -306,7 +339,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 	else if (type == np2ps::ARTICLE_HEADER) {
 		auto article_header = find_article(message->article_header().article_hash());
 		if (article_header.has_value()) {
-			networking_.enroll_message_to_be_sent(
+			networking_->enroll_message_to_be_sent(
 				MFW::RespArticleHeaderFactory(
 					MFW::ArticleHeaderFactory(
 						public_key_,
@@ -337,7 +370,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 			list_all_articles_by_me(articles, categories, news_id);
 		}
 
-		networking_.enroll_message_to_be_sent(
+		networking_->enroll_message_to_be_sent(
 			MFW::RespArticleListFactory(
 				MFW::ArticleListFactory(
 					public_key_,
@@ -354,7 +387,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 		if ((find_result != user_map.end()) && (find_result->second >= message->user_is_member().level())) {
 			is_member = true;
 		}
-		networking_.enroll_message_to_be_sent(
+		networking_->enroll_message_to_be_sent(
 			MFW::RespUserIsMemberFactory(
 				MFW::UserIsMemberFactory(
 					public_key_,
@@ -452,28 +485,28 @@ void Peer::handle_requests(unique_ptr_message message) {
 
 		if (message->credentials().req_ipv4()) {
 			if (req_my_credentials)
-				resp_ip4 = networking_.ip_map_.my_ip.ipv4.toString();
-			else if (networking_.ip_map_.have_ip4(requested_credentials))
-				resp_ip4 = networking_.ip_map_.get_ip4(requested_credentials).toString();
+				resp_ip4 = networking_->ip_map_.my_ip.ipv4.toString();
+			else if (networking_->ip_map_.have_ip4(requested_credentials))
+				resp_ip4 = networking_->ip_map_.get_ip4(requested_credentials).toString();
 		}
 		if (message->credentials().req_ipv6()) {
 			if (req_my_credentials)
-				resp_ip6 = networking_.ip_map_.my_ip.ipv6.toString();
-			else if (networking_.ip_map_.have_ip6(requested_credentials))
-				resp_ip6 = networking_.ip_map_.get_ip6(requested_credentials).toString();
+				resp_ip6 = networking_->ip_map_.my_ip.ipv6.toString();
+			else if (networking_->ip_map_.have_ip6(requested_credentials))
+				resp_ip6 = networking_->ip_map_.get_ip6(requested_credentials).toString();
 		}
 		if (message->credentials().req_rsa_public_key()) {
 			if (req_my_credentials)
-				resp_rsa_public = std::make_shared<rsa_public_optional>(networking_.ip_map_.my_ip.key_pair.first);
-			else if (networking_.ip_map_.have_rsa_public(requested_credentials))
-				resp_rsa_public = networking_.ip_map_.get_rsa_public(requested_credentials);
+				resp_rsa_public = std::make_shared<rsa_public_optional>(networking_->ip_map_.my_ip.key_pair.first);
+			else if (networking_->ip_map_.have_rsa_public(requested_credentials))
+				resp_rsa_public = networking_->ip_map_.get_rsa_public(requested_credentials);
 		}
 		if (!req_my_credentials && message->credentials().req_eax_key()) {
-			if (networking_.ip_map_.have_eax(message->from()))
-				resp_eax = networking_.ip_map_.get_eax(message->from());
+			if (networking_->ip_map_.have_eax(message->from()))
+				resp_eax = networking_->ip_map_.get_eax(message->from());
 		}
 
-		networking_.enroll_message_to_be_sent(
+		networking_->enroll_message_to_be_sent(
 			MFW::RespCredentialsFactory(
 				MFW::CredentialsFactory(
 					public_key_,
@@ -508,23 +541,27 @@ void Peer::handle_responses(unique_ptr_message message) {
 		}
 	}
 	else if (type == np2ps::ARTICLE_LIST) {
-		article_list_wrapper_.article_headers.clear();
+		pk_t list_news_id = message->article_list().response().begin()->news_id();
+		auto article_list = news_[list_news_id].get_list_of_articles();
+		
 		for (auto it = message->article_list().response().begin(); it != message->article_list().response().end(); it++) {
-			article_list_wrapper_.article_headers.push_back(Article(*it));
+			article_list.article_headers.push_back(Article(*it));
 		}
+
+		emit(new_article_list(list_news_id));
 	}
 	else if (type == np2ps::USER_IS_MEMBER) {
 		if (message->user_is_member().is_member() && (message->user_is_member().level() > 127)) {
 			user_map.insert({message->user_is_member().user_pk(), message->user_is_member().level()});
 		}
-		if (networking_.check_if_in_map(message->seq())) {
+		if (networking_->check_if_in_map(message->seq())) {
 			if (message->user_is_member().is_member()) {
 				//user was member of given level, message can be sent
-				networking_.enroll_message_to_be_sent(networking_.load_from_map(message->seq()));
+				networking_->enroll_message_to_be_sent(networking_->load_from_map(message->seq()));
 			}
 			else {
 				//message can't be sent, user wasn't member of given level
-				networking_.load_from_map(message->seq());
+				networking_->load_from_map(message->seq());
 				//TODO: log error
 			}
 		}
@@ -532,23 +569,24 @@ void Peer::handle_responses(unique_ptr_message message) {
 	else if (type == np2ps::CREDENTIALS) {
 		if (message->credentials().req_ipv4()) {
 			if (message->credentials().req_ipv6()) {
-				networking_.ip_map_.update_ip((pk_t)message->from(), QHostAddress(QString(message->credentials().ipv4().c_str())), QHostAddress(QString(message->credentials().ipv6().c_str())));
+				networking_->ip_map_.update_ip((pk_t)message->from(), QHostAddress(QString(message->credentials().ipv4().c_str())), QHostAddress(QString(message->credentials().ipv6().c_str())));
 			}
 			else {
-				networking_.ip_map_.update_ip((pk_t)message->from(), QHostAddress(QString(message->credentials().ipv4().c_str())));
+				networking_->ip_map_.update_ip((pk_t)message->from(), QHostAddress(QString(message->credentials().ipv4().c_str())));
 			}
 		}
 		if (message->credentials().req_rsa_public_key()) {
-			networking_.ip_map_.update_rsa_public((pk_t)message->from(), message->credentials().rsa_public_key());
+			networking_->ip_map_.update_rsa_public((pk_t)message->from(), message->credentials().rsa_public_key());
+			
 		}
 		if (message->credentials().req_eax_key()) {
-			networking_.ip_map_.update_eax((pk_t)message->from(), message->credentials().eax_key());
+			networking_->ip_map_.update_eax((pk_t)message->from(), message->credentials().eax_key());
 		}
 	}
 }
 
 void Peer::generate_article_all_message(pk_t destination, hash_t article_hash) {
-	networking_.enroll_message_to_be_sent(
+	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextRequest(
 			MFW::ArticleDownloadFactory(
 				public_key_,
@@ -564,7 +602,7 @@ void Peer::generate_article_all_message(pk_t destination, hash_t article_hash) {
 }
 
 void Peer::generate_article_header_message(pk_t destination, hash_t article_hash) {
-	networking_.enroll_message_to_be_sent(
+	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextRequest(
 			MFW::ArticleHeaderFactory(
 				public_key_,
@@ -578,16 +616,16 @@ void Peer::generate_article_header_message(pk_t destination, hash_t article_hash
 void Peer::handle_one_way(unique_ptr_message msg) {
 	auto type = msg->msg_type();
 	if (type == np2ps::ARTICLE_SOLICITATION) {
-		auto check_for_existence = networking_.soliciting_articles.find(msg->article_sol().article_hash());
-		if (check_for_existence == networking_.soliciting_articles.end()) {
+		auto check_for_existence = networking_->soliciting_articles.find(msg->article_sol().article_hash());
+		if (check_for_existence == networking_->soliciting_articles.end()) {
 			std::vector<pk_t> potential_owners;
 			for (auto i = msg->article_sol().possible_owners().begin(); i != msg->article_sol().possible_owners().end(); i++) {
 				potential_owners.push_back(*i);
 			}
-			networking_.soliciting_articles.insert({msg->article_sol().article_hash(), std::move(potential_owners)});
+			networking_->soliciting_articles.insert({msg->article_sol().article_hash(), std::move(potential_owners)});
 		}
-		auto destination = networking_.soliciting_articles[msg->article_sol().article_hash()].back();
-		networking_.soliciting_articles[msg->article_sol().article_hash()].pop_back();
+		auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back();
+		networking_->soliciting_articles[msg->article_sol().article_hash()].pop_back();
 		generate_article_all_message(destination, msg->article_sol().article_hash());
 	}
 }
@@ -595,10 +633,10 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 void Peer::handle_error(unique_ptr_message msg) {
 	auto type = msg->msg_type();
 	if (type == np2ps::ARTICLE_SOLICITATION) {
-		auto check_for_existence = networking_.soliciting_articles.find(msg->article_sol().article_hash());
-		if (check_for_existence != networking_.soliciting_articles.end()) {
-			auto destination = networking_.soliciting_articles[msg->article_sol().article_hash()].back();
-			networking_.soliciting_articles[msg->article_sol().article_hash()].pop_back();
+		auto check_for_existence = networking_->soliciting_articles.find(msg->article_sol().article_hash());
+		if (check_for_existence != networking_->soliciting_articles.end()) {
+			auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back();
+			networking_->soliciting_articles[msg->article_sol().article_hash()].pop_back();
 			generate_article_all_message(destination, msg->article_sol().article_hash());
 		}
 	}

@@ -21,7 +21,8 @@ void send_message_using_socket(QTcpSocket* tcp_socket, unique_ptr_message msg) {
 }
 
 bool Networking::enroll_message_to_be_sent(unique_ptr_message message) {
-    to_send_msg.push(std::move(message));
+    //to_send_msg.push(std::move(message));
+	emit new_message_enrolled(std::move(message));
     return true;
 }
 
@@ -100,6 +101,10 @@ void Networking::sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecBy
 	output << send_msg_str;
 }
 
+void Networking::send_message_again_ip(pk_t message_originally_to) {
+
+}
+
 /**
  * @brief Sends message into the network using provided TCP socket.
  * 
@@ -112,17 +117,15 @@ void Networking::sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecBy
  * ...conatining 20 -> Key exchange message
  * ```
  * 
- * @param tcp_socket Socket to use when sending message.
  * @param msg Pointer to message to send.
- * @param ipw IpWrapper of the receiver of this message.
  */
-void Networking::send_message(tcp::socket& tcp_socket, unique_ptr_message msg, IpWrapper& ipw) {
+void Networking::send_message(unique_ptr_message msg) {
     auto ip_map_iter = ip_map_.get_wrapper_for_pk(msg->to());
 	if (ip_map_iter != ip_map_.get_map_end() && ip_map_iter->second.key_pair.first.has_value()) {
 		IpWrapper& ipw = ip_map_iter->second;
-		auto msg = std::move(to_send_msg.front());
-		to_send_msg.pop();
-		sender_.message_send(std::move(msg), ipw);
+		//auto msg = std::move(to_send_msg.front());
+		//to_send_msg.pop();
+		sender_->message_send(std::move(msg), ipw);
 	}
 	else {
 		auto news_end = news_db.cend();
@@ -141,6 +144,7 @@ void Networking::send_message(tcp::socket& tcp_socket, unique_ptr_message msg, I
 				)
 			);
 		}
+		waiting_ip.insert({msg->to(), msg});
 	}
 }
 
@@ -223,6 +227,11 @@ std::optional<seq_t> Networking::receive_message(QTcpSocket* tcp_socket) {
 	return {1};
 }
 
+void Networking::init_sender_receiver() {
+	sender_ = std::make_shared<PeerSender>(shared_from_this());
+	receiver_ = std::make_shared<PeerReceiver>(shared_from_this());
+}
+
 PeerReceiver::PeerReceiver(networking_ptr net) {
 	tcp_server_ = new QTcpServer();
 	networking_ = net;
@@ -286,7 +295,7 @@ void PeerReceiver::message_receive() {
 			);
 
 			//deserialize
-			unique_ptr_message m = std::make_unique<proto_message>();
+			unique_ptr_message m = std::make_shared<proto_message>();
 			m->ParseFromString(dec_msg);
 			if (m->msg_ctx() == np2ps::REQUEST) {
 				seq_t rv = m->seq();
@@ -317,11 +326,11 @@ void PeerReceiver::message_receive() {
 		}
 	}
 	else if (msg_class == KEY_MESSAGE) {
-		auto m = std::make_unique<proto_message>();
+		auto m = std::make_shared<proto_message>();
 		m->ParseFromString(msg.mid(1).toStdString());
 		check_ip(tcp_socket_, m->from(), networking_->ip_map_);
 		networking_->add_to_received(std::move(m));
-		return;
+		return; 
 	}
 }
 

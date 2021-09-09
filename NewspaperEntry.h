@@ -7,6 +7,11 @@
 
 using database_iterator_t = article_database_container::const_iterator;
 
+struct ArticleListWrapper {
+	std::set<my_string> categories;
+	std::vector<Article> article_headers; 
+};
+
 class NewspaperEntry {
 public:
 	NewspaperEntry() = default;
@@ -34,12 +39,18 @@ public:
 	level_t level() {
 		return level_;
 	}
+
+	ArticleListWrapper& get_list_of_articles() {
+		return article_list_wrapper_;
+	};
+
 private:
 	pk_t news_id_;
 	my_string news_name_;
 	article_database_container _articles; //downloaded articles from these newspapers
 	user_container _authorities; //authorities of these newspapers
 	level_t level_; //level for given newspaper
+	ArticleListWrapper article_list_wrapper_; //saving requested article list
 };
 
 using news_database = std::unordered_map<pk_t, NewspaperEntry>;

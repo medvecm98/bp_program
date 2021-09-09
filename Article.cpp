@@ -1,9 +1,5 @@
 #include "Article.h"
 
-Article::Article(const my_string& path_file) {
-	_path_to_article_file = path_file;
-}
-
 /**
  * @brief Construct a new Article::Article object from protobuf Article.
  * 
@@ -51,51 +47,14 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 
 Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_article, ""){}
 
-
-/**
- * \brief Used to initialize a new article, from "scratch".
- *
- * @tparam T Container of categories.
- * @param path_header
- * @param author_name
- * @param author_id
- * @param categories
- */
-template<class Peer_t, class NewspaperEntry_t>
-void Article::initialize_article(const category_container &categories, const std::string& file_path, 
-	const Peer_t& me, const NewspaperEntry_t& news_entry )
-{
-
-	_path_to_article_file = file_path;
-
-	for (auto&& i : categories) {
-		_categories.insert(i);
-	}
-
-	_news_name = news_entry.get_name();
-	_news_id = news_entry.get_id();
-	_author_name = me.get_name();
-	_author_id = me.get_public_key();
-	_heading = "";
-
-	/* main hash, hashes, length and heading are calculated and found here: */
-	calculate_hashes(_hashes);
-
-	if (!categories.empty()) {
-		for (auto&& cat : categories) {
-			_categories.insert(cat);
-		}
-	}
-
-
-}
-
 /**
  * Calculated hashes for various paragraphs. Will also fill in heading_ member.
  * @param hashes Where to put hashes.
  */
 void Article::calculate_hashes(hashes_container& hashes) {
 	std::fstream article_file(_path_to_article_file);
+	if (article_file.is_open())
+		std::cout << "I'm open" << std::endl;
 
 	my_string line, paragraph;
 	int h_counter = 0;
@@ -106,7 +65,8 @@ void Article::calculate_hashes(hashes_container& hashes) {
 			std::regex_search(line, m, r);
 			while (!m.ready()) {}
 			if (!m.empty()) {
-				_heading = StringHelpers::Trim(line.substr(m.position(1) + m[1].length()));
+				//_heading = StringHelpers::Trim(line.substr(m.position(1) + m[1].length()));
+				_heading = line;
 			}
 		}
 

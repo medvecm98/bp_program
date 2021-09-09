@@ -2,6 +2,7 @@
 #define ADD_NEWSPAPER_H
 
 #include <QWidget>
+#include <QTreeWidget>
 #include "programcontext.h"
 
 namespace Ui {
@@ -18,6 +19,9 @@ public:
 		ctx = c;
 	}
 	~add_newspaper();
+
+signals:
+	void new_newspaper_in_db();
 
 private slots:
 	void on_buttonBox_accepted();

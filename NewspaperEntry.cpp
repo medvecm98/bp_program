@@ -1,7 +1,3 @@
-//
-// Created by michal on 26. 3. 2021.
-//
-
 #include "NewspaperEntry.h"
 
 NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name) {

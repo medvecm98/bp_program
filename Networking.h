@@ -111,18 +111,23 @@ private:
 	networking_ptr networking_;
 };
 
-class Networking : std::enable_shared_from_this<Networking> {
+class Networking : public QObject, public std::enable_shared_from_this<Networking> {
+	Q_OBJECT
+
 public:
 	Networking(const news_database& nd) 
-		: receiver_(PeerReceiver(shared_from_this()))
-		, sender_(PeerSender(shared_from_this()))
+		: sender_receiver_initialized(false)
 		, news_db(nd)
-	{}
+	{
+		QObject::connect(this, &Networking::new_message_enrolled,
+						 this, &Networking::send_message);
+	}
 
-	//template<class MSG>
 	bool enroll_message_to_be_sent(unique_ptr_message message);
 
-	void send_message(tcp::socket&, unique_ptr_message, IpWrapper&);
+	void init_sender_receiver();
+
+
 	std::optional<seq_t> receive_message(QTcpSocket* tcp_socket);
 	
 	unique_ptr_message pop_message() {
@@ -132,17 +137,17 @@ public:
 	}
 
 	void store_to_map(unique_ptr_message&& msg) {
-		waiting_messages.insert( {msg->seq(), std::move(msg)} );
+		waiting_level.insert( {msg->seq(), std::move(msg)} );
 	}
 
 	bool check_if_in_map(std::size_t seq) {
-		return waiting_messages.find(seq) != waiting_messages.end();
+		return waiting_level.find(seq) != waiting_level.end();
 	}
 
 	unique_ptr_message load_from_map(std::size_t seq) {
-		auto msg_iter = waiting_messages.find(seq);
+		auto msg_iter = waiting_level.find(seq);
 		unique_ptr_message rv = std::move(msg_iter->second);
-		waiting_messages.erase(msg_iter);
+		waiting_level.erase(msg_iter);
 		return std::move(rv);
 	}
 
@@ -151,7 +156,7 @@ public:
 	}
 
 	void add_to_messages_to_decrypt(pk_t pk_str, EncryptedMessageWrapper&& emw) {
-		messages_to_decrypt.insert({pk_str, emw});
+		waiting_decrypt.insert({pk_str, emw});
 	}
 	
 	void sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver);
@@ -161,16 +166,25 @@ public:
 	IpMap ip_map_;
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles;
 
+public slots:
+	void send_message(unique_ptr_message);
+	void send_message_again_ip(pk_t message_originally_to);
+
+signals:
+	void new_message_enrolled(unique_ptr_message);
+
 private:
 	const int port_ = PORT;
 
 	const news_database& news_db;
 	msg_queue to_send_msg, received_msg;
-	msg_map waiting_messages;
-	encrypted_message_map messages_to_decrypt;
+	msg_map waiting_level; //<seq number of message, message>
+	encrypted_message_map waiting_decrypt; //<pk_t of other holder of symmetric key, message>
+	std::unordered_map<pk_t, unique_ptr_message> waiting_ip; //<pk_t of receiver, message to send to receiver>
 	CryptoPP::AutoSeededRandomPool prng_;
-	PeerSender sender_;
-	PeerReceiver receiver_;
+	bool sender_receiver_initialized;
+	std::shared_ptr<PeerSender> sender_;
+	std::shared_ptr<PeerReceiver> receiver_;
 	
 	QDataStream in_;
 

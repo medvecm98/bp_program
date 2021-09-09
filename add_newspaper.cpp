@@ -23,6 +23,7 @@ void add_newspaper::on_buttonBox_accepted() {
 	ctx->p.add_new_newspaper(ui->lineEdit_public_id->text().toULongLong(), ui->lineEdit_name->text().toStdString(),
 							 ui->lineEdit_ip->text().toStdString());
 	clear_all_lineEdit();
+	emit(new_newspaper_in_db());
 	this->hide();
 }
 

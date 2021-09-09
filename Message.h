@@ -13,7 +13,7 @@ using margin_ptr = std::unique_ptr<Margin>;
 using msg_ctx_t = np2ps::MessageContext;
 
 using proto_message = np2ps::Message;
-using unique_ptr_message = std::unique_ptr< proto_message>;
+using unique_ptr_message = std::shared_ptr< proto_message>;
 
 using string_ptr_optional = std::optional<std::shared_ptr<std::string>>;
 using rsa_public_ptr_optional = std::optional<std::shared_ptr<CryptoPP::RSA::PublicKey>>;
@@ -31,7 +31,7 @@ public:
 	}
 
 	static unique_ptr_message upm_factory() {
-		return std::make_unique<proto_message>();
+		return std::make_shared<proto_message>();
 	}
 
 	/* Requests: */

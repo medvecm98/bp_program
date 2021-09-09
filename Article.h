@@ -128,8 +128,7 @@ private:
 
 class Article {
 public:
-	explicit Article() = default;
-	explicit Article(const my_string&);
+	Article() = default;
 	explicit Article(const np2ps::Article& protobuf_article);
 	explicit Article(const np2ps::Article& protobuf_article_header, const std::string& article_actual);
 	void open_fstream(std::fstream& stream);
@@ -142,9 +141,50 @@ public:
 	
 	void calculate_hashes(hashes_container&);
 
-	template<class Peer_t, class NewspaperEntry_t>
-	void initialize_article(const category_container &categories, const std::string& file_path, 
-							const Peer_t& me, const NewspaperEntry_t& news_entry );
+	/**
+	 * \brief Used to initialize a new article, from "scratch".
+	 *
+	 * @tparam T Container of categories.
+	 * @param path_header
+	 * @param author_name
+	 * @param author_id
+	 * @param categories
+	 */
+	template<class Container, class Peer_t, class NewspaperEntry_t>
+	void initialize_article(const Container &categories, const std::string& file_path,
+		Peer_t& me, NewspaperEntry_t& news_entry )
+	{
+
+		_path_to_article_file = file_path;
+
+		bool at_least_one_category = false;
+		for (auto&& i : categories) {
+			at_least_one_category = true;
+			_categories.insert(i);
+		}
+
+		if (!at_least_one_category) {
+			_categories.insert("no_cat");
+		}
+
+		_news_name = news_entry.get_name();
+		_news_id = news_entry.get_id();
+		_author_name = me.get_name();
+		_author_id = me.get_public_key();
+		_heading = "";
+
+		/* main hash, hashes, length and heading are calculated and found here: */
+		calculate_hashes(_hashes);
+
+		if (!categories.empty()) {
+			for (auto&& cat : categories) {
+				_categories.insert(cat);
+			}
+		}
+
+
+	}
+
 
 	bool is_in_category(const std::string& category) const;
 
@@ -237,8 +277,15 @@ using article_database_container = std::map<hash_t, Article>;
 struct ArticleReaders {
 	Article article;
 	std::unordered_map<pk_t, user_variant> readers;
-	explicit ArticleReaders(Article a) :
-		article(std::move(a)) {}
+	ArticleReaders(Article a, pk_t user, user_variant reader) 
+	: article(std::move(a))
+	{
+		readers.insert({user, reader});
+	}
+
+	void add_reader(pk_t user, user_variant reader) {
+		readers.insert({user, reader});
+	}
 };
 
 /*

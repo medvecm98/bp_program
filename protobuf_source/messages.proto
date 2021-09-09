@@ -78,6 +78,7 @@ message ArticleList {
 	bool all_articles = 1;
 	// request
 	repeated string categories = 2;
+	int32 count = 4;
 	// response
 	repeated Article response = 3;
 }
