@@ -45,8 +45,14 @@ public:
 		CryptoPP::AutoSeededRandomPool prng;
 		std::random_device rd("/dev/urandom");
 		public_key_ = rd();
-		pub_pri_pair_.second.GenerateRandomWithKeySize(prng, 2048);
-		pub_pri_pair_.first = std::move(CryptoPP::RSA::PublicKey(pub_pri_pair_.second));
+
+		CryptoPP::RSA::PrivateKey private_key_new;
+		private_key_new.GenerateRandomWithKeySize(prng, 2048);
+		CryptoPP::RSA::PublicKey public_key_new(private_key_new);
+
+		networking_->ip_map_.my_ip.add_rsa_key(std::move(public_key_new));
+		networking_->ip_map_.private_rsa = {std::move(private_key_new)};
+
 		newspaper_id_ = 0;
 
 		QObject::connect(this, &Peer::ip_credentials_arrived,

@@ -236,7 +236,7 @@ void Networking::init_sender_receiver() {
 PeerReceiver::PeerReceiver(networking_ptr net) {
 	tcp_server_ = new QTcpServer();
 	networking_ = net;
-	if (!tcp_server_->listen(QHostAddress(QString("127.0.0.1")), 65432)) {
+	if (!tcp_server_->listen(networking_->ip_map_.my_ip.ipv4, 14128)) {
 		QTextStream(stdout)
 			<< "Failed to start the server "
 			<< tcp_server_->errorString()

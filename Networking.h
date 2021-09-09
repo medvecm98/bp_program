@@ -119,6 +119,17 @@ public:
 		: sender_receiver_initialized(false)
 		, news_db(nd)
 	{
+		QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
+		for (int i = 0; i < ipAddressesList.size(); ++i) {
+			if (ipAddressesList.at(i) != QHostAddress::LocalHost &&
+				ipAddressesList.at(i).toIPv4Address()) {
+				ip_map_.my_ip.ipv4 = ipAddressesList.at(i);
+				break;
+			}
+		}
+
+		std::cout << ip_map_.my_ip.ipv4.toString().toStdString() << '\n';
+
 		QObject::connect(this, &Networking::new_message_enrolled,
 						 this, &Networking::send_message);
 	}
