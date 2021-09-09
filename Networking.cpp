@@ -334,6 +334,7 @@ void PeerReceiver::message_receive() {
 			);
 			//message will now wait until symmetric key is received
 			networking_->add_to_messages_to_decrypt(pk_str, EncryptedMessageWrapper(e_msg, iv, pk_str, NORMAL_MESSAGE));
+			tcp_socket_->disconnect();
 			return;
 		}
 	}
@@ -342,6 +343,7 @@ void PeerReceiver::message_receive() {
 		m->ParseFromString(msg.mid(1).toStdString());
 		check_ip(tcp_socket_, m->from(), networking_->ip_map_);
 		networking_->add_to_received(std::move(m));
+		tcp_socket_->disconnect();
 		return; 
 	}
 }
