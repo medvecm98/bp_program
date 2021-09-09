@@ -47,7 +47,6 @@ public:
 	}
 	
 	static unique_ptr_message ReqUserIsMemberFactory(unique_ptr_message&& msg, level_t level);
-	static unique_ptr_message ReqNewPublicKeyFactory(unique_ptr_message&& msg, const CryptoPP::RSA::PublicKey& public_key);
 	static unique_ptr_message ReqCredentialsFactory(unique_ptr_message&& msg, bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
 		string_ptr_optional ip4, string_ptr_optional ip6, rsa_public_ptr_optional public_key, eax_ptr_optional eax_key);
 
@@ -73,6 +72,7 @@ public:
 	static unique_ptr_message UpdateMarginUpdateFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin);
 	static unique_ptr_message UpdateArticleFactory(pk_t from, pk_t to, hash_t article_hash);
 	static unique_ptr_message CredentialsFactory(pk_t from, pk_t to);
+	static unique_ptr_message PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::PublicKey& key);
 
 	template<typename PeerContainer>
 	static unique_ptr_message ArticleSolicitationFactory(pk_t from, pk_t to, hash_t article_hash, const PeerContainer& peers, std::int32_t level = 127) {

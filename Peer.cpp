@@ -17,6 +17,14 @@ void Peer::enroll_new_article(Article a) {
 void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain) {
 	recently_added = news_.insert({newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name)}).first;
 	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
+
+	networking_->enroll_message_to_be_sent(MFW::SetMessageContextOneWay(
+		MFW::PublicKeyFactory(
+			public_key_,
+			newspaper_key,
+			networking_->ip_map_.my_ip.key_pair.first.value()
+		)
+	));
 }
 
 void Peer::load_ip_authorities(pk_t newspaper_key) {
@@ -212,8 +220,7 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
 /**
  * Universal method to handle the message from the top of the message queue.
  */
-void Peer::handle_message() {
-	unique_ptr_message message = networking_->pop_message();
+void Peer::handle_message(unique_ptr_message message) {
 	if (message->msg_ctx() == np2ps::REQUEST) {
 		handle_requests( std::move( message));
 	}
@@ -557,11 +564,13 @@ void Peer::handle_responses(unique_ptr_message message) {
 		if (networking_->check_if_in_map(message->seq())) {
 			if (message->user_is_member().is_member()) {
 				//user was member of given level, message can be sent
-				networking_->enroll_message_to_be_sent(networking_->load_from_map(message->seq()));
+
+				emit user_is_member_verification(message->seq(), true);
 			}
 			else {
 				//message can't be sent, user wasn't member of given level
-				networking_->load_from_map(message->seq());
+
+				emit user_is_member_verification(message->seq(), false);
 				//TODO: log error
 			}
 		}
@@ -581,6 +590,7 @@ void Peer::handle_responses(unique_ptr_message message) {
 		}
 		if (message->credentials().req_eax_key()) {
 			networking_->ip_map_.update_eax((pk_t)message->from(), message->credentials().eax_key());
+			emit new_symmetric_key(message->from());
 		}
 	}
 }
@@ -627,6 +637,49 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back();
 		networking_->soliciting_articles[msg->article_sol().article_hash()].pop_back();
 		generate_article_all_message(destination, msg->article_sol().article_hash());
+	}
+	else if (type == np2ps::SYMMETRIC_KEY) {
+		CryptoPP::AutoSeededRandomPool rng;
+		std::string key_str = msg->symmetric_key().key();
+		std::string signature_str = msg->symmetric_key().signature();
+
+		CryptoPP::SecByteBlock key_encrypted(reinterpret_cast<const CryptoPP::byte*>(&key_str[0]), key_str.size());
+		CryptoPP::SecByteBlock signature(reinterpret_cast<const CryptoPP::byte*>(&signature_str[0]), signature_str.size());
+
+		CryptoPP::RSASS<CryptoPP::PSSR, CryptoPP::SHA256>::Verifier verifier(networking_->ip_map_.get_rsa_public(msg->from())->value());
+		CryptoPP::RSAES_OAEP_SHA_Decryptor rsa_decryptor(networking_->ip_map_.private_rsa.value());
+
+		std::string key_decrypted_str;
+
+		CryptoPP::StringSource ss1(
+			key_encrypted.data(),
+			key_encrypted.size(),
+			true,
+			new CryptoPP::PK_DecryptorFilter(
+				rng,
+				rsa_decryptor,
+				new CryptoPP::StringSink(key_decrypted_str)
+			)
+		);
+
+		CryptoPP::SecByteBlock key_decrypted(reinterpret_cast<const CryptoPP::byte*>(&key_decrypted_str[0]), key_decrypted_str.size());
+
+		bool verification_result = verifier.VerifyMessage(
+			key_decrypted.data(),
+			key_decrypted.SizeInBytes(),
+			signature,
+			signature.size()
+		);
+
+		if (!verification_result) {
+			//TODO: throw error
+		}
+		else {
+			networking_->ip_map_.get_wrapper_for_pk(msg->from())->second.add_eax_key(std::move(key_decrypted));
+		}
+	}
+	else if (type == np2ps::PUBLIC_KEY) {
+		networking_->ip_map_.update_rsa_public((pk_t)msg->from(), msg->public_key().key());
 	}
 }
 

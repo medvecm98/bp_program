@@ -152,7 +152,7 @@ public:
 	}
 
 	void add_to_received(unique_ptr_message msg) {
-		received_msg.push(std::move(msg));
+		emit new_message_received(msg);
 	}
 
 	void add_to_messages_to_decrypt(pk_t pk_str, EncryptedMessageWrapper&& emw) {
@@ -169,9 +169,12 @@ public:
 public slots:
 	void send_message(unique_ptr_message);
 	void send_message_again_ip(pk_t message_originally_to);
+	void decrypt_encrypted_messages(pk_t symmetric_key_sender);
+	void user_member_results(seq_t msg_seq, bool is_member);
 
 signals:
 	void new_message_enrolled(unique_ptr_message);
+	void new_message_received(unique_ptr_message);
 
 private:
 	const int port_ = PORT;
@@ -180,7 +183,7 @@ private:
 	msg_queue to_send_msg, received_msg;
 	msg_map waiting_level; //<seq number of message, message>
 	encrypted_message_map waiting_decrypt; //<pk_t of other holder of symmetric key, message>
-	std::unordered_map<pk_t, unique_ptr_message> waiting_ip; //<pk_t of receiver, message to send to receiver>
+	std::unordered_multimap<pk_t, unique_ptr_message> waiting_ip; //<pk_t of receiver, message to send to receiver>
 	CryptoPP::AutoSeededRandomPool prng_;
 	bool sender_receiver_initialized;
 	std::shared_ptr<PeerSender> sender_;

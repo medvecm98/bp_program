@@ -128,6 +128,7 @@ void Networking::send_message(unique_ptr_message msg) {
 		sender_->message_send(std::move(msg), ipw);
 	}
 	else {
+		//request IP and public key from authority
 		auto news_end = news_db.cend();
 		for (auto news_iter = news_db.cbegin(); news_iter != news_end; news_iter++) {
 			std::shared_ptr<std::string> request_string;
@@ -247,6 +248,40 @@ PeerReceiver::PeerReceiver(networking_ptr net) {
 	in_.setVersion(QDataStream::Qt_5_0);
 }
 
+void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlock iv, IpWrapper& ipw, networking_ptr networking) {
+	symmetric_cipher::Decryption dec;
+
+	//symmetric key present
+
+	dec.SetKeyWithIV(ipw.key_pair.second.value(), ipw.key_pair.second.value().size(), iv);
+	std::string dec_msg; //decrypted message
+	CryptoPP::StringSource s(
+		e_msg,
+		true,
+		new CryptoPP::AuthenticatedDecryptionFilter (
+			dec,
+			new CryptoPP::StringSink(
+				dec_msg
+			)
+		)
+	);
+
+	//deserialize
+
+	unique_ptr_message m = std::make_shared<proto_message>();
+	m->ParseFromString(dec_msg);
+	if (m->msg_ctx() == np2ps::REQUEST) {
+		seq_t rv = m->seq();
+		networking->add_to_received(std::move(m));
+		return;
+	}
+	else {
+		networking->add_to_received(std::move(m));
+		return;
+	}
+
+}
+
 void PeerReceiver::message_receive() {
 	
 	tcp_socket_ = tcp_server_->nextPendingConnection();
@@ -275,37 +310,9 @@ void PeerReceiver::message_receive() {
 		check_ip(tcp_socket_, pk_str, networking_->ip_map_);
 		
 		//decrypt
-		symmetric_cipher::Decryption dec;
 		auto& [ipw_pk, ipw] = *(networking_->ip_map_.get_wrapper_for_pk(pk_str));
 		if (ipw.key_pair.second.has_value()) {
-			//symmetric key present
-			dec.SetKeyWithIV(ipw.key_pair.second.value(), ipw.key_pair.second.value().size(), iv);
-
-			std::string dec_msg; //decrypted message
-
-			CryptoPP::StringSource s(
-				e_msg,
-				true,
-				new CryptoPP::AuthenticatedDecryptionFilter (
-					dec,
-					new CryptoPP::StringSink(
-						dec_msg
-					)
-				)
-			);
-
-			//deserialize
-			unique_ptr_message m = std::make_shared<proto_message>();
-			m->ParseFromString(dec_msg);
-			if (m->msg_ctx() == np2ps::REQUEST) {
-				seq_t rv = m->seq();
-				networking_->add_to_received(std::move(m));
-				return;
-			}
-			else {
-				networking_->add_to_received(std::move(m));
-				return;
-			}
+			decrypt_message_using_symmetric_key(e_msg, iv, ipw, networking_);
 		}
 		else {
 			//common symmetric key for given sender isn't stored locally yet
@@ -388,4 +395,21 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 
     //send message
 	send_message_using_socket( tcp_socket_, length_plus_msg.str());
+}
+
+void Networking::decrypt_encrypted_messages(pk_t original_sender) {
+	auto [emb, eme] = waiting_decrypt.equal_range(original_sender);
+	auto& [ipw_pk, ipw] = *(ip_map_.get_wrapper_for_pk(original_sender));
+	for (; emb != eme; emb++) {
+		decrypt_message_using_symmetric_key(emb->second.encrypted_message_or_symmetric_key, emb->second.initialization_vector_or_signature, ipw, shared_from_this());
+	}
+}
+
+void Networking::user_member_results(seq_t msg_seq, bool is_member) {
+	auto waiting_level_i = waiting_level.find(msg_seq);
+	if (waiting_level_i != waiting_level.end()) {
+		if (is_member)
+			enroll_message_to_be_sent(waiting_level_i->second);
+		waiting_level.erase(waiting_level_i);
+	}
 }

@@ -51,6 +51,12 @@ public:
 
 		QObject::connect(this, &Peer::ip_credentials_arrived,
 						 &(*networking_), &Networking::send_message_again_ip);
+
+		QObject::connect(this, &Peer::new_symmetric_key,
+						 &(*networking_), &Networking::decrypt_encrypted_messages);
+
+		QObject::connect(&(*networking_), &Networking::new_message_received,
+						 this, &Peer::handle_message);
 	}
 
 	void load_ip_authorities(pk_t newspaper_key); //to load the IPs of authorities
@@ -65,7 +71,6 @@ public:
 	optional_author_peers find_article_in_article_categories_db(hash_t article_hash);
 	optional_author_peers find_article_in_article_categories_db(hash_t article_hash, category_container categories);
 	article_optional find_article_news(hash_t article_hash, category_container categories);
-	void handle_message();
 	void handle_requests(unique_ptr_message message);
 	void handle_responses(unique_ptr_message message);
 	void handle_one_way(unique_ptr_message message);
@@ -239,9 +244,14 @@ public:
 
 	news_database::iterator recently_added;
 
+public slots:
+	void handle_message(unique_ptr_message message);
+
 signals:
 	void new_article_list(pk_t newspaper_id);
 	void ip_credentials_arrived(pk_t message_originally_to);
+	void new_symmetric_key(pk_t key_sender);
+	void user_is_member_verification(seq_t message_seq_number, bool is_member);
 
 private:
 	//reader part

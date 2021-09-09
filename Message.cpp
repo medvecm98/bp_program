@@ -280,6 +280,21 @@ unique_ptr_message MFW::RespCredentialsFactory(unique_ptr_message&& msg, QString
 		return std::move(msg);
 	}
 
+unique_ptr_message MFW::PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::PublicKey& key) {
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
+	msg->set_msg_type(np2ps::PUBLIC_KEY);
+
+	std::string key_str;
+
+	CryptoPP::StringSink rsa_pub_sink(key_str);
+	key.DEREncode(rsa_pub_sink);
+
+	msg->mutable_public_key()->set_key(key_str);
+	return std::move(msg);
+}
+
 unique_ptr_message MFW::UpdateSeqNumber(unique_ptr_message&& msg, unsigned int seq) {
 	msg->set_seq(seq);
 	return std::move(msg);
