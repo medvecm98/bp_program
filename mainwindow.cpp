@@ -155,3 +155,9 @@ void MainWindow::on_pushButton_article_list_released()
 	ctx->p.generate_article_list(ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong());
 }
 
+
+void MainWindow::on_pushButton_set_ip_released()
+{
+	ctx->p.set_my_ip(ui->lineEdit_set_ip->text());
+}
+

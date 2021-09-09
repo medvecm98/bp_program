@@ -121,7 +121,11 @@ void Networking::send_message_again_ip(pk_t message_originally_to) {
  */
 void Networking::send_message(unique_ptr_message msg) {
     auto ip_map_iter = ip_map_.get_wrapper_for_pk(msg->to());
-	if (ip_map_iter != ip_map_.get_map_end() && ip_map_iter->second.key_pair.first.has_value()) {
+	if (ip_map_iter != ip_map_.get_map_end() && msg->msg_type() == np2ps::PUBLIC_KEY) {
+		IpWrapper& ipw = ip_map_iter->second;
+		sender_->message_send(std::move(msg), ipw);
+	}
+	else if (ip_map_iter != ip_map_.get_map_end() && ip_map_iter->second.key_pair.first.has_value()) {
 		IpWrapper& ipw = ip_map_iter->second;
 		//auto msg = std::move(to_send_msg.front());
 		//to_send_msg.pop();
@@ -361,7 +365,7 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 	prng.GenerateBlock(iv, iv.size());
 
 	// check if symmetric key exists for given receiver:
-	if (!ipw.key_pair.second.has_value()) {
+	if (!ipw.key_pair.second.has_value() && (msg->msg_type() != np2ps::PUBLIC_KEY)) {
 		//...no, and so symmetric key needs to be yet generated
 		CryptoPP::SecByteBlock aes_key(CryptoPP::AES::DEFAULT_KEYLENGTH);
 		prng.GenerateBlock(aes_key, aes_key.size());
@@ -372,27 +376,33 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 		send_message_using_socket(tcp_socket_, key_exchange_msg.str());
 	}
 
-
-	//encrypt message
-	enc.SetKeyWithIV(ipw.key_pair.second.value(), ipw.key_pair.second.value().size(), iv);
-	CryptoPP::StringSource s(
-		serialized_msg,
-		true,
-		new CryptoPP::AuthenticatedEncryptionFilter(
-			enc,
-			new CryptoPP::StringSink(
-				encrypted_msg
+	std::stringstream length_plus_msg;
+	if (msg->msg_type() != np2ps::PUBLIC_KEY) {
+		//encrypt message
+		enc.SetKeyWithIV(ipw.key_pair.second.value(), ipw.key_pair.second.value().size(), iv);
+		CryptoPP::StringSource s(
+			serialized_msg,
+			true,
+			new CryptoPP::AuthenticatedEncryptionFilter(
+				enc,
+				new CryptoPP::StringSink(
+					encrypted_msg
+				)
 			)
-		)
-	);
+		);
 
-	//we will create the initialization vector (iv) string
-	std::string iv_str(reinterpret_cast<const char*>(&iv[0]), iv.size());
+		//we will create the initialization vector (iv) string
+		std::string iv_str(reinterpret_cast<const char*>(&iv[0]), iv.size());
 
-    std::stringstream length_plus_msg;
-	length_plus_msg << (char)NORMAL_MESSAGE;
-    length_plus_msg << std::setfill('0') << std::setw(16) << std::hex << msg->from(); //public identifier won't be encrypted
-    length_plus_msg << iv_str << encrypted_msg; //initialization vector is written after size, but before message itself
+
+		length_plus_msg << (char)NORMAL_MESSAGE;
+		length_plus_msg << std::setfill('0') << std::setw(16) << std::hex << msg->from(); //public identifier won't be encrypted
+		length_plus_msg << iv_str << encrypted_msg; //initialization vector is written after size, but before message itself
+	}
+	else {
+		length_plus_msg << (char)KEY_MESSAGE;
+		length_plus_msg << serialized_msg;
+	}
 
     //send message
 	send_message_using_socket( tcp_socket_, length_plus_msg.str());

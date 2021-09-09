@@ -44,6 +44,8 @@ private slots:
 
 	void on_pushButton_article_list_released();
 
+	void on_pushButton_set_ip_released();
+
 private:
 	Ui::MainWindow *ui;
 	ProgramContext* ctx;

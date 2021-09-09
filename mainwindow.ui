@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1193</width>
-    <height>652</height>
+    <width>1172</width>
+    <height>695</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,17 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_2">
-    <item row="0" column="0">
+    <item row="1" column="0">
+     <widget class="QLineEdit" name="lineEdit_article_path"/>
+    </item>
+    <item row="2" column="0">
+     <widget class="QComboBox" name="comboBox_newspapers">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0" colspan="2">
      <layout class="QGridLayout" name="gridLayout">
       <item row="1" column="3" rowspan="6">
        <widget class="QTextEdit" name="textEdit_article"/>
@@ -147,15 +157,19 @@
       </item>
      </layout>
     </item>
-    <item row="1" column="0">
-     <widget class="QLineEdit" name="lineEdit_article_path"/>
-    </item>
-    <item row="2" column="0">
-     <widget class="QComboBox" name="comboBox_newspapers">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-     </widget>
+    <item row="3" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QLineEdit" name="lineEdit_set_ip"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_set_ip">
+        <property name="text">
+         <string>Set IP</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -165,7 +179,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1193</width>
+     <width>1172</width>
      <height>23</height>
     </rect>
    </property>

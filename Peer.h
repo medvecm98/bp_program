@@ -88,6 +88,10 @@ public:
 		name_ = name;
 	}
 
+	void set_my_ip(QString ip) {
+		networking_->ip_map_.my_ip.ipv4 = QHostAddress(ip);
+	}
+
 	void init_newspaper(my_string name);
 
 	void generate_article_list(pk_t destination) {
