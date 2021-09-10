@@ -320,16 +320,16 @@ void PeerReceiver::message_receive() {
 		return;
 	}
 
-	tcp_socket_->disconnectFromHost();
 
 	std::cout << "Message read and received" << std::endl;
 	char msg_class = read_class_and_length(msg);
+
 
 	if (msg_class == NORMAL_MESSAGE) {
 		auto iv = extract_init_vector(msg); //init. vector
 		auto pk_str = extract_public_identifier(msg); //public identifier
 		auto e_msg = extract_encrypted_message(msg); //encrypted message
-
+		
 		//we can check now, if the IP of sender is already in database and if not, we will add it
 		check_ip(tcp_socket_, pk_str, networking_->ip_map_);
 		
@@ -353,7 +353,8 @@ void PeerReceiver::message_receive() {
 			);
 			//message will now wait until symmetric key is received
 			networking_->add_to_messages_to_decrypt(pk_str, EncryptedMessageWrapper(e_msg, iv, pk_str, NORMAL_MESSAGE));
-			
+
+			tcp_socket_->disconnectFromHost();
 			return;
 		}
 	}
@@ -364,6 +365,8 @@ void PeerReceiver::message_receive() {
 		m->ParseFromString(msg.toStdString());
 		check_ip(tcp_socket_, m->from(), networking_->ip_map_);
 		networking_->add_to_received(std::move(m));
+
+		tcp_socket_->disconnectFromHost();
 		return; 
 	}
 }
