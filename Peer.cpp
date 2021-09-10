@@ -222,16 +222,23 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
 void Peer::handle_message(unique_ptr_message message) {
 	std::cout << "message handling" << std::endl;
 	if (message->msg_ctx() == np2ps::REQUEST) {
+		std::cout << "message request" << std::endl;
 		handle_requests( std::move( message));
 	}
 	else if (message->msg_ctx() == np2ps::RESPONSE) {
+		std::cout << "message response" << std::endl;
 		handle_responses( std::move( message));
 	}
 	else if (message->msg_ctx() == np2ps::ONE_WAY) {
+		std::cout << "message one way" << std::endl;
 		handle_one_way( std::move( message));
 	}
 	else if (message->msg_ctx() == np2ps::ERROR) {
+		std::cout << "message error (context is error)" << std::endl;
 		handle_error( std::move( message));
+	}
+	else {
+		std::cout << "message unknown" << std::endl;
 	}
 }
 
