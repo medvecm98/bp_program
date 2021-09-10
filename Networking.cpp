@@ -4,7 +4,7 @@ void send_message_using_socket(QTcpSocket* tcp_socket, const std::string& msg) {
 	QByteArray block;
 	QDataStream out(&block, QIODevice::WriteOnly);
 	out.setVersion(QDataStream::Qt_5_0);
-	out << QString(msg.c_str());
+	out << QString::fromStdString(msg);
 	tcp_socket->write(block);
 	tcp_socket->disconnectFromHost();
 }
@@ -13,7 +13,7 @@ void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg) {
 	QByteArray block;
 	QDataStream out(&block, QIODevice::WriteOnly);
 	out.setVersion(QDataStream::Qt_5_0);
-	out << QString(msg.c_str());
+	out << QString::fromStdString(msg);
 	tcp_socket->write(block);
 	tcp_socket->disconnectFromHost();
 }
@@ -315,6 +315,8 @@ void PeerReceiver::message_receive() {
 		return;
 	}
 
+	tcp_socket_->disconnectFromHost();
+
 	std::cout << "Message read and received" << std::endl;
 	char msg_class = read_class_and_length(msg);
 
@@ -346,7 +348,7 @@ void PeerReceiver::message_receive() {
 			);
 			//message will now wait until symmetric key is received
 			networking_->add_to_messages_to_decrypt(pk_str, EncryptedMessageWrapper(e_msg, iv, pk_str, NORMAL_MESSAGE));
-			tcp_socket_->disconnectFromHost();
+			
 			return;
 		}
 	}
@@ -355,7 +357,6 @@ void PeerReceiver::message_receive() {
 		m->ParseFromString(msg.toStdString());
 		check_ip(tcp_socket_, m->from(), networking_->ip_map_);
 		networking_->add_to_received(std::move(m));
-		tcp_socket_->disconnectFromHost();
 		return; 
 	}
 }
@@ -367,6 +368,8 @@ PeerSender::PeerSender(networking_ptr net) {
 
 void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 	//serialize message
+	std::cout << (pk_t)msg->from() << std::endl;
+	std::cout << (pk_t)msg->to()   << std::endl;
     std::string serialized_msg, encrypted_msg;
 	msg->SerializeToString(&serialized_msg);
 
@@ -417,7 +420,14 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 	else {
 		length_plus_msg << KEY_MESSAGE;
 		length_plus_msg << serialized_msg;
-		std::cout << length_plus_msg.str() << std::endl;
+		/*std::cout << length_plus_msg.str() << std::endl;
+		std::string s = length_plus_msg.str().substr(1);
+		unique_ptr_message m = std::make_shared<proto_message>();
+		m->ParseFromString(s);
+		std::cout << m->from() << '\n';
+		std::cout << m->to() << '\n';
+		std::cout << length_plus_msg.str().length() << std::endl;
+		std::cout << length_plus_msg.str()[0] << std::endl;*/
 	}
 
     //send message
