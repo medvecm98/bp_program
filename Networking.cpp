@@ -137,7 +137,7 @@ void Networking::send_message(unique_ptr_message msg) {
 		//request IP and public key from authority
 		auto news_end = news_db.cend();
 		for (auto news_iter = news_db.cbegin(); news_iter != news_end; news_iter++) {
-			std::shared_ptr<std::string> request_string;
+			std::shared_ptr<std::string> request_string = std::make_shared<std::string>();
 			request_string->append("r");
 			request_string->append(std::to_string(msg->to()));
 			enroll_message_to_be_sent(

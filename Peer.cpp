@@ -593,6 +593,10 @@ void Peer::handle_responses(unique_ptr_message message) {
 			emit new_symmetric_key(message->from());
 		}
 	}
+	else if (type == np2ps::PUBLIC_KEY) {
+		std::cout << "public key update" << std::endl;
+		networking_->ip_map_.update_rsa_public((pk_t)message->from(), message->public_key().key());
+	}
 }
 
 void Peer::generate_article_all_message(pk_t destination, hash_t article_hash) {
@@ -680,6 +684,16 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 	}
 	else if (type == np2ps::PUBLIC_KEY) {
 		networking_->ip_map_.update_rsa_public((pk_t)msg->from(), msg->public_key().key());
+		
+		networking_->enroll_message_to_be_sent(
+			MFW::SetMessageContextResponse(
+				MFW::PublicKeyFactory(
+					public_key_,
+					msg->from(),
+					networking_->ip_map_.my_ip.key_pair.first.value()
+				)
+			)
+		);
 	}
 }
 

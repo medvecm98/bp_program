@@ -143,12 +143,18 @@ void MainWindow::on_pushButton_article_list_released()
 {
 	std::cout << "Article list requested" << std::endl;
 	QErrorMessage qem;
-	if (ui->treeWidget_newspaper->selectedItems().size() >= 1) {
-
+	if (ui->treeWidget_newspaper->selectedItems().size() == 0) {
+		std::cout << "Please, select one item, thank you." << std::endl;
+		qem.showMessage("Please, select one item, thank you.");
+		return;
+	}
+	if (ui->treeWidget_newspaper->selectedItems().size() > 1) {
+		std::cout << "Please, select only one item, thank you." << std::endl;
 		qem.showMessage("Please, select only one item, thank you.");
 		return;
 	}
-	if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr) {
+	if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() != nullptr) {
+		std::cout << "Non-newspaper item selected. Please select only top-level newspaper item from tree." << std::endl;
 		qem.showMessage("Non-newspaper item selected. Please select only top-level newspaper item from tree.");
 		return;
 	}
