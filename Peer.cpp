@@ -58,8 +58,7 @@ bool Peer::request_margin_add(hash_t article, margin_vector& margin) {
 
 void Peer::init_newspaper(my_string name) {
 	newspaper_name_ = name;
-	std::random_device rd("/dev/urandom");
-	newspaper_id_ = rd();
+	newspaper_id_ = public_key_;
 	news_.insert({newspaper_id_, NewspaperEntry(public_key_, newspaper_id_, newspaper_name_)});
 }
 

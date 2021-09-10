@@ -76,10 +76,8 @@ public:
 public slots:
 	void message_receive();
 	void prepare_for_message_receive();
-
-private slots:
 	void display_error(QAbstractSocket::SocketError e) {
-		//TODO: implement
+		QTextStream(stderr) << "Code " << e << "\n";
 		return;
 	}
 
@@ -100,9 +98,9 @@ public:
 	PeerSender(networking_ptr net);
 	void message_send(unique_ptr_message msg, IpWrapper& ipw);
 
-private slots:
-	void display_error(QAbstractSocket::SocketError) {
-		//TODO: implement
+public slots:
+	void display_error(QAbstractSocket::SocketError e) {
+		QTextStream(stderr) << "Code " << e << "\n";
 		return;
 	}
 

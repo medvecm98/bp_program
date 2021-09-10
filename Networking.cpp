@@ -302,6 +302,7 @@ void PeerReceiver::prepare_for_message_receive() {
 	in_.setVersion(QDataStream::Qt_5_0);
 	QObject::connect(tcp_socket_, &QIODevice::readyRead, this, &PeerReceiver::message_receive);
 	QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, tcp_socket_, &QObject::deleteLater);
+	QObject::connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &PeerReceiver::display_error);
 }
 
 void PeerReceiver::message_receive() {
@@ -358,8 +359,8 @@ void PeerReceiver::message_receive() {
 	}
 	else if (msg_class == KEY_MESSAGE) {
 		auto m = std::make_shared<proto_message>();
-		std::cout << msg.toStdString() << std::endl;
-		std::cout << msg.toStdString().size() << std::endl;
+		std::cout << "[DEBUG][PeerReceiver::message_receive()] messsage: " << msg.toStdString() << std::endl;
+		std::cout << "[DEBUG][PeerReceiver::message_receive()] size: " << msg.toStdString().size() << std::endl;
 		m->ParseFromString(msg.toStdString());
 		check_ip(tcp_socket_, m->from(), networking_->ip_map_);
 		networking_->add_to_received(std::move(m));
@@ -370,6 +371,7 @@ void PeerReceiver::message_receive() {
 PeerSender::PeerSender(networking_ptr net) {
 	networking_ = net;
 	tcp_socket_ = new QTcpSocket();
+	QObject::connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &PeerSender::display_error);
 }
 
 void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
@@ -426,8 +428,8 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 	else {
 		length_plus_msg << KEY_MESSAGE;
 		length_plus_msg << serialized_msg;
-		std::cout << length_plus_msg.str() << std::endl;
-		std::cout << length_plus_msg.str().size() << std::endl;
+		std::cout << "[DEBUG][PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw)] message: " << length_plus_msg.str() << std::endl;
+		std::cout << "[DEBUG][PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw)] size: " << length_plus_msg.str().size() << std::endl;
 		/*std::string s = length_plus_msg.str().substr(1);
 		unique_ptr_message m = std::make_shared<proto_message>();
 		m->ParseFromString(s);
