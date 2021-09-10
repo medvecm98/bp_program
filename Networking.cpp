@@ -370,20 +370,20 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 	CryptoPP::SecByteBlock iv(CryptoPP::AES::BLOCKSIZE);
 	prng.GenerateBlock(iv, iv.size());
 
-	// check if symmetric key exists for given receiver:
-	if (!ipw.key_pair.second.has_value()) {
-		//...no, and so symmetric key needs to be yet generated
-		CryptoPP::SecByteBlock aes_key(CryptoPP::AES::DEFAULT_KEYLENGTH);
-		prng.GenerateBlock(aes_key, aes_key.size());
-		ipw.add_eax_key(std::move(aes_key));
-
-		std::stringstream key_exchange_msg;
-		networking_->sign_and_encrypt_key(key_exchange_msg, aes_key, msg->from(), msg->to());
-		send_message_using_socket(tcp_socket_, key_exchange_msg.str());
-	}
-
 	std::stringstream length_plus_msg;
 	if (msg->msg_type() != np2ps::PUBLIC_KEY) {
+		// check if symmetric key exists for given receiver:
+		if (!ipw.key_pair.second.has_value()) {
+			//...no, and so symmetric key needs to be yet generated
+			CryptoPP::SecByteBlock aes_key(CryptoPP::AES::DEFAULT_KEYLENGTH);
+			prng.GenerateBlock(aes_key, aes_key.size());
+			ipw.add_eax_key(std::move(aes_key));
+
+			std::stringstream key_exchange_msg;
+			networking_->sign_and_encrypt_key(key_exchange_msg, aes_key, msg->from(), msg->to());
+			send_message_using_socket(tcp_socket_, key_exchange_msg.str());
+		}
+	
 		//encrypt message
 		enc.SetKeyWithIV(ipw.key_pair.second.value(), ipw.key_pair.second.value().size(), iv);
 		CryptoPP::StringSource s(

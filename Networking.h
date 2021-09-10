@@ -128,7 +128,7 @@ public:
 			}
 		}*/
 
-		ip_map_.my_ip.ipv4 = "192.168.122.1";
+		ip_map_.my_ip.ipv4 = QHostAddress("192.168.122.1");
 
 		std::cout << ip_map_.my_ip.ipv4.toString().toStdString() << '\n';
 
