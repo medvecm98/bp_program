@@ -6,6 +6,7 @@ void send_message_using_socket(QTcpSocket* tcp_socket, const std::string& msg) {
 	out.setVersion(QDataStream::Qt_5_0);
 	out << QString(msg.c_str());
 	tcp_socket->write(block);
+	tcp_socket->disconnectFromHost();
 }
 
 void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg) {
@@ -14,7 +15,7 @@ void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg) {
 	out.setVersion(QDataStream::Qt_5_0);
 	out << QString(msg.c_str());
 	tcp_socket->write(block);
-	tcp_socket->disconnect();
+	tcp_socket->disconnectFromHost();
 }
 
 void send_message_using_socket(QTcpSocket* tcp_socket, unique_ptr_message msg) {
@@ -249,9 +250,9 @@ PeerReceiver::PeerReceiver(networking_ptr net) {
 		tcp_server_->close();
 		return;
 	}
-	in_.setDevice(tcp_socket_);
-	in_.setVersion(QDataStream::Qt_5_0);
+	
 	QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &PeerReceiver::message_receive);
+	
 	
 }
 
@@ -292,14 +293,16 @@ void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlo
 void PeerReceiver::prepare_for_message_receive() {
 	tcp_socket_ = tcp_server_->nextPendingConnection();
 	tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
-	QObject::connect(tcp_socket_, &QAbstractSocket::disconnected,
-					 tcp_socket_, &QObject::deleteLater);
-	QObject::connect(tcp_socket_, &QIODevice::readyRead,
-					 this, &PeerReceiver::message_receive);
+	in_.setDevice(tcp_socket_);
+	in_.setVersion(QDataStream::Qt_5_0);
+	QObject::connect(tcp_socket_, &QIODevice::readyRead, this, &PeerReceiver::message_receive);
+	QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, tcp_socket_, &QObject::deleteLater);
 }
 
 void PeerReceiver::message_receive() {
+	std::cout << "Receiving message" << std::endl;
 	in_.startTransaction();
+	std::cout << "transaction started" << std::endl;
 
 	QString msg;
 	in_ >> msg;
@@ -307,6 +310,7 @@ void PeerReceiver::message_receive() {
 	if (!in_.commitTransaction()) {
 		//TODO: receiving failed
 		std::cout << "Message receiving failed" << std::endl;
+		tcp_socket_->disconnectFromHost();
 		return;
 	}
 
