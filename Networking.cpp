@@ -4,7 +4,10 @@ void send_message_using_socket(QTcpSocket* tcp_socket, const std::string& msg) {
 	QByteArray block;
 	QDataStream out(&block, QIODevice::WriteOnly);
 	out.setVersion(QDataStream::Qt_5_0);
-	out << QString::fromStdString(msg);
+	QString qs = QString::fromStdString(msg);
+	std::cout << "QString size: " << qs.size() << std::endl;
+	out << qs;
+	std::cout << "Block size: " << block.size() << std::endl;
 	tcp_socket->write(block);
 	tcp_socket->disconnectFromHost();
 }
@@ -13,7 +16,8 @@ void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg) {
 	QByteArray block;
 	QDataStream out(&block, QIODevice::WriteOnly);
 	out.setVersion(QDataStream::Qt_5_0);
-	out << QString::fromStdString(msg);
+	QByteArray dd(msg.data(), msg.size());
+	out << dd;
 	tcp_socket->write(block);
 	tcp_socket->disconnectFromHost();
 }
@@ -174,8 +178,8 @@ void check_ip(QTcpSocket* tcp_socket, pk_t pk_id, IpMap& ip_map_) {
  * @param message Message in string.
  * @return QString Message class.
  */
-char read_class_and_length(QString& message) {
-	char rv = message[0].toLatin1();
+char read_class_and_length(QByteArray& message) {
+	char rv = message[0];
 	message = message.mid(1);
 	return rv;
 }
@@ -198,7 +202,7 @@ QString read_meta_message(const QString& message) {
  * @param s_msg Message to get the init vector from, in QString form.
  * @return Initialization vector CryptoPP::SecByteBlock.
  */
-CryptoPP::SecByteBlock extract_init_vector(const QString& s_msg) {
+CryptoPP::SecByteBlock extract_init_vector(const QByteArray& s_msg) {
 	std::string iv_str = s_msg.left(16).toStdString();
 	CryptoPP::SecByteBlock iv(reinterpret_cast<const CryptoPP::byte*>(&iv_str[0]), iv_str.size());
 	return std::move(iv);
@@ -210,7 +214,7 @@ CryptoPP::SecByteBlock extract_init_vector(const QString& s_msg) {
  * @param s_msg Message to extract from.
  * @return Public identifier of sender.
  */
-pk_t extract_public_identifier(const QString& s_msg) {
+pk_t extract_public_identifier(const QByteArray& s_msg) {
 	return (pk_t)s_msg.mid(16, 16).toULongLong();
 }
 
@@ -220,7 +224,7 @@ pk_t extract_public_identifier(const QString& s_msg) {
  * @param s_msg 
  * @return std::string 
  */
-std::string extract_encrypted_message(const QString& s_msg) {
+std::string extract_encrypted_message(const QByteArray& s_msg) {
 	return s_msg.mid(32).toStdString();
 }
 
@@ -305,7 +309,7 @@ void PeerReceiver::message_receive() {
 	in_.startTransaction();
 	std::cout << "transaction started" << std::endl;
 
-	QString msg;
+	QByteArray msg;
 	in_ >> msg;
 
 	if (!in_.commitTransaction()) {
