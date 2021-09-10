@@ -14,6 +14,7 @@ void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg) {
 	out.setVersion(QDataStream::Qt_5_0);
 	out << QString(msg.c_str());
 	tcp_socket->write(block);
+	tcp_socket->disconnect();
 }
 
 void send_message_using_socket(QTcpSocket* tcp_socket, unique_ptr_message msg) {
@@ -301,9 +302,11 @@ void PeerReceiver::message_receive() {
 
 	if (!in_.commitTransaction()) {
 		//TODO: receiving failed
+		std::cout << "Message receiving failed" << std::endl;
 		return;
 	}
 
+	std::cout << "Message read and received" << std::endl;
 	int msg_class = read_class_and_length(msg);
 
 	if (msg_class == NORMAL_MESSAGE) {
@@ -368,7 +371,7 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 	prng.GenerateBlock(iv, iv.size());
 
 	// check if symmetric key exists for given receiver:
-	if (!ipw.key_pair.second.has_value() && (msg->msg_type() != np2ps::PUBLIC_KEY)) {
+	if (!ipw.key_pair.second.has_value()) {
 		//...no, and so symmetric key needs to be yet generated
 		CryptoPP::SecByteBlock aes_key(CryptoPP::AES::DEFAULT_KEYLENGTH);
 		prng.GenerateBlock(aes_key, aes_key.size());

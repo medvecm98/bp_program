@@ -119,14 +119,16 @@ public:
 		: sender_receiver_initialized(false)
 		, news_db(nd)
 	{
-		QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
+		/*QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
 		for (int i = 0; i < ipAddressesList.size(); ++i) {
 			if (ipAddressesList.at(i) != QHostAddress::LocalHost &&
 				ipAddressesList.at(i).toIPv4Address()) {
 				ip_map_.my_ip.ipv4 = ipAddressesList.at(i);
 				break;
 			}
-		}
+		}*/
+
+		ip_map_.my_ip.ipv4 = "192.168.122.1";
 
 		std::cout << ip_map_.my_ip.ipv4.toString().toStdString() << '\n';
 
