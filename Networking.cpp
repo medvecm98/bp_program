@@ -174,8 +174,8 @@ void check_ip(QTcpSocket* tcp_socket, pk_t pk_id, IpMap& ip_map_) {
  * @param message Message in string.
  * @return QString Message class.
  */
-int read_class_and_length(QString& message) {
-	auto rv = message.left(1).toInt();
+char read_class_and_length(QString& message) {
+	char rv = message[0].toLatin1();
 	message = message.mid(1);
 	return rv;
 }
@@ -316,7 +316,7 @@ void PeerReceiver::message_receive() {
 	}
 
 	std::cout << "Message read and received" << std::endl;
-	int msg_class = read_class_and_length(msg);
+	char msg_class = read_class_and_length(msg);
 
 	if (msg_class == NORMAL_MESSAGE) {
 		auto iv = extract_init_vector(msg); //init. vector
@@ -410,12 +410,12 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 		std::string iv_str(reinterpret_cast<const char*>(&iv[0]), iv.size());
 
 
-		length_plus_msg << (char)NORMAL_MESSAGE;
+		length_plus_msg << NORMAL_MESSAGE;
 		length_plus_msg << std::setfill('0') << std::setw(16) << std::hex << msg->from(); //public identifier won't be encrypted
 		length_plus_msg << iv_str << encrypted_msg; //initialization vector is written after size, but before message itself
 	}
 	else {
-		length_plus_msg << (char)KEY_MESSAGE;
+		length_plus_msg << KEY_MESSAGE;
 		length_plus_msg << serialized_msg;
 	}
 

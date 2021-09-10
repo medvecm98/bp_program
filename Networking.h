@@ -35,8 +35,8 @@ using msg_queue_ptr = std::shared_ptr< msg_queue>;
 using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
 
 #define PORT 14128
-static constexpr int NORMAL_MESSAGE = 10;
-static constexpr int KEY_MESSAGE = 20;
+static constexpr char NORMAL_MESSAGE = 'A';
+static constexpr char KEY_MESSAGE = 'B';
 
 /**
  * @brief Wrapper for encrypted messages where peer don't have symmetric key stored locally, or when public key is unknown.

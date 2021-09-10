@@ -221,6 +221,7 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
  * Universal method to handle the message from the top of the message queue.
  */
 void Peer::handle_message(unique_ptr_message message) {
+	std::cout << "message handling" << std::endl;
 	if (message->msg_ctx() == np2ps::REQUEST) {
 		handle_requests( std::move( message));
 	}
