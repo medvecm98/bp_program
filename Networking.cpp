@@ -251,7 +251,7 @@ PeerReceiver::PeerReceiver(networking_ptr net) {
 		return;
 	}
 	
-	QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &PeerReceiver::message_receive);
+	QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &PeerReceiver::prepare_for_message_receive);
 	
 	
 }
@@ -291,6 +291,7 @@ void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlo
 }
 
 void PeerReceiver::prepare_for_message_receive() {
+	std::cout << "preparing for message receive" << std::endl;
 	tcp_socket_ = tcp_server_->nextPendingConnection();
 	tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
 	in_.setDevice(tcp_socket_);
@@ -345,7 +346,7 @@ void PeerReceiver::message_receive() {
 			);
 			//message will now wait until symmetric key is received
 			networking_->add_to_messages_to_decrypt(pk_str, EncryptedMessageWrapper(e_msg, iv, pk_str, NORMAL_MESSAGE));
-			tcp_socket_->disconnect();
+			tcp_socket_->disconnectFromHost();
 			return;
 		}
 	}
@@ -354,7 +355,7 @@ void PeerReceiver::message_receive() {
 		m->ParseFromString(msg.mid(1).toStdString());
 		check_ip(tcp_socket_, m->from(), networking_->ip_map_);
 		networking_->add_to_received(std::move(m));
-		tcp_socket_->disconnect();
+		tcp_socket_->disconnectFromHost();
 		return; 
 	}
 }

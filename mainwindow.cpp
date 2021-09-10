@@ -141,6 +141,7 @@ void MainWindow::on_pushButton_preview_article_released()
 
 void MainWindow::on_pushButton_article_list_released()
 {
+	std::cout << "Article list requested" << std::endl;
 	QErrorMessage qem;
 	if (ui->treeWidget_newspaper->selectedItems().size() >= 1) {
 
