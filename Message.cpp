@@ -126,11 +126,14 @@ unique_ptr_message MFW::CredentialsFactory(pk_t from, pk_t to) {
 /* Requests: */
 unique_ptr_message MFW::ReqUserIsMemberFactory(unique_ptr_message&& msg, level_t level) { 
 	msg->mutable_user_is_member()->set_level(level);
+	msg->set_msg_ctx(np2ps::REQUEST);
 	return std::move(msg);
 }
 
 unique_ptr_message MFW::ReqCredentialsFactory(unique_ptr_message&& msg, bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
 	string_ptr_optional ip4, string_ptr_optional ip6, rsa_public_ptr_optional public_key, eax_ptr_optional eax_key) {
+
+		msg->set_msg_ctx(np2ps::REQUEST);
 
 		msg->mutable_credentials()->set_req_ipv4(req_ip4);
 		msg->mutable_credentials()->set_req_ipv6(req_ip6);
@@ -215,6 +218,7 @@ void CreateArticle(np2ps::Article* art, article_ptr article) {
 
 unique_ptr_message MFW::RespArticleDownloadFactory(unique_ptr_message&& msg, article_ptr article_header, std::string&& article) { 
 	auto header_ptr = msg->mutable_article_all()->mutable_header();
+	msg->set_msg_ctx(np2ps::RESPONSE);
 	CreateArticle(header_ptr, article_header);
 	msg->mutable_article_all()->set_article_actual(article);
 
@@ -224,6 +228,7 @@ unique_ptr_message MFW::RespArticleDownloadFactory(unique_ptr_message&& msg, art
 unique_ptr_message MFW::RespArticleHeaderFactory(unique_ptr_message&& msg, article_ptr article_header) {
 	auto header_ptr = msg->mutable_article_header()->mutable_article();
 	CreateArticle(header_ptr, article_header);
+	msg->set_msg_ctx(np2ps::RESPONSE);
 
 	return std::move(msg);
 }
@@ -233,18 +238,20 @@ unique_ptr_message MFW::RespArticleListFactory(unique_ptr_message&& msg, article
 		auto a = msg->mutable_article_list()->add_response();
 		CreateArticle(a, article);
 	}
+	msg->set_msg_ctx(np2ps::RESPONSE);
 	return std::move(msg);
 }
 
 unique_ptr_message MFW::RespUserIsMemberFactory(unique_ptr_message&& msg, bool is_member, level_t req_level) { 
 	msg->mutable_user_is_member()->set_is_member(is_member);
 	msg->mutable_user_is_member()->set_level(req_level);
+	msg->set_msg_ctx(np2ps::RESPONSE);
 	return std::move(msg);
 }
 
 unique_ptr_message MFW::RespCredentialsFactory(unique_ptr_message&& msg, QString ip4, QString ip6, 
 	std::shared_ptr<rsa_public_optional> public_key, std::shared_ptr<eax_optional> eax_key) {
-
+		msg->set_msg_ctx(np2ps::RESPONSE);
 		if (!ip4.isEmpty()) {
 			msg->mutable_credentials()->set_ipv4(ip4.toStdString());
 			msg->mutable_credentials()->set_req_ipv4(true);

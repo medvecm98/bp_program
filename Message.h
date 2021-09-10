@@ -39,6 +39,8 @@ public:
 	template <typename CategoryContainer>
 	static unique_ptr_message ReqArticleListFactory(unique_ptr_message&& msg, const CategoryContainer& categories) {
 		msg->mutable_article_list()->set_all_articles(true);
+
+		msg->set_msg_ctx(np2ps::REQUEST);
 		
 		for (auto &&cat : categories) {
 			msg->mutable_article_list()->set_all_articles(false);
