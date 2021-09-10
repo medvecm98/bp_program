@@ -75,6 +75,7 @@ public:
 
 public slots:
 	void message_receive();
+	void prepare_for_message_receive();
 
 private slots:
 	void display_error(QAbstractSocket::SocketError e) {

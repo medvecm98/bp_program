@@ -252,6 +252,7 @@ PeerReceiver::PeerReceiver(networking_ptr net) {
 	in_.setDevice(tcp_socket_);
 	in_.setVersion(QDataStream::Qt_5_0);
 	QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &PeerReceiver::message_receive);
+	
 }
 
 void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlock iv, IpWrapper& ipw, networking_ptr networking) {
@@ -288,13 +289,16 @@ void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlo
 
 }
 
-void PeerReceiver::message_receive() {
-	
+void PeerReceiver::prepare_for_message_receive() {
 	tcp_socket_ = tcp_server_->nextPendingConnection();
 	tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
 	QObject::connect(tcp_socket_, &QAbstractSocket::disconnected,
 					 tcp_socket_, &QObject::deleteLater);
+	QObject::connect(tcp_socket_, &QIODevice::readyRead,
+					 this, &PeerReceiver::message_receive);
+}
 
+void PeerReceiver::message_receive() {
 	in_.startTransaction();
 
 	QString msg;
