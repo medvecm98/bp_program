@@ -683,6 +683,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		}
 	}
 	else if (type == np2ps::PUBLIC_KEY) {
+		std::cout << "got one-way public key" << std::endl;
 		networking_->ip_map_.update_rsa_public((pk_t)msg->from(), msg->public_key().key());
 		
 		networking_->enroll_message_to_be_sent(
