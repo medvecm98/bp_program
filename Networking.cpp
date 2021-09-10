@@ -352,7 +352,7 @@ void PeerReceiver::message_receive() {
 	}
 	else if (msg_class == KEY_MESSAGE) {
 		auto m = std::make_shared<proto_message>();
-		m->ParseFromString(msg.mid(1).toStdString());
+		m->ParseFromString(msg.toStdString());
 		check_ip(tcp_socket_, m->from(), networking_->ip_map_);
 		networking_->add_to_received(std::move(m));
 		tcp_socket_->disconnectFromHost();
@@ -417,6 +417,7 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 	else {
 		length_plus_msg << KEY_MESSAGE;
 		length_plus_msg << serialized_msg;
+		std::cout << length_plus_msg.str() << std::endl;
 	}
 
     //send message
