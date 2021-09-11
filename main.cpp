@@ -69,6 +69,8 @@ int main(int argc, char *argv[]) {
 	QObject::connect(w_add_newspaper, &add_newspaper::new_newspaper_in_db,
 					 &w, &MainWindow::newspaper_added_to_db);
 
+	QObject::connect(&ctx.p, &Peer::new_article_list, &w, &MainWindow::article_list_received);
+
 	f->setProgramContext(&ctx);
 	w.addForm("new_peer", f);
 	w_add_newspaper->setProgramContext(&ctx);

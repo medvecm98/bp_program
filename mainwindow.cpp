@@ -50,16 +50,18 @@ void MainWindow::on_pushButton_add_news_released()
 }
 
 void MainWindow::article_list_received(pk_t newspaper_id) {
+	std::cout << "about to print article_list" << std::endl;
 	auto news_the_one  = ctx->p.get_news_db().at(newspaper_id);
 	auto articles = news_the_one.get_list_of_articles();
-	QString news_name = news_the_one.get_name().c_str();
+	QString news_name = QString::fromStdString(news_the_one.get_name());
 	QString id_in_string = QString::number(news_the_one.get_id());
 	
 	auto items = ui->treeWidget_newspaper->findItems(news_name, Qt::MatchContains);
 	QTreeWidgetItem* requseted_newspaper = nullptr;
 
 	for (int i = 0; i < ui->treeWidget_newspaper->topLevelItemCount() && !requseted_newspaper; i++) {
-		if (ui->treeWidget_newspaper->topLevelItem(i)->text(3) == id_in_string) {
+		std::cout << ui->treeWidget_newspaper->topLevelItem(i)->text(3).toStdString() << ' ' << id_in_string.toStdString() << '\n';
+		if (ui->treeWidget_newspaper->topLevelItem(i)->text(2) == id_in_string) {
 			requseted_newspaper = ui->treeWidget_newspaper->topLevelItem(i);
 		}
 	}
@@ -166,5 +168,32 @@ void MainWindow::on_pushButton_article_list_released()
 void MainWindow::on_pushButton_set_ip_released()
 {
 	ctx->p.set_my_ip(ui->lineEdit_set_ip->text());
+}
+
+
+void MainWindow::on_pushButton_released()
+{
+
+}
+
+
+void MainWindow::on_pushButton_external_article_released()
+{
+	if (ui->treeWidget_newspaper->selectedItems().size() == 0) {
+		std::cout << "Please, select one item, thank you." << std::endl;
+		return;
+	}
+	else if (ui->treeWidget_newspaper->selectedItems().size() > 1) {
+		std::cout << "Please, select only one item, thank you." << std::endl;
+		return;
+	}
+	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent()->parent() != nullptr) {
+		std::cout << "Please, select article, thank you." << std::endl;
+		return;
+	}
+	else {
+		ctx->p.generate_article_all_message(ctx->p.get_news_db().at(ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent()->text(2).toULongLong()).get_id(), 
+			ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong());
+	}
 }
 

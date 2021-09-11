@@ -49,7 +49,7 @@ private:
 	my_string news_name_;
 	article_database_container _articles; //downloaded articles from these newspapers
 	user_container _authorities; //authorities of these newspapers
-	level_t level_; //level for given newspaper
+	level_t level_ = 127; //level for given newspaper
 	ArticleListWrapper article_list_wrapper_; //saving requested article list
 };
 

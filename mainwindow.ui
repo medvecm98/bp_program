@@ -38,7 +38,7 @@
        </widget>
       </item>
       <item row="10" column="1">
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="pushButton_external_article">
         <property name="text">
          <string>Preview external article</string>
         </property>

@@ -263,13 +263,33 @@ void Peer::handle_requests(unique_ptr_message message) {
 		auto article_readers_iterator = readers_.begin(article_bucket);
 
 		bool user_not_found = true;
+		level_t req_level = message->article_all().level();
+		level_t found_level = 0;
+		level_t final_level = 0;
 
 		for (; user_not_found && (article_readers_iterator != readers_.end(article_bucket)); article_readers_iterator++) {
 			//we search for given user, if it exists in our database and we will check for his level
 			if (article_readers_iterator->second.peer_key == message->from()) {
 				user_not_found = false;
+				found_level = article_readers_iterator->second.peer_level;
 			}
 		}
+
+		for (auto&& user : basic_users) {
+			if (user == message->from()) {
+				user_not_found == false;
+				found_level = 127;
+			}
+		}
+
+		for (auto&& user : user_map) {
+			if (user.first == message->from()) {
+				user_not_found = false;
+				found_level = user.second;
+			}
+		}
+
+		final_level = req_level < found_level ? req_level : found_level;
 
 		if (user_not_found) {
 			/* if no user was found in database, we need to check with authority, what his level is */
@@ -292,7 +312,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 			if (article.has_value() && article.value()->article_present()) {
 				std::string article_whole;
 				//select only appropriate level
-				article.value()->select_level(article_whole, article_readers_iterator->second.peer_level);
+				article.value()->select_level(article_whole, final_level);
 
 				//send message
 				networking_->enroll_message_to_be_sent(MFW::RespArticleDownloadFactory(
@@ -300,7 +320,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 						public_key_, 
 						message->from(), 
 						article.value()->main_hash(), 
-						article_readers_iterator->second.peer_level),
+						final_level),
 					article.value(), 
 					std::move(article_whole)
 				));
@@ -567,13 +587,20 @@ void Peer::handle_responses(unique_ptr_message message) {
 	else if (type == np2ps::ARTICLE_LIST) {
 		std::cout << message->article_list().response_size() << '\n';
 		pk_t list_news_id = message->article_list().response().begin()->news_id();
-		auto article_list = news_[list_news_id].get_list_of_articles();
+		auto& article_list = news_[list_news_id].get_list_of_articles();
 		
 		for (auto it = message->article_list().response().begin(); it != message->article_list().response().end(); it++) {
+			auto a = Article(*it);
+			auto [cit, cite] = a.categories();
+			for (; cit != cite; cit++) {
+				if (article_list.categories.find(*cit) == article_list.categories.end()) {
+					article_list.categories.insert(*cit);
+				}
+			}
 			article_list.article_headers.push_back(Article(*it));
 		}
 
-		emit(new_article_list(list_news_id));
+		emit new_article_list(list_news_id);
 	}
 	else if (type == np2ps::USER_IS_MEMBER) {
 		if (message->user_is_member().is_member() && (message->user_is_member().level() > 127)) {
@@ -718,6 +745,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 	else if (type == np2ps::PUBLIC_KEY) {
 		std::cout << "got one-way public key" << std::endl;
 		networking_->ip_map_.update_rsa_public((pk_t)msg->from(), msg->public_key().key());
+		basic_users.insert((pk_t)msg->from());
 		
 		networking_->enroll_message_to_be_sent(
 			MFW::SetMessageContextResponse(

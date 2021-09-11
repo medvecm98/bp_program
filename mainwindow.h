@@ -26,6 +26,7 @@ public:
 
 public slots:
 	void newspaper_added_to_db();
+	void article_list_received(pk_t newspaper_id);
 
 private slots:
 	void on_pushButton_new_peer_released();
@@ -34,7 +35,6 @@ private slots:
 
 	void on_pushButton_add_news_released();
 
-	void article_list_received(pk_t newspaper_id);
 
 	void on_pushButton_add_article_released();
 
@@ -45,6 +45,10 @@ private slots:
 	void on_pushButton_article_list_released();
 
 	void on_pushButton_set_ip_released();
+
+	void on_pushButton_released();
+
+	void on_pushButton_external_article_released();
 
 private:
 	Ui::MainWindow *ui;
