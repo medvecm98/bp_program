@@ -16,6 +16,8 @@ class Peer;
 #include "NewspaperEntry.h"
 #include <sstream>
 #include <iomanip>
+#include <chrono>
+#include <thread>
 #include "cryptopp/rsa.h"
 #include "cryptopp/cryptlib.h"
 #include "cryptopp/osrng.h"
@@ -177,12 +179,14 @@ public:
 
 	IpMap ip_map_;
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles;
+	std::unordered_multimap<pk_t, unique_ptr_message> waiting_symmetrich_exchange;
 
 public slots:
 	void send_message(unique_ptr_message);
 	void send_message_again_ip(pk_t message_originally_to);
 	void decrypt_encrypted_messages(pk_t symmetric_key_sender);
 	void user_member_results(seq_t msg_seq, bool is_member);
+	void symmetric_exchanged(pk_t other_peer);
 
 signals:
 	void new_message_enrolled(unique_ptr_message);

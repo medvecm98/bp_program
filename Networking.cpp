@@ -12,14 +12,19 @@ void send_message_using_socket(QTcpSocket* tcp_socket, const std::string& msg) {
 	tcp_socket->disconnectFromHost();
 }
 
-void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg) {
+void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg, bool disconnect = true) {
+	std::cout << "sending" << std::endl;
 	QByteArray block;
 	QDataStream out(&block, QIODevice::WriteOnly);
 	out.setVersion(QDataStream::Qt_5_0);
 	QByteArray dd(msg.data(), msg.size());
 	out << dd;
 	tcp_socket->write(block);
-	tcp_socket->disconnectFromHost();
+	if (tcp_socket->state() != QAbstractSocket::ConnectedState) {
+		std::cout << tcp_socket->state() << std::endl;
+	}
+	if (disconnect)
+		tcp_socket->disconnectFromHost();
 }
 
 void send_message_using_socket(QTcpSocket* tcp_socket, unique_ptr_message msg) {
@@ -332,7 +337,7 @@ void PeerReceiver::message_receive() {
 		
 		//we can check now, if the IP of sender is already in database and if not, we will add it
 		check_ip(tcp_socket_, pk_str, networking_->ip_map_);
-		
+
 		//decrypt
 		auto& [ipw_pk, ipw] = *(networking_->ip_map_.get_wrapper_for_pk(pk_str));
 		if (ipw.key_pair.second.has_value()) {
@@ -340,19 +345,25 @@ void PeerReceiver::message_receive() {
 		}
 		else {
 			//common symmetric key for given sender isn't stored locally yet
-			send_message_using_socket(
-				tcp_socket_,
-				MFW::ReqCredentialsFactory(
-					MFW::CredentialsFactory(
-						networking_->ip_map_.my_public_id,
-						pk_str
-					),
-					false, false, false, true,
-					{}, {}, {}, {}
-				)
+			
+
+			auto cred_req = MFW::ReqCredentialsFactory(
+				MFW::CredentialsFactory(
+					networking_->ip_map_.my_public_id,
+					pk_str
+				),
+				false, false, false, true,
+				{}, {}, {}, {}
 			);
+
+
 			//message will now wait until symmetric key is received
 			networking_->add_to_messages_to_decrypt(pk_str, EncryptedMessageWrapper(e_msg, iv, pk_str, NORMAL_MESSAGE));
+
+			std::stringstream msg_key_sstream;
+			msg_key_sstream << KEY_MESSAGE;
+			msg_key_sstream << cred_req->SerializeAsString();
+			send_message_using_socket(tcp_socket_, msg_key_sstream.str());
 
 			tcp_socket_->disconnectFromHost();
 			return;
@@ -404,9 +415,13 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 
 			std::stringstream key_exchange_msg;
 			networking_->sign_and_encrypt_key(key_exchange_msg, aes_key, msg->from(), msg->to());
-			send_message_using_socket(tcp_socket_, key_exchange_msg.str());
+			send_message_using_socket(tcp_socket_, key_exchange_msg.str(), true);
+			std::cout << "Key generated and message sent" << std::endl;
+			networking_->waiting_symmetrich_exchange.insert({msg->to(), std::move(msg)});
+			return;
 		}
-	
+
+		std::cout << "About to encrypt a NORMAL_MESSAGE" << std::endl;
 		//encrypt message
 		enc.SetKeyWithIV(ipw.key_pair.second.value(), ipw.key_pair.second.value().size(), iv);
 		CryptoPP::StringSource s(
@@ -422,7 +437,6 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 
 		//we will create the initialization vector (iv) string
 		std::string iv_str(reinterpret_cast<const char*>(&iv[0]), iv.size());
-
 
 		length_plus_msg << NORMAL_MESSAGE;
 		length_plus_msg << std::setfill('0') << std::setw(16) << std::hex << msg->from(); //public identifier won't be encrypted
@@ -460,5 +474,13 @@ void Networking::user_member_results(seq_t msg_seq, bool is_member) {
 		if (is_member)
 			enroll_message_to_be_sent(waiting_level_i->second);
 		waiting_level.erase(waiting_level_i);
+	}
+}
+
+void Networking::symmetric_exchanged(pk_t other_peer) {
+	auto [mapib, mapie] = waiting_symmetrich_exchange.equal_range(other_peer);
+	for (; mapib != mapie; mapib++) {
+		enroll_message_to_be_sent(std::move(mapib->second));
+		waiting_symmetrich_exchange.erase(mapib->first);
 	}
 }

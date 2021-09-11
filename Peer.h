@@ -63,6 +63,9 @@ public:
 
 		QObject::connect(&(*networking_), &Networking::new_message_received,
 						 this, &Peer::handle_message);
+
+		QObject::connect(this, &Peer::symmetric_key_exchanged, 
+						 &(*networking_), &Networking::symmetric_exchanged);
 	}
 
 	void load_ip_authorities(pk_t newspaper_key); //to load the IPs of authorities
@@ -262,6 +265,7 @@ signals:
 	void ip_credentials_arrived(pk_t message_originally_to);
 	void new_symmetric_key(pk_t key_sender);
 	void user_is_member_verification(seq_t message_seq_number, bool is_member);
+	void symmetric_key_exchanged(pk_t other_peer);
 
 private:
 	//reader part

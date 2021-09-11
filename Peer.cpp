@@ -604,6 +604,9 @@ void Peer::handle_responses(unique_ptr_message message) {
 		std::cout << "public key update" << std::endl;
 		networking_->ip_map_.update_rsa_public((pk_t)message->from(), message->public_key().key());
 	}
+	else if (type == np2ps::SYMMETRIC_KEY) {
+		emit symmetric_key_exchanged(message->from());
+	}
 }
 
 void Peer::generate_article_all_message(pk_t destination, hash_t article_hash) {
@@ -650,6 +653,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		generate_article_all_message(destination, msg->article_sol().article_hash());
 	}
 	else if (type == np2ps::SYMMETRIC_KEY) {
+		std::cout << "handling and saving a symmetric key" << std::endl;
 		CryptoPP::AutoSeededRandomPool rng;
 		std::string key_str = msg->symmetric_key().key();
 		std::string signature_str = msg->symmetric_key().signature();
@@ -683,11 +687,22 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		);
 
 		if (!verification_result) {
+			std::cout << "Verification FAILED" << std::endl;
 			//TODO: throw error
 		}
 		else {
+			std::cout << "Verification SUCCEEDED" << std::endl;
 			networking_->ip_map_.get_wrapper_for_pk(msg->from())->second.add_eax_key(std::move(key_decrypted));
 		}
+
+		unique_ptr_message _msg = std::make_shared<proto_message>();
+		_msg->set_from(public_key_);
+		_msg->set_to(msg->from());
+		_msg->set_msg_ctx(np2ps::RESPONSE);
+		_msg->set_msg_type(np2ps::SYMMETRIC_KEY);
+		networking_->enroll_message_to_be_sent(
+			std::move(_msg)
+		);
 	}
 	else if (type == np2ps::PUBLIC_KEY) {
 		std::cout << "got one-way public key" << std::endl;
