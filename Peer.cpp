@@ -141,11 +141,20 @@ size_t Peer::list_all_articles_by_me(article_container &articles, const std::set
 		std::cout << "iteration in list_all_articles_by_me" << '\n';
 		auto i_end = news_iterator->second.get_const_iterator_database_end();
 		for (auto i = news_iterator->second.get_const_iterator_database(); i != i_end; i++) {
-			for (auto &&category : categories) {
-				if ((i->second.author_id() == public_key_) && (categories.empty() || i->second.is_in_category(category))) {
+			if (!categories.empty()) {
+				for (auto &&category : categories) {
+					if ((i->second.author_id() == public_key_) && (categories.empty() || i->second.is_in_category(category))) {
+						articles.insert(std::make_shared<Article>(i->second));
+						article_counter++;
+						break;
+					}
+				}
+			}
+			else {
+				if (i->second.author_id() == public_key_) {
 					articles.insert(std::make_shared<Article>(i->second));
 					article_counter++;
-					break;
+					std::cout << "added article" << std::endl;
 				}
 			}
 		}
@@ -556,6 +565,7 @@ void Peer::handle_responses(unique_ptr_message message) {
 		}
 	}
 	else if (type == np2ps::ARTICLE_LIST) {
+		std::cout << message->article_list().response_size() << '\n';
 		pk_t list_news_id = message->article_list().response().begin()->news_id();
 		auto article_list = news_[list_news_id].get_list_of_articles();
 		
