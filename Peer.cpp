@@ -129,15 +129,16 @@ size_t Peer::list_all_articles_by_me(article_container &articles, const std::set
 	}
 	else {
 		news = news_.find(news_id);
-		if (news == news_.end()) {
+		if (news == news_.cend()) {
 			return 0;
 		}
 		ts.entry = news;
-		ts.end_iterator = news_.end();
+		ts.end_iterator = news_.cend();
 		news_functor = ts;
 	}
 
-	for (auto news_iterator = news_functor(); news_iterator != news_.end(); news_iterator = news_functor()) {
+	for (auto news_iterator = news_functor(); news_iterator != news_.cend(); news_iterator = news_functor()) {
+		std::cout << "iteration in list_all_articles_by_me" << '\n';
 		auto i_end = news_iterator->second.get_const_iterator_database_end();
 		for (auto i = news_iterator->second.get_const_iterator_database(); i != i_end; i++) {
 			for (auto &&category : categories) {

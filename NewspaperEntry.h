@@ -85,6 +85,7 @@ struct AllTheNews {
 	}
 	news_database::const_iterator data;
 	news_database::const_iterator operator() () {
+		std::cout << "AllTheNews operator()" << std::endl;
 		return data++;
 	}
 };
