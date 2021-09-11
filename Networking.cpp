@@ -144,6 +144,7 @@ void Networking::send_message(unique_ptr_message msg) {
 	}
 	else {
 		//request IP and public key from authority
+		std::cout << "requesting IP and public key" << std::endl;
 		auto news_end = news_db.cend();
 		for (auto news_iter = news_db.cbegin(); news_iter != news_end; news_iter++) {
 			std::shared_ptr<std::string> request_string = std::make_shared<std::string>();
@@ -208,7 +209,7 @@ QString read_meta_message(const QString& message) {
  * @return Initialization vector CryptoPP::SecByteBlock.
  */
 CryptoPP::SecByteBlock extract_init_vector(const QByteArray& s_msg) {
-	std::string iv_str = s_msg.left(16).toStdString();
+	std::string iv_str = s_msg.mid(16, 16).toStdString();
 	CryptoPP::SecByteBlock iv(reinterpret_cast<const CryptoPP::byte*>(&iv_str[0]), iv_str.size());
 	return std::move(iv);
 }
@@ -220,7 +221,7 @@ CryptoPP::SecByteBlock extract_init_vector(const QByteArray& s_msg) {
  * @return Public identifier of sender.
  */
 pk_t extract_public_identifier(const QByteArray& s_msg) {
-	return (pk_t)s_msg.mid(16, 16).toULongLong();
+	return (pk_t)s_msg.left(16).toULongLong(nullptr, 16);
 }
 
 /**
@@ -331,8 +332,10 @@ void PeerReceiver::message_receive() {
 
 
 	if (msg_class == NORMAL_MESSAGE) {
-		auto iv = extract_init_vector(msg); //init. vector
+		std::cout << "Normal message read and received" << std::endl;
 		auto pk_str = extract_public_identifier(msg); //public identifier
+		std::cout << pk_str << std::endl;
+		auto iv = extract_init_vector(msg); //init. vector
 		auto e_msg = extract_encrypted_message(msg); //encrypted message
 		
 		//we can check now, if the IP of sender is already in database and if not, we will add it
@@ -478,9 +481,13 @@ void Networking::user_member_results(seq_t msg_seq, bool is_member) {
 }
 
 void Networking::symmetric_exchanged(pk_t other_peer) {
+	std::cout << "symmetrci exchange slot" << std::endl;
 	auto [mapib, mapie] = waiting_symmetrich_exchange.equal_range(other_peer);
 	for (; mapib != mapie; mapib++) {
-		enroll_message_to_be_sent(std::move(mapib->second));
+		std::cout << "EEEEEEE" << std::endl;
+		auto msg_ptr = mapib->second;
 		waiting_symmetrich_exchange.erase(mapib->first);
+		enroll_message_to_be_sent(msg_ptr);
+		break;
 	}
 }
