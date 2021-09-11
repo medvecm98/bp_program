@@ -120,7 +120,7 @@ size_t Peer::list_all_articles_from_news(article_container &articles) {
 size_t Peer::list_all_articles_by_me(article_container &articles, const std::set<category_t> &categories, pk_t news_id) {
 	size_t article_counter = 0;
 	std::function<news_database::const_iterator()> news_functor;
-	AllTheNews al(news_.cbegin());
+	AllTheNews al(news_.cbegin(), news_.cend());
 	TheSameNews ts;
 
 	news_database::const_iterator news;

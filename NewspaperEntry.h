@@ -80,13 +80,20 @@ struct TheSameNews {
  * Functor, that covers all the various news companies.
  */
 struct AllTheNews {
-	explicit AllTheNews(news_database::const_iterator nd) {
+	explicit AllTheNews(news_database::const_iterator nd, news_database::const_iterator e) {
 		data = nd;
+		enddata = e;
 	}
 	news_database::const_iterator data;
+	news_database::const_iterator enddata;
 	news_database::const_iterator operator() () {
 		std::cout << "AllTheNews operator()" << std::endl;
-		return data++;
+		if (data == enddata) {
+			return enddata;
+		}
+		else {
+			return data++;
+		}
 	}
 };
 
