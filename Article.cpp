@@ -44,8 +44,10 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 		QFile file;
 		file.setFileName(file_name.prepend("/home/michal/"));
 		file.open(QIODevice::ReadWrite);
+		QTextStream qts(&file);
+		qts << QString::fromStdString(article_actual);
 		file.close();
-		_path_to_article_file = file_name.prepend("/home/michal").toStdString();
+		_path_to_article_file = file_name.toStdString();
 	} 
 
 }

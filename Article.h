@@ -13,6 +13,7 @@
 #include <optional>
 #include <QString>
 #include <QFile>
+#include <QTextStream>
 
 #include "StringSplitter.h"
 #include "GlobalUsing.h"
@@ -87,7 +88,7 @@ public:
 				if (hash_iter_->second.paragraph_level <= level_) {
 					//found paragraph and level checks out
 					paragraph_found = true;
-					paragraph_.append(line);
+					paragraph_.append(line).append("\n");
 				}
 				else {
 					wrong_level_para_found = true;

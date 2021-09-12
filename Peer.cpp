@@ -314,8 +314,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 				//select only appropriate level
 				article.value()->select_level(article_whole, final_level);
 
-				//send message
-				networking_->enroll_message_to_be_sent(MFW::RespArticleDownloadFactory(
+				unique_ptr_message article_msg = MFW::RespArticleDownloadFactory(
 					MFW::ArticleDownloadFactory(
 						public_key_, 
 						message->from(), 
@@ -323,7 +322,10 @@ void Peer::handle_requests(unique_ptr_message message) {
 						final_level),
 					article.value(), 
 					std::move(article_whole)
-				));
+				);
+
+				//send message
+				networking_->enroll_message_to_be_sent(article_msg);
 			}
 			else {
 				//article not found in database
