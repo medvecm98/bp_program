@@ -277,7 +277,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 
 		for (auto&& user : basic_users) {
 			if (user == message->from()) {
-				user_not_found == false;
+				user_not_found = false;
 				found_level = 127;
 			}
 		}
@@ -568,11 +568,11 @@ void Peer::handle_responses(unique_ptr_message message) {
 	if (type == np2ps::ARTICLE_ALL) {
 		if (message->has_article_all() && message->article_all().has_header() && message->article_all().has_article_actual()) {
 			hash_t recv_article_hash = message->article_all().article_hash();
-			Article recv_article(message->article_all().header());
+			Article recv_article(message->article_all().header(), message->article_all().article_actual());
 			if (news_.find(recv_article.news_id()) == news_.end()) {
 				//TODO: log error
 			}
-			auto news_entry = news_[recv_article.news_id()];
+			auto& news_entry = news_[recv_article.news_id()];
 			news_entry.add_article(recv_article_hash, std::move(recv_article));
 		}
 		else {

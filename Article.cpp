@@ -40,7 +40,12 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 	if (!article_actual.empty()) 
 	{
 		article_present_ = true;
-		//TODO: create file for article on filesystem
+		QString file_name = QString::fromStdString(_heading).replace(' ', '_').append('-').append(QString::number(_main_hash)).append(".md");
+		QFile file;
+		file.setFileName(file_name.prepend("/home/michal/"));
+		file.open(QIODevice::ReadWrite);
+		file.close();
+		_path_to_article_file = file_name.prepend("/home/michal").toStdString();
 	} 
 
 }

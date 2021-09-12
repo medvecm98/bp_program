@@ -144,7 +144,7 @@ void MainWindow::on_pushButton_preview_article_released()
 void MainWindow::on_pushButton_article_list_released()
 {
 	std::cout << "Article list requested" << std::endl;
-	QErrorMessage qem;
+	QErrorMessage qem(this);
 	if (ui->treeWidget_newspaper->selectedItems().size() == 0) {
 		std::cout << "Please, select one item, thank you." << std::endl;
 		qem.showMessage("Please, select one item, thank you.");
@@ -188,12 +188,32 @@ void MainWindow::on_pushButton_external_article_released()
 		return;
 	}
 	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent()->parent() != nullptr) {
-		std::cout << "Please, select article, thank you." << std::endl;
+		std::cout << "Please, select an article, thank you." << std::endl;
 		return;
 	}
 	else {
-		ctx->p.generate_article_all_message(ctx->p.get_news_db().at(ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent()->text(2).toULongLong()).get_id(), 
-			ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong());
+		auto news_db_id = ctx->p.get_news_db().at(ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent()->text(2).toULongLong()).get_id();
+		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
+		article_optional present_article = ctx->p.get_news_db().at(news_db_id).find_article_header(article_selected_hash);
+		if (!present_article.has_value()) {
+			ctx->p.generate_article_all_message(news_db_id, article_selected_hash);
+		}
+		else {
+			ui->textEdit_article->clear();
+
+			QString path(present_article.value()->get_path_to_file().c_str());
+			QFile file;
+			file.setFileName(path);
+			file.open(QIODevice::ReadOnly);
+			QTextStream text_stream(&file);
+			QString line;
+			ui->textEdit_article->clear();
+			while (!text_stream.atEnd()) {
+				line = text_stream.readLine();
+				ui->textEdit_article->append(line);
+			}
+			file.close();
+		}
 	}
 }
 

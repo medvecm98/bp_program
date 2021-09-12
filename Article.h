@@ -11,6 +11,8 @@
 #include <map>
 #include <regex>
 #include <optional>
+#include <QString>
+#include <QFile>
 
 #include "StringSplitter.h"
 #include "GlobalUsing.h"
@@ -130,7 +132,7 @@ class Article {
 public:
 	Article() = default;
 	explicit Article(const np2ps::Article& protobuf_article);
-	explicit Article(const np2ps::Article& protobuf_article_header, const std::string& article_actual);
+	Article(const np2ps::Article& protobuf_article_header, const std::string& article_actual);
 	void open_fstream(std::fstream& stream);
 	void load_information();
 	[[nodiscard]] article_format get_format() const {
