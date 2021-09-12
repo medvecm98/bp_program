@@ -60,7 +60,6 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 	QTreeWidgetItem* requseted_newspaper = nullptr;
 
 	for (int i = 0; i < ui->treeWidget_newspaper->topLevelItemCount() && !requseted_newspaper; i++) {
-		std::cout << ui->treeWidget_newspaper->topLevelItem(i)->text(3).toStdString() << ' ' << id_in_string.toStdString() << '\n';
 		if (ui->treeWidget_newspaper->topLevelItem(i)->text(2) == id_in_string) {
 			requseted_newspaper = ui->treeWidget_newspaper->topLevelItem(i);
 		}
@@ -70,7 +69,7 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 	if (requseted_newspaper) {
 		for (auto&& category : articles.categories) {
 			for (int i = 0; i < requseted_newspaper->childCount(); i++) {
-				if (requseted_newspaper->child(i)->text(1) == category.c_str()) { //found category we are looking for
+				if (requseted_newspaper->child(i)->text(0) == category.c_str()) { //found category we are looking for
 					category_found = true;
 					for (auto&& article : articles.article_headers) {
 						requseted_newspaper->child(i)->addChild( new QTreeWidgetItem(QStringList({article.heading().c_str(), "Article", QString::number(article.main_hash())})));
