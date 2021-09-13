@@ -1,5 +1,23 @@
 #include "Article.h"
 
+void set_dir_path_and_root(QString& dir_path, QString& root_path) {
+#ifdef _WIN64
+	dir_path = "C:\\Program Files (x86)\\NewsP2PSharing\\Articles";
+	root_path = "C:\\";
+#elif defined(_WIN32)
+	dir_path = "C:\\Program Files\\NewsP2PSharing\\Articles";
+	root_path = "C:\\";
+#else
+	if (const char* env_p = std::getenv("XDG_DATA_HOME")) {
+		dir_path = QString(env_p).append("/news_p2p_sharing/Articles/");
+	}
+	else if (const char* env_p = std::getenv("HOME")) {
+		dir_path = QString(env_p).append("/.local/share/news_p2p_sharing/Articles/");
+	}
+	root_path = "/";
+#endif
+}
+
 /**
  * @brief Construct a new Article::Article object from protobuf Article.
  * 
@@ -42,7 +60,20 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 		article_present_ = true;
 		QString file_name = QString::fromStdString(_heading).replace(' ', '_').append('-').append(QString::number(_main_hash)).append(".md");
 		QFile file;
-		file.setFileName(file_name.prepend("/home/michal/"));
+
+		QString dir_path, root_path;
+
+		set_dir_path_and_root(dir_path, root_path);
+
+		QDir dir(dir_path);
+		QDir rdir(root_path);
+		if (!dir.exists()) {
+			rdir.mkpath(dir.path());
+		}
+
+		file_name.prepend(dir_path);
+
+		file.setFileName(file_name);
 		file.open(QIODevice::ReadWrite);
 		QTextStream qts(&file);
 		qts << QString::fromStdString(article_actual);

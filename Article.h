@@ -11,9 +11,11 @@
 #include <map>
 #include <regex>
 #include <optional>
+
 #include <QString>
 #include <QFile>
 #include <QTextStream>
+#include <QDir>
 
 #include "StringSplitter.h"
 #include "GlobalUsing.h"
@@ -88,7 +90,11 @@ public:
 				if (hash_iter_->second.paragraph_level <= level_) {
 					//found paragraph and level checks out
 					paragraph_found = true;
-					paragraph_.append(line).append("\n");
+					#if defined(_WIN32) 
+						paragraph_.append(line).append("\r\n");
+					#else
+						paragraph_.append(line).append("\n");
+					#endif
 				}
 				else {
 					wrong_level_para_found = true;
