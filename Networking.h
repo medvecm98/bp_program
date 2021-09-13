@@ -74,6 +74,7 @@ class PeerReceiver : public QObject {
 
 public:
 	PeerReceiver(networking_ptr net);
+	void restart_server();
 
 public slots:
 	void message_receive();
@@ -120,16 +121,16 @@ public:
 		: sender_receiver_initialized(false)
 		, news_db(nd)
 	{
-		/*QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
+		QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
 		for (int i = 0; i < ipAddressesList.size(); ++i) {
 			if (ipAddressesList.at(i) != QHostAddress::LocalHost &&
 				ipAddressesList.at(i).toIPv4Address()) {
 				ip_map_.my_ip.ipv4 = ipAddressesList.at(i);
 				break;
 			}
-		}*/
+		}
 
-		ip_map_.my_ip.ipv4 = QHostAddress("192.168.122.1");
+		//ip_map_.my_ip.ipv4 = QHostAddress("192.168.122.1");
 
 		std::cout << ip_map_.my_ip.ipv4.toString().toStdString() << '\n';
 
@@ -175,6 +176,10 @@ public:
 	
 	void sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver);
 	void generate_rsa_key_pair();
+
+	void restart_server() {
+		receiver_->restart_server();
+	}
 
 
 	IpMap ip_map_;

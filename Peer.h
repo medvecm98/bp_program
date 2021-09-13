@@ -246,13 +246,14 @@ public:
 		std::cout << "newspaper_id_ " << newspaper_id_ << std::endl;
 		std::cout << "newspaper_name_ " << newspaper_name_ << std::endl;
 		std::cout << "news_ count: " << news_.size() << std::endl;
-		for (auto&& n : news_) {
-			std::cout << "  EE: " << n.second.get_name() << std::endl;
-		}
 	}
 
 	news_database& get_news_db() {
 		return news_;
+	}
+
+	void restart_server() {
+		networking_->restart_server();
 	}
 
 	news_database::iterator recently_added;

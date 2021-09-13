@@ -266,6 +266,22 @@ PeerReceiver::PeerReceiver(networking_ptr net) {
 	
 }
 
+void PeerReceiver::restart_server() {
+	tcp_server_->close();
+	if (!tcp_server_->listen(networking_->ip_map_.my_ip.ipv4, 14128)) {
+		QTextStream(stdout)
+			<< "Failed to start the server "
+			<< tcp_server_->errorString()
+			<< '\n';
+		tcp_server_->close();
+		return;
+	}
+	else {
+		QTextStream(stdout) << "Server restarted" << '\n';
+		QTextStream(stdout) << "Listening on: " << networking_->ip_map_.my_ip.ipv4.toString() << '\n';
+	}
+}
+
 void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlock iv, IpWrapper& ipw, networking_ptr networking) {
 	symmetric_cipher::Decryption dec;
 
