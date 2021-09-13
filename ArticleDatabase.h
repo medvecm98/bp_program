@@ -24,6 +24,17 @@ public:
 
 	void load_from_headers();
 	void save_to_headers();
+
+	/**
+	 * Serialize using boost archive.
+	 */
+	template <class Archive>
+	void serialize(Archive& ar, const unsigned int version) {
+		ar & _headers_loaded;
+		ar & _database;
+		ar & _paths_to_headers;
+		ar & counter;
+	}
 private:
 	bool _headers_loaded;
 	article_database_container _database;

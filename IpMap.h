@@ -23,6 +23,17 @@ public:
 	ip_map::iterator get_map_end() {
 		return map_.end();
 	}
+
+	/**
+	 * Serialize using boost archive.
+	 */
+	template <class Archive>
+	void serialize(Archive& ar, const unsigned int version) {
+		ar & my_ip;
+		ar & my_public_id;
+		ar & private_rsa;
+	}
+
 	ip_map::iterator get_wrapper_for_pk(pk_t);
 	IpWrapper my_ip;
 	pk_t my_public_id;

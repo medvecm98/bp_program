@@ -599,7 +599,7 @@ void Peer::handle_responses(unique_ptr_message message) {
 					article_list.categories.insert(*cit);
 				}
 			}
-			article_list.article_headers.push_back(Article(*it));
+			article_list.article_headers.insert({a.main_hash(), std::move(a)});
 		}
 
 		emit new_article_list(list_news_id);

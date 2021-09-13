@@ -9,7 +9,7 @@ using database_iterator_t = article_database_container::const_iterator;
 
 struct ArticleListWrapper {
 	std::set<my_string> categories;
-	std::vector<Article> article_headers; 
+	std::unordered_map<hash_t, Article> article_headers; 
 };
 
 class NewspaperEntry {

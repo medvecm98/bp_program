@@ -52,11 +52,11 @@ void MainWindow::on_pushButton_add_news_released()
 void MainWindow::article_list_received(pk_t newspaper_id) {
 	std::cout << "about to print article_list" << std::endl;
 	auto news_the_one  = ctx->p.get_news_db().at(newspaper_id);
-	auto articles = news_the_one.get_list_of_articles();
+	auto& articles = news_the_one.get_list_of_articles();
 	QString news_name = QString::fromStdString(news_the_one.get_name());
 	QString id_in_string = QString::number(news_the_one.get_id());
 	
-	auto items = ui->treeWidget_newspaper->findItems(news_name, Qt::MatchContains);
+	//auto items = ui->treeWidget_newspaper->findItems(news_name, Qt::MatchContains);
 	QTreeWidgetItem* requseted_newspaper = nullptr;
 
 	for (int i = 0; i < ui->treeWidget_newspaper->topLevelItemCount() && !requseted_newspaper; i++) {
@@ -72,7 +72,16 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 				if (requseted_newspaper->child(i)->text(0) == category.c_str()) { //found category we are looking for
 					category_found = true;
 					for (auto&& article : articles.article_headers) {
-						requseted_newspaper->child(i)->addChild( new QTreeWidgetItem(QStringList({article.heading().c_str(), "Article", QString::number(article.main_hash())})));
+						bool article_found = false;
+						for (int j = 0; j < requseted_newspaper->child(i)->childCount(); j++) {
+							if (requseted_newspaper->child(i)->child(j)->text(2) == QString::number(article.second.main_hash())) {
+								article_found = true;
+							}
+						}
+						if (!article_found) {
+							requseted_newspaper->child(i)->addChild( new QTreeWidgetItem(QStringList({article.second.heading().c_str(), "Article", QString::number(article.second.main_hash())})));
+						}
+						article_found = false;
 					}
 				}
 			}
@@ -80,7 +89,7 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 				auto new_cat_tree = new QTreeWidgetItem(QStringList({category.c_str(), "Category", category.c_str()}));
 				requseted_newspaper->addChild( new_cat_tree);
 				for (auto&& article : articles.article_headers) {
-					new_cat_tree->addChild( new QTreeWidgetItem(QStringList({article.heading().c_str(), "Article", QString::number(article.main_hash())})));
+					new_cat_tree->addChild( new QTreeWidgetItem(QStringList({article.second.heading().c_str(), "Article", QString::number(article.second.main_hash())})));
 				}
 			}
 			category_found = false;
