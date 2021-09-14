@@ -98,7 +98,7 @@ void MainWindow::on_pushButton_add_article_released()
 {
 	Article a;
 	if (std::filesystem::is_regular_file(ui->lineEdit_article_path->text().trimmed().toStdString())) {
-		pk_t news_id = ui->comboBox_newspapers->currentText().split(QLatin1Char(':'))[1].toULongLong();
+		pk_t news_id = ui->comboBox_newspapers->currentText().split(QLatin1Char(':')).last().toULongLong();
 		a.initialize_article(std::vector<my_string>(), ui->lineEdit_article_path->text().trimmed().toStdString(), ctx->p, ctx->p.get_news_db().at(news_id));
 
 		ui->listWidget_articles->addItem(QString(a.heading().c_str()).append(':').append(QString::number(a.main_hash())));
@@ -194,7 +194,8 @@ void MainWindow::on_pushButton_external_article_released()
 		std::cout << "Please, select only one item, thank you." << std::endl;
 		return;
 	}
-	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent()->parent() != nullptr) {
+	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr ||
+			 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) {
 		std::cout << "Please, select an article, thank you." << std::endl;
 		return;
 	}
