@@ -29,9 +29,14 @@ void Form::on_buttonBox_accepted()
 {
 	if (!ui->lineEdit_name->text().isEmpty()) {
 		ctx->p.set_name(ui->lineEdit_name->text().toStdString());
-	}
-	if (ui->checkBox_create_newspaper->isChecked() && !ui->lineEdit_newspaper_name->text().isEmpty()) {
-		ctx->p.init_newspaper(ui->lineEdit_newspaper_name->text().toStdString());
+
+		if (ui->checkBox_create_newspaper->isChecked() && !ui->lineEdit_newspaper_name->text().isEmpty()) {
+			ctx->p.init_newspaper(ui->lineEdit_newspaper_name->text().toStdString());
+			emit enable_add_article();
+			emit disable_new_peer();
+		}
+		emit enable_add_newspaper();
+		emit enable_print_peer();
 	}
 	this->hide();
 }

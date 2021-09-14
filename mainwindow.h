@@ -4,6 +4,9 @@
 #include <QMainWindow>
 #include <QWidget>
 #include <QErrorMessage>
+#include <QTreeWidgetItem>
+#include <QListWidgetItem>
+#include <QFileDialog>
 #include "programcontext.h"
 #include "form.h"
 #include <memory>
@@ -27,6 +30,10 @@ public:
 public slots:
 	void newspaper_added_to_db();
 	void article_list_received(pk_t newspaper_id);
+	void enable_add_article();
+	void enable_add_news();
+	void enable_print_peer();
+	void disable_new_peer();
 
 private slots:
 	void on_pushButton_new_peer_released();
@@ -49,6 +56,14 @@ private slots:
 	void on_pushButton_released();
 
 	void on_pushButton_external_article_released();
+
+	void on_treeWidget_newspaper_itemActivated(QTreeWidgetItem *item, int column);
+
+	void on_listWidget_articles_itemActivated(QListWidgetItem *item);
+
+	void on_pushButton_select_files_released();
+
+	void on_lineEdit_article_path_textChanged(const QString &arg1);
 
 private:
 	Ui::MainWindow *ui;

@@ -224,3 +224,65 @@ void MainWindow::on_pushButton_external_article_released()
 	}
 }
 
+void MainWindow::enable_add_news(){
+	ui->pushButton_add_news->setEnabled(true);
+}
+
+void MainWindow::enable_add_article() {
+	ui->pushButton_add_article->setEnabled(true);
+	ui->lineEdit_article_path->setEnabled(true);
+	ui->pushButton_select_files->setEnabled(true);
+}
+
+void MainWindow::enable_print_peer() {
+	ui->pushButton_print_peer->setEnabled(true);
+}
+
+void MainWindow::disable_new_peer(){
+	ui->pushButton_new_peer->setDisabled(true);
+}
+
+void MainWindow::on_treeWidget_newspaper_itemActivated(QTreeWidgetItem *item, int column)
+{
+	if (item->parent() == nullptr) {
+		ui->pushButton_article_list->setEnabled(true);
+	}
+	else {
+		ui->pushButton_article_list->setDisabled(true);
+	}
+
+	if (item->parent()->parent()->parent() == nullptr) {
+		ui->pushButton_external_article->setEnabled(true);
+	}
+	else {
+		ui->pushButton_external_article->setDisabled(true);
+	}
+}
+
+void MainWindow::on_listWidget_articles_itemActivated(QListWidgetItem *item)
+{
+	ui->pushButton_preview_article->setEnabled(true);
+}
+
+void MainWindow::on_pushButton_select_files_released()
+{
+	const char* env_p = std::getenv("HOME");
+	auto fileName = QFileDialog::getOpenFileName(this, "Select files", env_p, "Text Files (*.txt);;Markdown (*.md)");
+	if (!fileName.isNull()) {
+		ui->lineEdit_article_path->clear();
+		ui->lineEdit_article_path->setText(fileName);
+		on_pushButton_add_article_released();
+	}
+}
+
+void MainWindow::on_lineEdit_article_path_textChanged(const QString &arg1)
+{
+	if (ui->comboBox_newspapers->count() == 0) {
+		auto news_db = ctx->p.get_news_db();
+		for (auto&& news : news_db) {
+			ui->comboBox_newspapers->addItem(QString(news.second.get_name().c_str()).append(':').append(QString::number(news.second.get_id())));
+		}
+		ui->comboBox_newspapers->setEnabled(true);
+		ui->pushButton_add_article->setEnabled(true);
+	}
+}

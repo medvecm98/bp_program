@@ -26,6 +26,12 @@ private slots:
 
     void on_buttonBox_rejected();
 
+signals:
+	void enable_add_article();
+	void enable_add_newspaper();
+	void enable_print_peer();
+	void disable_new_peer();
+
 private:
 	Ui::Form *ui;
 	ProgramContext *ctx;
