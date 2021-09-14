@@ -37,7 +37,7 @@ void MainWindow::newspaper_added_to_db(pk_t news_id) {
 				new QTreeWidgetItem(QStringList({
 								QString(ctx->p.get_news_db()[news_id].get_name().c_str()),
 								"Newspaper",
-								QString::number(ctx->p.recently_added->second.get_id())
+								QString::number(ctx->p.get_news_db()[news_id].get_id())
 							}))
 	);
 }
@@ -259,7 +259,7 @@ void MainWindow::on_pushButton_select_files_released()
 	if (!fileName.isNull()) {
 		ui->lineEdit_article_path->clear();
 		ui->lineEdit_article_path->setText(fileName);
-		on_pushButton_add_article_released();
+		//on_pushButton_add_article_released();
 	}
 }
 
