@@ -30,8 +30,6 @@ void MainWindow::on_pushButton_new_peer_released()
 void MainWindow::on_pushButton_print_peer_released()
 {
 	ctx->p.print_contents();
-	if (!ui->treeWidget_newspaper->topLevelItem(0)->parent())
-		std::cout << "its nullptr" << std::endl;
 }
 
 void MainWindow::newspaper_added_to_db() {
