@@ -27,3 +27,9 @@ void add_newspaper::on_buttonBox_accepted() {
 	this->hide();
 }
 
+
+void add_newspaper::on_buttonBox_rejected()
+{
+    clear_all_lineEdit();
+    this->hide();
+}
