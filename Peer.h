@@ -262,6 +262,7 @@ public slots:
 	void handle_message(unique_ptr_message message);
 
 signals:
+	void got_newspaper_confirmation(pk_t news_id);
 	void new_article_list(pk_t newspaper_id);
 	void ip_credentials_arrived(pk_t message_originally_to);
 	void new_symmetric_key(pk_t key_sender);
@@ -278,6 +279,7 @@ private:
 
 	std::unordered_multimap<hash_t, Margin> margins_added_; //multimap of Article -> Margins, that this peer added, or requested to add
 	std::unordered_map<pk_t, Article> article_headers_only; //only for article headers, so it won't interfere with regular ones
+	std::unordered_map<pk_t, NewspaperEntry> newspapers_awaiting_confirmation;
 
 	//journalist part
 	reader_database readers_; //list of article readers

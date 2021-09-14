@@ -15,7 +15,7 @@ void Peer::enroll_new_article(Article a) {
  * @param newspaper_ip_domain IP, or domain name, of the newspaper.
  */
 void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain) {
-	recently_added = news_.insert({newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name)}).first;
+	newspapers_awaiting_confirmation.insert({newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name)});
 	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
 
 	networking_->enroll_message_to_be_sent(MFW::SetMessageContextOneWay(
@@ -643,6 +643,11 @@ void Peer::handle_responses(unique_ptr_message message) {
 	else if (type == np2ps::PUBLIC_KEY) {
 		std::cout << "public key update" << std::endl;
 		networking_->ip_map_.update_rsa_public((pk_t)message->from(), message->public_key().key());
+		if (newspapers_awaiting_confirmation.find((pk_t)message->from()) != newspapers_awaiting_confirmation.end()) {
+			news_.insert({message->from(), newspapers_awaiting_confirmation[(pk_t)message->from()]});
+			newspapers_awaiting_confirmation.erase(message->from());
+			emit got_newspaper_confirmation(message->from());
+		}
 	}
 	else if (type == np2ps::SYMMETRIC_KEY) {
 		emit symmetric_key_exchanged(message->from());

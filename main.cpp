@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 	ProgramContext ctx;
 	w.setProgramContext(&ctx);
 
-	QObject::connect(w_add_newspaper, &add_newspaper::new_newspaper_in_db,
+	QObject::connect(&ctx.p, &Peer::got_newspaper_confirmation,
 					 &w, &MainWindow::newspaper_added_to_db);
 
 	QObject::connect(&ctx.p, &Peer::new_article_list, &w, &MainWindow::article_list_received);

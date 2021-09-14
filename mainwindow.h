@@ -28,7 +28,7 @@ public:
 	~MainWindow();
 
 public slots:
-	void newspaper_added_to_db();
+	void newspaper_added_to_db(pk_t news_id);
 	void article_list_received(pk_t newspaper_id);
 	void enable_add_article();
 	void enable_add_news();

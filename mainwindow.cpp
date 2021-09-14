@@ -32,10 +32,10 @@ void MainWindow::on_pushButton_print_peer_released()
 	ctx->p.print_contents();
 }
 
-void MainWindow::newspaper_added_to_db() {
+void MainWindow::newspaper_added_to_db(pk_t news_id) {
 	ui->treeWidget_newspaper->addTopLevelItem(
 				new QTreeWidgetItem(QStringList({
-								QString(ctx->p.recently_added->second.get_name().c_str()),
+								QString(ctx->p.get_news_db()[news_id].get_name().c_str()),
 								"Newspaper",
 								QString::number(ctx->p.recently_added->second.get_id())
 							}))
