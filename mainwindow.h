@@ -65,6 +65,8 @@ private slots:
 
 	void on_lineEdit_article_path_textChanged(const QString &arg1);
 
+	void on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int column);
+
 private:
 	Ui::MainWindow *ui;
 	ProgramContext* ctx;

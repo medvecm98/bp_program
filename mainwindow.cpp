@@ -244,19 +244,7 @@ void MainWindow::disable_new_peer(){
 
 void MainWindow::on_treeWidget_newspaper_itemActivated(QTreeWidgetItem *item, int column)
 {
-	if (item->parent() == nullptr) {
-		ui->pushButton_article_list->setEnabled(true);
-	}
-	else {
-		ui->pushButton_article_list->setDisabled(true);
-	}
 
-	if (item->parent()->parent()->parent() == nullptr) {
-		ui->pushButton_external_article->setEnabled(true);
-	}
-	else {
-		ui->pushButton_external_article->setDisabled(true);
-	}
 }
 
 void MainWindow::on_listWidget_articles_itemActivated(QListWidgetItem *item)
@@ -284,5 +272,22 @@ void MainWindow::on_lineEdit_article_path_textChanged(const QString &arg1)
 		}
 		ui->comboBox_newspapers->setEnabled(true);
 		ui->pushButton_add_article->setEnabled(true);
+	}
+}
+
+void MainWindow::on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int column)
+{
+	if (item->parent() == nullptr) {
+		ui->pushButton_article_list->setEnabled(true);
+	}
+	else {
+		ui->pushButton_article_list->setDisabled(true);
+	}
+
+	if (item->parent()->parent()->parent() == nullptr) {
+		ui->pushButton_external_article->setEnabled(true);
+	}
+	else {
+		ui->pushButton_external_article->setDisabled(true);
 	}
 }
