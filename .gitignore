@@ -4,3 +4,4 @@ build/
 cmake-build-debug/
 html/
 b/
+CMakeLists.txt.user
