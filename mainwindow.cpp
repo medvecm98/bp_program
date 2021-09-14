@@ -249,7 +249,7 @@ void MainWindow::on_treeWidget_newspaper_itemActivated(QTreeWidgetItem *item, in
 
 void MainWindow::on_listWidget_articles_itemActivated(QListWidgetItem *item)
 {
-	ui->pushButton_preview_article->setEnabled(true);
+
 }
 
 void MainWindow::on_pushButton_select_files_released()
@@ -290,4 +290,9 @@ void MainWindow::on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int 
 	else {
 		ui->pushButton_external_article->setDisabled(true);
 	}
+}
+
+void MainWindow::on_listWidget_articles_itemClicked(QListWidgetItem *item)
+{
+	ui->pushButton_preview_article->setEnabled(true);
 }

@@ -67,6 +67,8 @@ private slots:
 
 	void on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int column);
 
+	void on_listWidget_articles_itemClicked(QListWidgetItem *item);
+
 private:
 	Ui::MainWindow *ui;
 	ProgramContext* ctx;
