@@ -277,19 +277,7 @@ void MainWindow::on_lineEdit_article_path_textChanged(const QString &arg1)
 
 void MainWindow::on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int column)
 {
-	if (item->parent() == nullptr) {
-		ui->pushButton_article_list->setEnabled(true);
-	}
-	else {
-		ui->pushButton_article_list->setDisabled(true);
-	}
 
-	if (item->parent()->parent()->parent() == nullptr) {
-		ui->pushButton_external_article->setEnabled(true);
-	}
-	else {
-		ui->pushButton_external_article->setDisabled(true);
-	}
 }
 
 void MainWindow::on_listWidget_articles_itemClicked(QListWidgetItem *item)
