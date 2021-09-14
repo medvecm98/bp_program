@@ -91,6 +91,7 @@ Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_arti
  */
 void Article::calculate_hashes(hashes_container& hashes) {
 	std::fstream article_file(_path_to_article_file);
+	std::string first_line;
 	if (article_file.is_open())
 		std::cout << "I'm open" << std::endl;
 
@@ -98,6 +99,9 @@ void Article::calculate_hashes(hashes_container& hashes) {
 	int h_counter = 0;
 	std::regex r("[ ]*#[ ]+"); //heading (in markdown) regex
 	while (std::getline(article_file, line)) {
+		if (first_line.empty() && !line.empty()) {
+			first_line = line;
+		}
 		if (_heading.empty()) {
 			std::smatch m;
 			std::regex_search(line, m, r);
@@ -117,6 +121,8 @@ void Article::calculate_hashes(hashes_container& hashes) {
 			paragraph += StringHelpers::Trim(line) + ' ';
 		}
 	}
+	if (_heading.empty())
+		_heading = first_line;
 }
 
 void Article::load_information() {
