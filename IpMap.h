@@ -2,9 +2,12 @@
 #define PROGRAM_IPMAP_H
 
 #include "IpWrapper.h"
+#include <cryptopp/files.h>
+#include <filesystem>
 #include <optional>
 
 class IpMap {
+	friend class boost::serialization::access;
 public:
 	bool add_to_map(pk_t, IpWrapper&& ip);
 	void remove_from_map(pk_t);
@@ -28,17 +31,51 @@ public:
 	 * Serialize using boost archive.
 	 */
 	template <class Archive>
-	void serialize(Archive& ar, const unsigned int version) {
+	void save(Archive& ar, const unsigned int version) const {
 		ar & my_ip;
 		ar & my_public_id;
-		ar & private_rsa;
+		if (private_rsa.has_value()) {
+			std::string s;
+			CryptoPP::StringSink ss(s);
+			private_rsa.value().DEREncode(ss);
+			ar & s;
+		}
+		else {
+			ar & "";
+		}
+		ar & map_;
 	}
+
+	/**
+	 * Serialize using boost archive.
+	 */
+	template <class Archive>
+	void load(Archive& ar, const unsigned int version) {
+		ar & my_ip;
+		ar & my_public_id;
+		std::string private_rsa_str;
+		ar & private_rsa_str;
+		if (private_rsa_str != "") {
+			private_rsa = {CryptoPP::RSA::PrivateKey()};
+			CryptoPP::StringSource ss(private_rsa_str);
+			private_rsa.value().BERDecode(ss);
+		}
+		else {
+			private_rsa = {};
+		}
+		ar & map_;
+	}
+
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+	
 
 	ip_map::iterator get_wrapper_for_pk(pk_t);
 	IpWrapper my_ip;
 	pk_t my_public_id;
 	rsa_private_optional private_rsa;
 private:
+	void serialize_keys();
+	void deserialize_keys();
 	ip_map map_;
 };
 

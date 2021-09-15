@@ -285,3 +285,11 @@ void MainWindow::on_listWidget_articles_itemClicked(QListWidgetItem *item)
 {
 	ui->pushButton_preview_article->setEnabled(true);
 }
+
+void MainWindow::on_pushButton_save_released()
+{
+	std::ofstream ofs("/home/michal/archive.txt");
+	boost::archive::text_oarchive oa(ofs);
+	oa << (*ctx);
+}
+

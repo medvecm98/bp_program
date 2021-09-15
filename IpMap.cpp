@@ -148,3 +148,33 @@ ip_map::iterator IpMap::get_wrapper_for_pk(pk_t pk) {
 	}
 	return map_.end();
 }
+
+void IpMap::serialize_keys() {
+	if (private_rsa.has_value()) {
+		CryptoPP::ByteQueue bq;
+		private_rsa.value().Save(bq);
+
+		std::string dir = GU::get_program_home().append("/Keys");
+		std::filesystem::create_directories(dir.c_str());
+		std::fstream file;
+		file.open(dir.append("/PrivateKey.prvk"), std::ios_base::out);
+		CryptoPP::FileSink fs(file);
+
+		bq.CopyTo(fs);
+		fs.MessageEnd();
+	}
+}
+
+void IpMap::deserialize_keys() {	
+	std::string file_path = GU::get_program_home().append("/Keys").append("/PrivateKey.prvk");
+	if (std::filesystem::is_regular_file(file_path)) {
+		CryptoPP::FileSource fs(file_path.c_str(), true);
+		CryptoPP::ByteQueue bq;
+
+		fs.TransferTo(bq);
+		bq.MessageEnd();
+
+		private_rsa = {CryptoPP::RSA::PrivateKey()};
+		private_rsa.value().Load(bq);
+	}
+}	

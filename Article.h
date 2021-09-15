@@ -59,6 +59,15 @@ struct HashWrapper {
 	}
 	hash_t hash;
 	level_t paragraph_level;
+
+	/**
+	 * Serialize using boost archive.
+	 */
+	template <class Archive>
+	void serialize(Archive& ar, const unsigned int version) {
+		ar & hash;
+		ar & paragraph_level;
+	}
 };
 
 using hashes_container = std::map<std::int32_t, HashWrapper>;
@@ -285,15 +294,24 @@ using article_database_container = std::map<hash_t, Article>;
  */
 struct ArticleReaders {
 	Article article;
-	std::unordered_map<pk_t, user_variant> readers;
-	ArticleReaders(Article a, pk_t user, user_variant reader) 
+	std::unordered_map<pk_t, PeerInfo*> readers;
+	ArticleReaders(Article a, pk_t user, PeerInfo* reader) 
 	: article(std::move(a))
 	{
 		readers.insert({user, reader});
 	}
 
-	void add_reader(pk_t user, user_variant reader) {
+	void add_reader(pk_t user, PeerInfo* reader) {
 		readers.insert({user, reader});
+	}
+
+	/**
+	 * Serialize using boost archive.
+	 */
+	template <class Archive>
+	void serialize(Archive& ar, const unsigned int version) {
+		ar & article;
+		ar & readers;
 	}
 };
 
@@ -302,7 +320,7 @@ struct ArticleReaders {
  */
 using category_t = std::string;
 using user_multimap_container = std::unordered_map<hash_t, ArticleReaders>;
-using category_multimap_container = std::unordered_multimap<my_string, user_multimap_container::iterator>;
-using optional_author_peers = std::optional<std::shared_ptr<ArticleReaders>>;
+using category_multimap_container = std::unordered_multimap<my_string, ArticleReaders*>;
+using optional_author_peers = std::optional<ArticleReaders*>;
 
 #endif //PROGRAM_ARTICLE_H

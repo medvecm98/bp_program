@@ -69,6 +69,8 @@ private slots:
 
 	void on_listWidget_articles_itemClicked(QListWidgetItem *item);
 
+	void on_pushButton_save_released();
+
 private:
 	Ui::MainWindow *ui;
 	ProgramContext* ctx;

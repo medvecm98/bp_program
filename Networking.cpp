@@ -145,8 +145,8 @@ void Networking::send_message(unique_ptr_message msg) {
 	else {
 		//request IP and public key from authority
 		std::cout << "requesting IP and public key" << std::endl;
-		auto news_end = news_db.cend();
-		for (auto news_iter = news_db.cbegin(); news_iter != news_end; news_iter++) {
+		auto news_end = news_db->cend();
+		for (auto news_iter = news_db->cbegin(); news_iter != news_end; news_iter++) {
 			std::shared_ptr<std::string> request_string = std::make_shared<std::string>();
 			request_string->append("r");
 			request_string->append(std::to_string(msg->to()));
@@ -244,9 +244,13 @@ std::optional<seq_t> Networking::receive_message(QTcpSocket* tcp_socket) {
 	return {1};
 }
 
-void Networking::init_sender_receiver() {
-	sender_ = std::make_shared<PeerSender>(shared_from_this());
-	receiver_ = std::make_shared<PeerReceiver>(shared_from_this());
+void Networking::init_sender_receiver(news_database* nd) {
+	if (!sender_receiver_initialized) {
+		sender_ = std::make_shared<PeerSender>(shared_from_this());
+		receiver_ = std::make_shared<PeerReceiver>(shared_from_this());
+		news_db = nd;
+		sender_receiver_initialized = true;
+	}
 }
 
 PeerReceiver::PeerReceiver(networking_ptr net) {

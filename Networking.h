@@ -117,10 +117,9 @@ class Networking : public QObject, public std::enable_shared_from_this<Networkin
 	Q_OBJECT
 
 public:
-	Networking(const news_database& nd) 
-		: sender_receiver_initialized(false)
-		, news_db(nd)
-	{
+	Networking() {
+		sender_receiver_initialized = false;
+
 		QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
 		for (int i = 0; i < ipAddressesList.size(); ++i) {
 			if (ipAddressesList.at(i) != QHostAddress::LocalHost &&
@@ -130,8 +129,6 @@ public:
 			}
 		}
 
-		//ip_map_.my_ip.ipv4 = QHostAddress("192.168.122.1");
-
 		std::cout << ip_map_.my_ip.ipv4.toString().toStdString() << '\n';
 
 		QObject::connect(this, &Networking::new_message_enrolled,
@@ -140,16 +137,10 @@ public:
 
 	bool enroll_message_to_be_sent(unique_ptr_message message);
 
-	void init_sender_receiver();
+	void init_sender_receiver(news_database* nd);
 
 
 	std::optional<seq_t> receive_message(QTcpSocket* tcp_socket);
-	
-	unique_ptr_message pop_message() {
-		auto msg = std::move(received_msg.front());
-		received_msg.pop();
-		return std::move(msg);
-	}
 
 	void store_to_map(unique_ptr_message&& msg) {
 		waiting_level.insert( {msg->seq(), std::move(msg)} );
@@ -181,6 +172,17 @@ public:
 		receiver_->restart_server();
 	}
 
+	/**
+	 * Serialize using boost archive.
+	 */
+	template <class Archive>
+	void serialize(Archive& ar, const unsigned int version) {
+		ar & ip_map_;
+		ar & soliciting_articles;
+		ar & news_db;
+		ar & sender_receiver_initialized;
+	}
+
 
 	IpMap ip_map_;
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles;
@@ -200,8 +202,7 @@ signals:
 private:
 	const int port_ = PORT;
 
-	const news_database& news_db;
-	msg_queue to_send_msg, received_msg;
+	news_database* news_db;
 	msg_map waiting_level; //<seq number of message, message>
 	encrypted_message_map waiting_decrypt; //<pk_t of other holder of symmetric key, message>
 	std::unordered_multimap<pk_t, unique_ptr_message> waiting_ip; //<pk_t of receiver, message to send to receiver>

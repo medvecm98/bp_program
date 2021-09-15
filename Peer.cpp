@@ -84,7 +84,7 @@ size_t Peer::list_all_articles_from_news(article_container &articles, const std:
 	size_t article_counter = 0;
 	for (auto&& cat : articles_categories_) {
 		if (categories.empty() || (categories.find(cat.first) != categories.end())) {
-			articles.insert(std::make_shared<Article>(cat.second->second.article));
+			articles.insert(std::make_shared<Article>(cat.second->article));
 			article_counter++;
 		}
 	}
@@ -100,7 +100,7 @@ size_t Peer::list_all_articles_from_news(article_container &articles, const std:
 size_t Peer::list_all_articles_from_news(article_container &articles) {
 	size_t article_counter = 0;
 	for (auto&& cat : articles_categories_) {
-			articles.insert(std::make_shared<Article>(cat.second->second.article));
+			articles.insert(std::make_shared<Article>(cat.second->article));
 			article_counter++;
 	}
 	return article_counter;
@@ -198,8 +198,8 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
 			auto bucket_begin = articles_categories_.begin(articles_categories_.bucket(cat));
 			auto bucket_end = articles_categories_.end(articles_categories_.bucket(cat));
 			for (; bucket_begin != bucket_end; bucket_begin++) {
-				if (bucket_begin->second->first == article_hash) {
-					return optional_author_peers(std::make_shared<ArticleReaders>(bucket_begin->second->second));
+				if (bucket_begin->second->article.main_hash() == article_hash) {
+					return optional_author_peers(bucket_begin->second);
 				}
 			}
 		}
@@ -218,8 +218,8 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
 		auto bucket_begin = articles_categories_.begin(articles_categories_.bucket(cat.first));
 		auto bucket_end = articles_categories_.end(articles_categories_.bucket(cat.first));
 		for (; bucket_begin != bucket_end; bucket_begin++) {
-			if (bucket_begin->second->first == article_hash) {
-				return optional_author_peers(std::make_shared<ArticleReaders>(bucket_begin->second->second));
+			if (bucket_begin->second->article.main_hash() == article_hash) {
+				return optional_author_peers(bucket_begin->second);
 			}
 		}
 	}
@@ -269,23 +269,16 @@ void Peer::handle_requests(unique_ptr_message message) {
 
 		for (; user_not_found && (article_readers_iterator != readers_.end(article_bucket)); article_readers_iterator++) {
 			//we search for given user, if it exists in our database and we will check for his level
-			if (article_readers_iterator->second.peer_key == message->from()) {
+			if (article_readers_iterator->second->peer_key == message->from()) {
 				user_not_found = false;
-				found_level = article_readers_iterator->second.peer_level;
-			}
-		}
-
-		for (auto&& user : basic_users) {
-			if (user == message->from()) {
-				user_not_found = false;
-				found_level = 127;
+				found_level = article_readers_iterator->second->peer_level;
 			}
 		}
 
 		for (auto&& user : user_map) {
 			if (user.first == message->from()) {
 				user_not_found = false;
-				found_level = user.second;
+				found_level = user.second.peer_level;
 			}
 		}
 
@@ -334,7 +327,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 				auto [readers_begin, readers_end] = readers_.equal_range(message->article_all().article_hash());
 				if (readers_begin != readers_end) {
 					for (; readers_begin != readers_end; readers_begin++) {
-						article_peers.push_back(readers_begin->second.peer_key);
+						article_peers.push_back(readers_begin->second->peer_key);
 					}
 					networking_->enroll_message_to_be_sent(
 						MFW::SetMessageContextOneWay(
@@ -430,7 +423,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 		//TODO: error, if user is not authority
 		bool is_member = false;
 		auto find_result = user_map.find(message->user_is_member().user_pk());
-		if ((find_result != user_map.end()) && (find_result->second >= message->user_is_member().level())) {
+		if ((find_result != user_map.end()) && (find_result->second.peer_level >= message->user_is_member().level())) {
 			is_member = true;
 		}
 		networking_->enroll_message_to_be_sent(
@@ -449,7 +442,14 @@ void Peer::handle_requests(unique_ptr_message message) {
 		//reporter part
 		if (find_article(message->article_data_update().article_pk()).has_value()) {
 			if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
-				readers_.insert( {message->from(), PeerInfo(message->from())} );
+				if (user_map.find(message->from()) == user_map.end()) {
+					auto uit = user_map.insert( {message->from(), PeerInfo(message->from())} );
+					readers_.insert( {message->from(), &(uit.first->second)} );
+				}
+				else {
+					auto uit = user_map.find(message->from());
+					readers_.insert( {message->from(), &(uit->second)} );
+				}
 			}
 			else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
 				readers_.erase(message->from());
@@ -463,11 +463,11 @@ void Peer::handle_requests(unique_ptr_message message) {
 			auto user = user_map.find(message->from());
 			if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
 				if (user == user_map.end()) {
-					auto ins = basic_users.insert(message->from());
-					article_author_peers.value()->readers.insert({*ins.first, user_variant(ins.first)});
+					auto ins = user_map.insert({message->from(), PeerInfo(message->from(), 127)});
+					article_author_peers.value()->readers.insert({ins.first->first, &(ins.first->second)});
 				}
 				else {
-					article_author_peers.value()->readers.insert({user->first, user_variant(user)});
+					article_author_peers.value()->readers.insert({user->first, &(user->second)});
 				}
 			}
 			else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
@@ -606,7 +606,7 @@ void Peer::handle_responses(unique_ptr_message message) {
 	}
 	else if (type == np2ps::USER_IS_MEMBER) {
 		if (message->user_is_member().is_member() && (message->user_is_member().level() > 127)) {
-			user_map.insert({message->user_is_member().user_pk(), message->user_is_member().level()});
+			user_map.insert({message->user_is_member().user_pk(), PeerInfo(message->user_is_member().user_pk(), message->user_is_member().level())});
 		}
 		if (networking_->check_if_in_map(message->seq())) {
 			if (message->user_is_member().is_member()) {
@@ -752,7 +752,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 	else if (type == np2ps::PUBLIC_KEY) {
 		std::cout << "got one-way public key" << std::endl;
 		networking_->ip_map_.update_rsa_public((pk_t)msg->from(), msg->public_key().key());
-		basic_users.insert((pk_t)msg->from());
+		user_map.insert({(pk_t)msg->from(), PeerInfo((pk_t)msg->from())});
 		
 		networking_->enroll_message_to_be_sent(
 			MFW::SetMessageContextResponse(

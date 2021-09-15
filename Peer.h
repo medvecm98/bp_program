@@ -10,24 +10,9 @@
 #include <QtNetwork/QHostAddress>
 #include <QObject>
 
-struct PeerInfo {
-	PeerInfo() = default;
-	explicit PeerInfo(pk_t pk) {
-		peer_key = pk;
-		peer_level = 0;
-	}
-	PeerInfo(pk_t pk, level_t level) {
-		peer_key = pk;
-		peer_level = level;
-	}
-	pk_t peer_key = 0;
-	level_t peer_level = 0;
-	/* timestamp of info */
-};
-
 
 using MFW = MessageFactoryWrapper;
-using reader_database = std::unordered_multimap<hash_t, PeerInfo>;
+using reader_database = std::unordered_multimap<hash_t, PeerInfo*>;
 
 
 
@@ -36,12 +21,12 @@ class Peer : public QObject {
 	Q_OBJECT
 
 public:
-	Peer() : networking_(std::make_shared<Networking>(news_))
+	Peer() : networking_(std::make_shared<Networking>())
 	{
 		std::cout << "Peer constructor" << std::endl;
 		name_ = "bla";
 		newspaper_name_ = "";
-		networking_->init_sender_receiver();
+		networking_->init_sender_receiver(&news_);
 		CryptoPP::AutoSeededRandomPool prng;
 		std::random_device rd("/dev/urandom");
 		public_key_ = rd();
@@ -256,7 +241,26 @@ public:
 		networking_->restart_server();
 	}
 
-	news_database::iterator recently_added;
+	/**
+	 * Serialize using boost archive.
+	 */
+	template <class Archive>
+	void serialize(Archive& ar, const unsigned int version) {
+		ar & user_map;
+		ar & news_;
+		ar & public_key_;
+		ar & name_;
+		ar & networking_;
+		ar & margins_added_;
+		ar & article_headers_only;
+		ar & readers_;
+		ar & newspaper_all_readers;
+		ar & articles_categories_;
+		ar & newspaper_name_;
+		ar & newspaper_id_;
+		ar & authorities_;
+		ar & journalists_;
+	}
 
 public slots:
 	void handle_message(unique_ptr_message message);
@@ -272,7 +276,6 @@ signals:
 private:
 	//reader part
 	pk_t public_key_;
-	public_private_key_pair pub_pri_pair_;
 	my_string name_;
 	std::shared_ptr<Networking> networking_;
 	news_database news_; //list of all downloaded articles, mapped by their Newspapers
@@ -285,7 +288,6 @@ private:
 	reader_database readers_; //list of article readers
 
 	//authorities
-	user_container basic_users;
 	user_level_map user_map;
 
 	//chief editor

@@ -19,6 +19,16 @@ struct Margin {
 	unsigned int id;
 	my_string type;
 	my_string content;
+
+	/**
+	 * Serialize using boost archive.
+	 */
+	template <class Archive>
+	void serialize(Archive& ar, const unsigned int version) {
+		ar & id;
+		ar & type;
+		ar & content;
+	}
 };
 
 
