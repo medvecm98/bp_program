@@ -124,7 +124,7 @@ void MainWindow::on_lineEdit_article_path_textEdited(const QString &arg1)
 
 void MainWindow::on_pushButton_preview_article_released()
 {
-	hash_t h = ui->listWidget_articles->selectedItems().begin().i->t()->text().split(':')[1].toULongLong();
+	hash_t h = ui->listWidget_articles->selectedItems().begin().i->t()->text().split(':').last().toULongLong();
 	auto a = ctx->p.find_article(h);
 	if (a.has_value()) {
 		auto article = a.value();
