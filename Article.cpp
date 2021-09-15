@@ -121,6 +121,11 @@ void Article::calculate_hashes(hashes_container& hashes) {
 			paragraph += StringHelpers::Trim(line) + ' ';
 		}
 	}
+	if (line.empty() && !paragraph.empty()) {
+		auto new_hash = hashes.insert(hashes_container::value_type(h_counter++, HashWrapper(std::hash<std::string>{}(paragraph), 0)));
+		_length += paragraph.length();
+		_main_hash += new_hash.first->second.hash;
+	}
 	if (_heading.empty())
 		_heading = first_line;
 }
