@@ -293,3 +293,24 @@ void MainWindow::on_pushButton_save_released()
 	oa << (*ctx);
 }
 
+void MainWindow::on_pushButton_load_released()
+{
+	std::ifstream ifs("/home/michal/archive.txt");
+	boost::archive::text_iarchive ia(ifs);
+	//ia >> (*ctx);
+	if (!ctx->p.get_name().empty()) {
+		if (!ctx->p.get_my_news_name().empty()) {
+			ui->pushButton_new_peer->setEnabled(false);
+			ui->pushButton_add_article->setEnabled(true);
+			ui->pushButton_select_files->setEnabled(true);
+			ui->lineEdit_article_path->setEnabled(true);
+		}
+		ui->pushButton_add_news->setEnabled(true);
+		ui->pushButton_print_peer->setEnabled(true);
+	}
+	ui->treeWidget_newspaper->clear();
+	for (auto&& news : ctx->p.get_news_db()) {
+		ui->treeWidget_newspaper->addTopLevelItem(new QTreeWidgetItem(QStringList({QString::fromStdString(news.second.get_name()), "Newspaper", QString::number(news.second.get_id())})));
+	}
+}
+

@@ -15,6 +15,7 @@ include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 find_package(Boost COMPONENTS system serialization REQUIRED)
 find_package(Qt5 COMPONENTS Core Network Widgets REQUIRED)
+find_package(Doxygen REQUIRED dot)
 include_directories( ${Boost_INCLUDE_DIRS} )
 
 find_library(CryptoPP cryptopp)
@@ -30,4 +31,12 @@ add_executable(news_p2p_sharing main.cpp newarticleform.h newarticleform.cpp new
 	NewspaperEntry.cpp NewspaperEntry.h Margins.h Message.cpp Message.h Networking.cpp Networking.h)
 target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
 	Qt5::Widgets Qt5::Network Qt5::Core)
-#target_link_libraries(news_p2p_sharing PUBLIC ${CryptoPP})
+
+if (DOXYGEN_FOUND)
+	doxygen_add_docs(news_p2p_sharing_docs
+		${CMAKE_SOURCE_DIR}
+		ALL
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+else (DOXYGEN_FOUND)
+	message("Doxygen need to be installed to generate the doxygen documentation.")
+endif (DOXYGEN_FOUND)

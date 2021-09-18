@@ -27,6 +27,13 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 	));
 }
 
+/**
+ * @brief Loads the IPs of all the authorities of given newspaper key.
+ * 
+ * Message is sent to newspaper chief editor.
+ * 
+ * @param newspaper_key Newspaper public ID for which we need the authorities.
+ */
 void Peer::load_ip_authorities(pk_t newspaper_key) {
 	networking_->enroll_message_to_be_sent(
 		MFW::ReqCredentialsFactory(
@@ -41,27 +48,25 @@ void Peer::load_ip_authorities(pk_t newspaper_key) {
 	);
 }
 
-bool Peer::request_margin_add(hash_t article, margin_vector& margin) {
-	auto found_article = find_article_in_database(article);
-
-	if (found_article.has_value()) {
-		networking_->enroll_message_to_be_sent(
-			MFW::SetMessageContextRequest(
-				MFW::UpdateMarginAddFactory(
-					public_key_,
-					found_article.value()->author_id(),
-					article, margin)));
-		return true;
-	}
-	return false;
-}
-
+/**
+ * @brief Intialize a new newspaper.
+ * 
+ * Public ID is same as peer's.
+ * 
+ * @param name Name of the newspaper we want to create.
+ */
 void Peer::init_newspaper(my_string name) {
 	newspaper_name_ = name;
 	newspaper_id_ = public_key_;
-	news_.insert({newspaper_id_, NewspaperEntry(public_key_, newspaper_id_, newspaper_name_)});
+	news_.insert({newspaper_id_, NewspaperEntry(public_key_, newspaper_id_, newspaper_name_)}); //our news are in same db as all the others
 }
 
+/**
+ * @brief Finds article in database. All newspaper are searched.
+ * 
+ * @param article_hash Hash of article we are looking for.
+ * @return article_optional Article header of article we are looking for, no value otherwise.
+ */
 article_optional Peer::find_article_in_database(hash_t article_hash) {
 	for(auto&& news : news_) {
 		auto& [hash, news_entry] = news;
@@ -138,7 +143,8 @@ size_t Peer::list_all_articles_by_me(article_container &articles, const std::set
 	}
 
 	for (auto news_iterator = news_functor(); news_iterator != news_.cend(); news_iterator = news_functor()) {
-		std::cout << "iteration in list_all_articles_by_me" << '\n';
+		/* iterate through one or all news */
+
 		auto i_end = news_iterator->second.get_const_iterator_database_end();
 		for (auto i = news_iterator->second.get_const_iterator_database(); i != i_end; i++) {
 			if (!categories.empty()) {
@@ -163,6 +169,15 @@ size_t Peer::list_all_articles_by_me(article_container &articles, const std::set
 	return article_counter;
 }
 
+/**
+ * @brief List all articles made by this Peer.
+ * 
+ * All categories are used. May or may not set more than one newspapers.
+ * 
+ * @param articles Where to put listed articles.
+ * @param news_id ID of newspaper to use. If zero, all newspapers will be used.
+ * @return Number of articles listed. 
+ */
 size_t Peer::list_all_articles_by_me(article_container &articles, pk_t news_id) {
 
 	return list_all_articles_by_me(articles, std::set<category_t>(), news_id);
@@ -227,7 +242,9 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
 }
 
 /**
- * Universal method to handle the message from the top of the message queue.
+ * @brief Universal method to handle the message from the top of the message queue.
+ * 
+ * @param article_hash Shared pointer to message which needs to be handled.
  */
 void Peer::handle_message(unique_ptr_message message) {
 	std::cout << "message handling" << std::endl;
@@ -252,6 +269,14 @@ void Peer::handle_message(unique_ptr_message message) {
 	}
 }
 
+/**
+ * @brief Handles messages of context "request".
+ * 
+ * Further flow is determined by the type of the message. Almost every one of
+ * these flow paths will generate another message that is later on sent via network.
+ * 
+ * @param message Shared pointer to message (request) which needs to be handled. 
+ */
 void Peer::handle_requests(unique_ptr_message message) {
 	auto type = message->msg_type();
 
@@ -564,6 +589,14 @@ void Peer::handle_requests(unique_ptr_message message) {
 	}
 }
 
+/**
+ * @brief Handles messages of context "response".
+ * 
+ * Further flow is determined by the type of the message. Usually, no message is
+ * sent via network.
+ * 
+ * @param message Shared pointer to message (request) which needs to be handled. 
+ */
 void Peer::handle_responses(unique_ptr_message message) {
 	auto type = message->msg_type();
 
@@ -654,6 +687,14 @@ void Peer::handle_responses(unique_ptr_message message) {
 	}
 }
 
+/**
+ * @brief Article all message generator.
+ * 
+ * Generator for `np2ps::ARTICLE_ALL`. Will send the message via network.
+ * 
+ * @param destination Who is the receiver of the message.
+ * @param article_hash Article hash of desired article.
+ */
 void Peer::generate_article_all_message(pk_t destination, hash_t article_hash) {
 	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextRequest(
@@ -670,6 +711,14 @@ void Peer::generate_article_all_message(pk_t destination, hash_t article_hash) {
 	);
 }
 
+/**
+ * @brief Article header message generator.
+ * 
+ * Generator for `np2ps::ARTICLE_HEADER`.
+ * 
+ * @param destination Who is the receiver of the message.
+ * @param article_hash Article hash of desired article header.
+ */
 void Peer::generate_article_header_message(pk_t destination, hash_t article_hash) {
 	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextRequest(
@@ -682,6 +731,14 @@ void Peer::generate_article_header_message(pk_t destination, hash_t article_hash
 	);
 }
 
+/**
+ * @brief Handler for messages of context "one way".
+ * 
+ * Even though response to such message makes no sense, responses are made,
+ * because it requires different handling that `requests`.
+ * 
+ * @param msg Shared pointer to `one way` message.
+ */
 void Peer::handle_one_way(unique_ptr_message msg) {
 	auto type = msg->msg_type();
 	if (type == np2ps::ARTICLE_SOLICITATION) {
@@ -766,6 +823,11 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 	}
 }
 
+/**
+ * @brief Handler for messages of context "error".
+ * 
+ * @param msg Shared pointer to the message.
+ */
 void Peer::handle_error(unique_ptr_message msg) {
 	auto type = msg->msg_type();
 	if (type == np2ps::ARTICLE_SOLICITATION) {

@@ -26,6 +26,7 @@
 #include <boost/serialization/shared_ptr.hpp>
 #include <boost/serialization/shared_ptr_helper.hpp>
 #include <boost/serialization/variant.hpp>
+#include <boost/serialization/utility.hpp>
 
 #include <boost/serialization/shared_ptr_helper.hpp>
 #include <boost/serialization/split_free.hpp>
