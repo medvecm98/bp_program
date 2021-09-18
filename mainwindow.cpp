@@ -295,9 +295,10 @@ void MainWindow::on_pushButton_save_released()
 
 void MainWindow::on_pushButton_load_released()
 {
+	//enable/disable buttons
 	std::ifstream ifs("/home/michal/archive.txt");
 	boost::archive::text_iarchive ia(ifs);
-	//ia >> (*ctx);
+	ia >> (*ctx);
 	if (!ctx->p.get_name().empty()) {
 		if (!ctx->p.get_my_news_name().empty()) {
 			ui->pushButton_new_peer->setEnabled(false);
@@ -308,9 +309,49 @@ void MainWindow::on_pushButton_load_released()
 		ui->pushButton_add_news->setEnabled(true);
 		ui->pushButton_print_peer->setEnabled(true);
 	}
+
+	//tree
 	ui->treeWidget_newspaper->clear();
 	for (auto&& news : ctx->p.get_news_db()) {
-		ui->treeWidget_newspaper->addTopLevelItem(new QTreeWidgetItem(QStringList({QString::fromStdString(news.second.get_name()), "Newspaper", QString::number(news.second.get_id())})));
+		if (news.second.get_id() != ctx->p.get_my_news_id()) {
+			QTreeWidgetItem* new_item = new QTreeWidgetItem(QStringList({QString::fromStdString(news.second.get_name()), "Newspaper", QString::number(news.second.get_id())}));
+			ui->treeWidget_newspaper->addTopLevelItem(new_item);
+			for (auto&& category : news.second.get_list_of_articles().categories) {
+				QTreeWidgetItem* new_category = new QTreeWidgetItem(
+					QStringList(
+						{
+							QString::fromStdString(category), "Category", QString::fromStdString(category)
+						}
+					)
+				);
+				new_item->addChild(new_category);
+				for (auto&& article : news.second.get_list_of_articles().article_headers) {
+					if (article.second.is_in_category(category)) {
+						new_category->addChild(new QTreeWidgetItem(
+							QStringList(
+								{
+									QString::fromStdString(article.second.heading()), "Article", QString::number(article.second.main_hash()) 
+								}
+							)
+						));
+					}
+				}
+			}
+		}
 	}
+
+	//list of my articles
+	if (!ctx->p.get_my_news_name().empty()) {
+		auto& news_mine = ctx->p.get_news_db().at(ctx->p.get_my_news_id());
+		for (auto ab = news_mine.get_const_iterator_database(); ab != news_mine.get_const_iterator_database_end(); ab++) {
+			ui->listWidget_articles->addItem(
+				new QListWidgetItem(
+					QString::fromStdString(ab->second.heading()).append(':').append(QString::number(ab->second.main_hash()))
+				)
+			);
+		}
+	}
+
+
 }
 

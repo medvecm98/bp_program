@@ -53,6 +53,7 @@ enum article_format {
 };
 
 struct HashWrapper {
+	HashWrapper() = default;
 	HashWrapper(hash_t h, level_t l) {
 		hash = h;
 		paragraph_level = l;
@@ -295,6 +296,7 @@ using article_database_container = std::map<hash_t, Article>;
 struct ArticleReaders {
 	Article article;
 	std::unordered_map<pk_t, PeerInfo*> readers;
+	ArticleReaders() = default;
 	ArticleReaders(Article a, pk_t user, PeerInfo* reader) 
 	: article(std::move(a))
 	{

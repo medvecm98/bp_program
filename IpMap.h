@@ -57,7 +57,7 @@ public:
 		ar & private_rsa_str;
 		if (private_rsa_str != "") {
 			private_rsa = {CryptoPP::RSA::PrivateKey()};
-			CryptoPP::StringSource ss(private_rsa_str);
+			CryptoPP::StringSource ss(private_rsa_str, true);
 			private_rsa.value().BERDecode(ss);
 		}
 		else {

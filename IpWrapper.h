@@ -119,7 +119,7 @@ struct IpWrapper {
 		ar & s;
 		if (!s.empty()) {
 			key_pair.first = {CryptoPP::RSA::PublicKey()};
-			CryptoPP::StringSource ss(s);
+			CryptoPP::StringSource ss(s, true);
 			key_pair.first.value().BERDecode(ss);
 		}
 		else {

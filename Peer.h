@@ -97,6 +97,15 @@ public:
 	}
 
 	/**
+	 * @brief Get ID of my news.
+	 * 
+	 * @return pk_t ID of my news
+	 */
+	pk_t get_my_news_id() {
+		return newspaper_id_;
+	}
+
+	/**
 	 * @brief Set the ip of the peer.
 	 * 
 	 * @param ip Desired IP to be set.
