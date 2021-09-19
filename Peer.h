@@ -32,7 +32,7 @@ public:
 	 * @brief Construct a new Peer object.
 	 * 
 	 * Networking is initialized here, random public identifier is generated and various
-	 * QObject connectoions with `Networking` are established. Newspaper ID is not yet
+	 * QObject connections with `Networking` are established. Newspaper ID is not yet
 	 * set, and same goes for name for both newspaper and peer. `CryptoPP` public and
 	 * private keys are generated here as well.
 	 * 
@@ -40,7 +40,7 @@ public:
 	Peer() : networking_(std::make_shared<Networking>())
 	{
 		std::cout << "Peer constructor" << std::endl;
-		name_ = "bla";
+		name_ = "";
 		newspaper_name_ = "";
 		networking_->init_sender_receiver(&news_);
 		CryptoPP::AutoSeededRandomPool prng;
@@ -347,8 +347,8 @@ public:
 	 * For example, when IP is changed.
 	 * 
 	 */
-	void restart_server() {
-		networking_->restart_server();
+	void restart_server(bool restart = true) {
+		networking_->restart_server(restart);
 	}
 
 	/**
@@ -382,6 +382,10 @@ public:
 		ar & newspaper_id_;
 		ar & authorities_;
 		ar & journalists_;
+	}
+
+	void networking_init_sender_receiver() {
+		networking_->init_sender_receiver(&news_);
 	}
 
 public slots:

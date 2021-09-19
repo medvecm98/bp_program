@@ -74,7 +74,7 @@ class PeerReceiver : public QObject {
 
 public:
 	PeerReceiver(networking_ptr net);
-	void restart_server();
+	void restart_server(bool);
 
 public slots:
 	void message_receive();
@@ -168,21 +168,35 @@ public:
 	void sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver);
 	void generate_rsa_key_pair();
 
-	void restart_server() {
-		receiver_->restart_server();
+	void restart_server(bool restart = true) {
+		receiver_->restart_server(restart);
 	}
 
 	/**
 	 * Serialize using boost archive.
 	 */
 	template <class Archive>
-	void serialize(Archive& ar, const unsigned int version) {
+	void save(Archive& ar, const unsigned int version) const {
 		ar & ip_map_;
 		ar & soliciting_articles;
 		ar & news_db;
-		ar & sender_receiver_initialized;
+		bool g;
+		ar & g;
 	}
 
+	/**
+	 * Serialize using boost archive.
+	 */
+	template <class Archive>
+	void load(Archive& ar, const unsigned int version) {
+		ar & ip_map_;
+		ar & soliciting_articles;
+		ar & news_db;
+		bool g;
+		ar & g;
+	}
+
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	IpMap ip_map_;
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles;

@@ -298,7 +298,9 @@ void MainWindow::on_pushButton_load_released()
 	//enable/disable buttons
 	std::ifstream ifs(GU::get_program_home().append("/settings.txt"));
 	boost::archive::text_iarchive ia(ifs);
+	ctx->p.restart_server(false);
 	ia >> (*ctx);
+	ctx->p.networking_init_sender_receiver();
 	if (!ctx->p.get_name().empty()) {
 		if (!ctx->p.get_my_news_name().empty()) {
 			ui->pushButton_new_peer->setEnabled(false);

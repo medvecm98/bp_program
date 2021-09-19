@@ -270,19 +270,21 @@ PeerReceiver::PeerReceiver(networking_ptr net) {
 	
 }
 
-void PeerReceiver::restart_server() {
+void PeerReceiver::restart_server(bool restart = true) {
 	tcp_server_->close();
-	if (!tcp_server_->listen(networking_->ip_map_.my_ip.ipv4, 14128)) {
-		QTextStream(stdout)
-			<< "Failed to start the server "
-			<< tcp_server_->errorString()
-			<< '\n';
-		tcp_server_->close();
-		return;
-	}
-	else {
-		QTextStream(stdout) << "Server restarted" << '\n';
-		QTextStream(stdout) << "Listening on: " << networking_->ip_map_.my_ip.ipv4.toString() << '\n';
+	if (restart) {
+		if (!tcp_server_->listen(networking_->ip_map_.my_ip.ipv4, 14128)) {
+			QTextStream(stdout)
+				<< "Failed to start the server "
+				<< tcp_server_->errorString()
+				<< '\n';
+			tcp_server_->close();
+			return;
+		}
+		else {
+			QTextStream(stdout) << "Server restarted" << '\n';
+			QTextStream(stdout) << "Listening on: " << networking_->ip_map_.my_ip.ipv4.toString() << '\n';
+		}
 	}
 }
 
