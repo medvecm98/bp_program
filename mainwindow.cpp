@@ -288,7 +288,7 @@ void MainWindow::on_listWidget_articles_itemClicked(QListWidgetItem *item)
 
 void MainWindow::on_pushButton_save_released()
 {
-	std::ofstream ofs("/home/michal/archive.txt");
+	std::ofstream ofs(GU::get_program_home().append("/settings.txt"));
 	boost::archive::text_oarchive oa(ofs);
 	oa << (*ctx);
 }
@@ -296,7 +296,7 @@ void MainWindow::on_pushButton_save_released()
 void MainWindow::on_pushButton_load_released()
 {
 	//enable/disable buttons
-	std::ifstream ifs("/home/michal/archive.txt");
+	std::ifstream ifs(GU::get_program_home().append("/settings.txt"));
 	boost::archive::text_iarchive ia(ifs);
 	ia >> (*ctx);
 	if (!ctx->p.get_name().empty()) {

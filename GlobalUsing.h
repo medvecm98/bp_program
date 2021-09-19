@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <optional>
 #include <variant>
+#include <filesystem>
 
 #include "cryptopp/rsa.h"
 #include "cryptopp/rijndael.h"
@@ -80,14 +81,18 @@ using optional_my_string = std::optional<my_string>;
 
 struct GU {
     static std::string get_program_home() {
+		std::string path;
     #if defined(_WIN32) 
-        return std::getenv("LOCALAPPDATA");
+        path = std::getenv("LOCALAPPDATA/NewsP2PSharing");
     #else
         if (const char* env_p = std::getenv("XDG_DATA_HOME"))
-            return std::string(env_p).append("/news_p2p_sharing");
+            path = std::string(env_p).append("/news_p2p_sharing");
         else
-            return std::string(std::getenv("HOME")).append(".local/share/news_p2p_sharing");
+            path = std::string(std::getenv("HOME")).append("/.local/share/news_p2p_sharing");
     #endif
+
+		std::filesystem::create_directories(path.c_str());
+		return path;
     }
 };
 
