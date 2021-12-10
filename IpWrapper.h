@@ -94,6 +94,7 @@ struct IpWrapper {
 		}
 
 		if (key_pair.second.has_value()) {
+			//EAX
 			std::string s(reinterpret_cast<const char*>(&key_pair.second.value()[0]), key_pair.second.value().size());
 			ar & s;
 		}

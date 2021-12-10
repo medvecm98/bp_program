@@ -180,7 +180,7 @@ void MainWindow::on_pushButton_set_ip_released()
 
 void MainWindow::on_pushButton_released()
 {
-
+	ui->textEdit_article->setMarkdown("# Hello");
 }
 
 
@@ -355,5 +355,20 @@ void MainWindow::on_pushButton_load_released()
 	}
 
 
+}
+
+
+void MainWindow::on_pushButton_2_released()
+{
+	std::cout << ui->textEdit_article->toMarkdown().toStdString() << std::endl;
+}
+
+
+void MainWindow::on_textEdit_article_cursorPositionChanged()
+{
+	QPoint qp;
+	const QTextCursor tc = ui->textEdit_article->textCursor();
+	const QTextBlock block = tc.block();
+	std::cout << tc.blockNumber() << std::endl;
 }
 

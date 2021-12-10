@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <fstream>
 #include "GlobalUsing.h"
+#include <QTextBlock>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -74,6 +75,10 @@ private slots:
 	void on_pushButton_save_released();
 
 	void on_pushButton_load_released();
+
+	void on_pushButton_2_released();
+
+	void on_textEdit_article_cursorPositionChanged();
 
 private:
 	Ui::MainWindow *ui;
