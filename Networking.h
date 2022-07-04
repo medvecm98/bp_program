@@ -21,6 +21,8 @@ class Peer;
 #include "cryptopp/rsa.h"
 #include "cryptopp/cryptlib.h"
 #include "cryptopp/osrng.h"
+#include "StunClient.hpp"
+#include "StunServer.hpp"
 
 #include <QObject>
 #include <QApplication>
@@ -35,6 +37,8 @@ using MFW = MessageFactoryWrapper;
 using msg_queue = std::queue< unique_ptr_message>;
 using msg_queue_ptr = std::shared_ptr< msg_queue>;
 using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
+
+class StunClient;
 
 #define PORT 14128
 static constexpr char NORMAL_MESSAGE = 'A';
@@ -78,6 +82,7 @@ public:
 
 public slots:
 	void message_receive();
+	void process_received_np2ps_message(QByteArray& msg, QHostAddress ip, std::uint16_t port);
 	void prepare_for_message_receive();
 	void display_error(QAbstractSocket::SocketError e) {
 		QTextStream(stderr) << "Code " << e << "\n";
@@ -91,6 +96,12 @@ private:
 	networking_ptr networking_;
 };
 
+enum class ConnectionStatus {
+	connection_ok = 1,
+	connection_fail = 2
+};
+using ConnectionMap = std::map<std::pair<std::uint32_t, std::uint16_t>, std::pair<unique_ptr_message, IpWrapper>>;
+
 /**
  * Client side of the P2P peer.
  */
@@ -100,6 +111,8 @@ class PeerSender : public QObject {
 public:
 	PeerSender(networking_ptr net);
 	void message_send(unique_ptr_message msg, IpWrapper& ipw);
+	void message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrapper& ipw, bool);
+	void try_connect(unique_ptr_message msg, IpWrapper& ipw);
 
 public slots:
 	void display_error(QAbstractSocket::SocketError e) {
@@ -107,11 +120,16 @@ public slots:
 		return;
 	}
 
+	void host_connected();
+	void handle_connection_error();
+
 private:
 	QTcpSocket* tcp_socket_ = nullptr;
 	CryptoPP::AutoSeededRandomPool prng_;
 	networking_ptr networking_;
+	ConnectionMap connection_map;
 };
+
 
 class Networking : public QObject, public std::enable_shared_from_this<Networking> {
 	Q_OBJECT
@@ -129,6 +147,9 @@ public:
 			}
 		}
 
+		stun_server = std::make_shared<StunServer>();
+		stun_client = std::make_shared<StunClient>();
+
 		std::cout << ip_map_.my_ip.ipv4.toString().toStdString() << '\n';
 
 		QObject::connect(this, &Networking::new_message_enrolled,
@@ -143,7 +164,7 @@ public:
 	std::optional<seq_t> receive_message(QTcpSocket* tcp_socket);
 
 	void store_to_map(unique_ptr_message&& msg) {
-		waiting_level.insert( {msg->seq(), std::move(msg)} );
+		waiting_level.emplace(msg->seq(), std::move(msg));
 	}
 
 	bool check_if_in_map(std::size_t seq) {
@@ -162,7 +183,7 @@ public:
 	}
 
 	void add_to_messages_to_decrypt(pk_t pk_str, EncryptedMessageWrapper&& emw) {
-		waiting_decrypt.insert({pk_str, emw});
+		waiting_decrypt.emplace(pk_str, emw);
 	}
 	
 	void sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver);
@@ -196,6 +217,18 @@ public:
 		ar & g;
 	}
 
+	std::shared_ptr<StunClient> get_stun_client() {
+		return stun_client;
+	}
+
+	CryptoPP::AutoSeededRandomPool& get_prng() {
+		return prng_;
+	}
+
+	void pass_message_to_receiver(QByteArray& msg, QHostAddress ip, std::uint16_t port) {
+		receiver_->process_received_np2ps_message(msg, ip, port);
+	}
+
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	IpMap ip_map_;
@@ -226,6 +259,12 @@ private:
 	std::shared_ptr<PeerReceiver> receiver_;
 	
 	QDataStream in_;
+
+
+	//TODO: "pointerize" STUN client and server
+
+	std::shared_ptr<StunClient> stun_client;
+	std::shared_ptr<StunServer> stun_server;
 
 	//boost::asio necessities
 	boost::asio::io_context io_ctx;

@@ -24,11 +24,17 @@ add_subdirectory(protobuf_source)
 add_dependencies(proto_msg proto_art)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-add_executable(news_p2p_sharing main.cpp newarticleform.h newarticleform.cpp newarticleform.ui
-	add_newspaper.h add_newspaper.cpp add_newspaper.ui form.h form.cpp form.ui
-	programcontext.h programcontext.cpp mainwindow.cpp mainwindow.h mainwindow.ui Article.cpp Article.h CategoryEnums.h
-	StringSplitter.h GlobalUsing.h ArticleDatabase.cpp ArticleDatabase.h Peer.cpp Peer.h IpWrapper.h IpMap.cpp IpMap.h
-	NewspaperEntry.cpp NewspaperEntry.h Margins.h Message.cpp Message.h Networking.cpp Networking.h)
+add_executable(news_p2p_sharing main.cpp newarticleform.h newarticleform.cpp newarticleform.ui add_newspaper.h 
+	add_newspaper.cpp add_newspaper.ui form.h form.cpp form.ui programcontext.h programcontext.cpp mainwindow.cpp 
+	mainwindow.h mainwindow.ui Article.cpp Article.h CategoryEnums.h StringSplitter.h GlobalUsing.h ArticleDatabase.cpp 
+	ArticleDatabase.h Peer.cpp Peer.h IpWrapper.h IpMap.cpp IpMap.h NewspaperEntry.cpp NewspaperEntry.h Margins.h 
+	Message.cpp Message.h Networking.cpp Networking.h StunServer.hpp StunServer.cpp StunMessages.hpp StunMessages.cpp
+	StunClient.hpp StunClient.cpp XorMappedAddressAttribute.hpp XorMappedAddressAttribute.cpp MessageProcessor.hpp
+	MessageProcessor.cpp ErrorCodeAttribute.hpp ErrorCodeAttribute.cpp UnknownAttributesAttribute.hpp
+	UnknownAttributesAttribute.cpp TurnAllocation.hpp RequestedTransportAttribute.hpp RequestedTransportAttribute.cpp
+	LifetimeAttribute.hpp LifetimeAttribute.cpp XorRelayedAddress.hpp XorRelayedAddress.cpp 
+	PublicIdentifierAttribute.hpp PublicIdentifierAttribute.cpp MPCreate.hpp MPProcess.hpp StunTags.hpp 
+	DataAttribute.hpp DataAttribute.cpp)
 target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
 	Qt5::Widgets Qt5::Network Qt5::Core)
 
@@ -38,5 +44,5 @@ target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art ${PROTOBUF_L
 #		ALL
 #		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 #else (DOXYGEN_FOUND)
-#	message("Doxygen need to be installed to generate the doxygen documentation.")
+#	message("Doxygen needs to be installed to generate the doxygen documentation.")
 #endif (DOXYGEN_FOUND)

@@ -80,6 +80,8 @@ private slots:
 
 	void on_textEdit_article_cursorPositionChanged();
 
+	void on_stunButton_clicked();
+
 private:
 	Ui::MainWindow *ui;
 	ProgramContext* ctx;

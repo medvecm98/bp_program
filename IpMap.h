@@ -11,12 +11,13 @@ class IpMap {
 public:
 	bool add_to_map(pk_t, IpWrapper&& ip);
 	void remove_from_map(pk_t);
-	bool update_ip(pk_t, const QHostAddress& ip);
-	bool update_ip(pk_t, const QHostAddress& ip4, const QHostAddress& ip6);
+	bool update_ip(pk_t, const QHostAddress& ip, std::uint16_t port = 14128);
+	bool update_ip(pk_t, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port = 14128);
 	bool update_rsa_public(pk_t, const std::string&);
 	bool update_eax(pk_t, const std::string&);
 	QHostAddress get_ip4(pk_t);
 	QHostAddress get_ip6(pk_t);
+	std::uint16_t get_port(pk_t);
 	std::shared_ptr<rsa_public_optional> get_rsa_public(pk_t);
 	std::shared_ptr<eax_optional> get_eax(pk_t);
 	bool have_ip4(pk_t);

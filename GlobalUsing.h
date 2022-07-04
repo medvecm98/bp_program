@@ -8,6 +8,10 @@
 #include <optional>
 #include <variant>
 #include <filesystem>
+#include <exception>
+#include <utility>
+#include <iostream>
+#include <functional>
 
 #include "cryptopp/rsa.h"
 #include "cryptopp/rijndael.h"
@@ -69,6 +73,7 @@ using seq_t = std::size_t;
 using symmetric_cipher = CryptoPP::EAX< CryptoPP::AES>;
 using asymmetric_cipher = CryptoPP::RSA;
 using signer_verifier = CryptoPP::RSASS< CryptoPP::PSSR, CryptoPP::SHA256>;
+using rsa_encryptor_decryptor = CryptoPP::RSAES< CryptoPP::OAEP< CryptoPP::SHA256>>;
 
 using my_string = std::string;
 using hash_t = std::size_t;

@@ -86,6 +86,7 @@ public:
 	void handle_error(unique_ptr_message message);
 	void generate_article_all_message(pk_t destination, hash_t article_hash);
 	void generate_article_header_message(pk_t destination, hash_t article_hash);
+	void send_stun_binding_request();
 
 	/**
 	 * @brief Set the name of the peer.

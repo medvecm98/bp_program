@@ -65,6 +65,7 @@ public:
 		std::shared_ptr<rsa_public_optional> public_key, std::shared_ptr<eax_optional> eax_key);
 
 	/* Basic factories: */
+	
 	static unique_ptr_message ArticleDataChangeFactory(pk_t from, pk_t to, hash_t article_hash, bool download);
 	static unique_ptr_message ArticleDownloadFactory(pk_t from, pk_t to, hash_t article_hash, level_t level);
 	static unique_ptr_message ArticleHeaderFactory(pk_t from, pk_t to, hash_t article_hash);
