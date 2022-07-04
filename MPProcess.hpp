@@ -1,0 +1,152 @@
+#ifndef NP2PS_MP_PROCESS
+#define NP2PS_MP_PROCESS
+
+#include "XorMappedAddressAttribute.hpp"
+#include "ErrorCodeAttribute.hpp"
+#include "UnknownAttributesAttribute.hpp"
+#include "TurnAllocation.hpp"
+#include "RequestedTransportAttribute.hpp"
+#include "LifetimeAttribute.hpp"
+#include "XorRelayedAddress.hpp"
+#include "IpMap.h"
+#include "PublicIdentifierAttribute.hpp"
+
+template<typename CTag, typename MTag>
+struct MPProcess {};
+
+/*
+ $$$$$$\  $$\ $$\                               $$\               
+$$  __$$\ $$ |$$ |                              $$ |              
+$$ /  $$ |$$ |$$ | $$$$$$\   $$$$$$$\ $$$$$$\ $$$$$$\    $$$$$$\  
+$$$$$$$$ |$$ |$$ |$$  __$$\ $$  _____|\____$$\\_$$  _|  $$  __$$\ 
+$$  __$$ |$$ |$$ |$$ /  $$ |$$ /      $$$$$$$ | $$ |    $$$$$$$$ |
+$$ |  $$ |$$ |$$ |$$ |  $$ |$$ |     $$  __$$ | $$ |$$\ $$   ____|
+$$ |  $$ |$$ |$$ |\$$$$$$  |\$$$$$$$\\$$$$$$$ | \$$$$  |\$$$$$$$\ 
+\__|  \__|\__|\__| \______/  \_______|\_______|  \____/  \_______|
+*/
+
+template<>
+struct MPProcess<CRequestTag, MAllocateTag> {
+    MPProcess() = default;
+    std::map<pk_t, TurnAllocation>& allocations;
+    QTcpSocket* socket;
+    QTcpServer* server;
+    stun_header_ptr message_orig, message_new;
+};
+
+template<>
+struct MPProcess<CResponseSuccessTag, MAllocateTag> {
+    MPProcess() = default;
+    MPProcess(stun_header_ptr mo, QString& qs, IpMap& ip_map_) : message_orig(mo), ip_map(ip_map_) {}
+    stun_header_ptr message_orig;
+    IpMap& ip_map;
+};
+
+template<>
+struct MPProcess<CResponseErrorTag, MAllocateTag> {
+    MPProcess() = default;
+    MPProcess(stun_header_ptr mo) : message_orig(mo) {}
+    stun_header_ptr message_orig;
+};
+
+/*
+$$$$$$$\  $$\                 $$\ $$\                     
+$$  __$$\ \__|                $$ |\__|                    
+$$ |  $$ |$$\ $$$$$$$\   $$$$$$$ |$$\ $$$$$$$\   $$$$$$\  
+$$$$$$$\ |$$ |$$  __$$\ $$  __$$ |$$ |$$  __$$\ $$  __$$\ 
+$$  __$$\ $$ |$$ |  $$ |$$ /  $$ |$$ |$$ |  $$ |$$ /  $$ |
+$$ |  $$ |$$ |$$ |  $$ |$$ |  $$ |$$ |$$ |  $$ |$$ |  $$ |
+$$$$$$$  |$$ |$$ |  $$ |\$$$$$$$ |$$ |$$ |  $$ |\$$$$$$$ |
+\_______/ \__|\__|  \__| \_______|\__|\__|  \__| \____$$ |
+                                                $$\   $$ |
+                                                \$$$$$$  |
+                                                 \______/ 
+*/
+
+template<>
+struct MPProcess<CResponseErrorTag, MBindingTag> {
+    MPProcess() = default;
+    MPProcess(stun_header_ptr mo) : message_orig(mo) {}
+    stun_header_ptr message_orig;
+};
+
+template<>
+struct MPProcess<CIndicationTag, MBindingTag> {
+};
+
+template<>
+struct MPProcess<CResponseSuccessTag, MBindingTag> {
+    MPProcess() = default;
+    MPProcess(stun_header_ptr mo, QString& qs) : message_orig(mo), response(qs) {}
+    stun_header_ptr message_orig;
+    QString& response;
+};
+
+template<>
+struct MPProcess<CRequestTag, MBindingTag> {
+    MPProcess() = default;
+    MPProcess(stun_header_ptr mo, stun_header_ptr mn, QTcpSocket* s, stun_attr_type_vec& u) : message_orig(mo), message_new(mn), socket(s), unknown_cr_attr(u) {}
+    stun_header_ptr message_orig, message_new;
+    QTcpSocket* socket;
+    stun_attr_type_vec& unknown_cr_attr;
+};
+
+/*
+$$$$$$\      $$\                      $$\     $$\  $$$$$$\            
+\_$$  _|     $$ |                     $$ |    \__|$$  __$$\           
+  $$ |  $$$$$$$ | $$$$$$\  $$$$$$$\ $$$$$$\   $$\ $$ /  \__|$$\   $$\ 
+  $$ | $$  __$$ |$$  __$$\ $$  __$$\\_$$  _|  $$ |$$$$\     $$ |  $$ |
+  $$ | $$ /  $$ |$$$$$$$$ |$$ |  $$ | $$ |    $$ |$$  _|    $$ |  $$ |
+  $$ | $$ |  $$ |$$   ____|$$ |  $$ | $$ |$$\ $$ |$$ |      $$ |  $$ |
+$$$$$$\\$$$$$$$ |\$$$$$$$\ $$ |  $$ | \$$$$  |$$ |$$ |      \$$$$$$$ |
+\______|\_______| \_______|\__|  \__|  \____/ \__|\__|       \____$$ |
+                                                            $$\   $$ |
+                                                            \$$$$$$  |
+                                                             \______/ 
+*/
+
+template<>
+struct MPProcess<CRequestTag, MIdentifyTag> {
+    MPProcess() = default;
+    std::map<pk_t, TurnAllocation>& allocations;
+    stun_header_ptr message_orig, message_new;
+};
+
+template<>
+struct MPProcess<CResponseSuccessTag, MIdentifyTag> {
+    MPProcess() = default;
+    MPProcess(stun_header_ptr message_orig_, QHostAddress address_, std::uint16_t port_, pk_t public_identifier_) : message_orig(message_orig_), address(address_), port(port_), public_identifier(public_identifier_) {}
+    QHostAddress address;
+    std::uint16_t port;
+    pk_t public_identifier;
+    stun_header_ptr message_orig;
+};
+
+/*
+███████ ███████ ███    ██ ██████  
+██      ██      ████   ██ ██   ██ 
+███████ █████   ██ ██  ██ ██   ██ 
+     ██ ██      ██  ██ ██ ██   ██ 
+███████ ███████ ██   ████ ██████  
+*/
+
+template<>
+struct MPProcess<CRequestTag, MSendTag> {
+    MPProcess();
+    stun_header_ptr message_to_relay;
+    std::uint32_t where_address;
+    std::uint16_t where_port;
+};
+
+template<>
+struct MPProcess<CIndicationTag, MSendTag> {
+    MPProcess();
+    MPProcess(stun_header_ptr mr)
+        : message_received(mr) {}
+    stun_header_ptr message_received;
+    std::uint32_t from_address;
+    std::uint16_t from_port;
+    std::string np2ps_message;
+};
+
+#endif

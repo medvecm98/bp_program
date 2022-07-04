@@ -12,6 +12,13 @@ void send_message_using_socket(QTcpSocket* tcp_socket, const std::string& msg) {
 	tcp_socket->disconnectFromHost();
 }
 
+void send_message_using_turn(QTcpSocket* tcp_socket, networking_ptr networking_, std::string&& msg, bool disconnect = true) {
+	stun_header_ptr m = std::make_shared<StunMessageHeader>();
+	MPCreate<CRequestTag, MSendTag> mpc(m, msg, tcp_socket, networking_->get_prng(), networking_->ip_map_);
+	MessageProcessor<CRequestTag, MSendTag>::create(mpc);
+	networking_->get_stun_client()->send_stun_message(mpc.message_to);
+}
+
 void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg, bool disconnect = true) {
 	std::cout << "sending" << std::endl;
 	QByteArray block;
@@ -79,7 +86,7 @@ void Networking::sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecBy
 	signature.resize(length);
 
 	auto& [ipw_pk, ipw] = *(ip_map_.get_wrapper_for_pk(receiver));
-	CryptoPP::RSAES_OAEP_SHA_Encryptor rsa_encryptor(ipw.key_pair.first.value()); //encrypt with recipient's public key
+	rsa_encryptor_decryptor::Encryptor rsa_encryptor(ipw.key_pair.first.value()); //encrypt with recipient's public key
 	std::string encrypted_key;
 
 	CryptoPP::StringSource s(
@@ -256,7 +263,7 @@ void Networking::init_sender_receiver(news_database* nd) {
 PeerReceiver::PeerReceiver(networking_ptr net) {
 	tcp_server_ = new QTcpServer();
 	networking_ = net;
-	if (!tcp_server_->listen(networking_->ip_map_.my_ip.ipv4, 14128)) {
+	if (!tcp_server_->listen(networking_->ip_map_.my_ip.ipv4, (qint16)networking_->ip_map_.my_ip.port)) {
 		QTextStream(stdout)
 			<< "Failed to start the server "
 			<< tcp_server_->errorString()
@@ -348,7 +355,10 @@ void PeerReceiver::message_receive() {
 		return;
 	}
 
+	process_received_np2ps_message(msg, tcp_socket_->peerAddress(), tcp_socket_->peerPort());
+}
 
+void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QHostAddress ip, std::uint16_t port) {
 	std::cout << "Message read and received" << std::endl;
 	char msg_class = read_class_and_length(msg);
 
@@ -413,15 +423,49 @@ PeerSender::PeerSender(networking_ptr net) {
 	QObject::connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &PeerSender::display_error);
 }
 
-void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
+void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
+	std::shared_ptr<QTcpSocket> socket_ = std::make_shared<QTcpSocket>();
+
+	QObject::connect(socket_.get(), &QTcpSocket::hostFound, this, &PeerSender::host_connected);
+	QObject::connect(socket_.get(), &QTcpSocket::errorOccurred, this, &PeerSender::handle_connection_error);
+
+	socket_->connectToHost(ipw.ipv4, ipw.port);
+
+	connection_map.emplace(std::make_pair(ipw.ipv4.toIPv4Address(), ipw.port), std::make_pair(msg, ipw));
+}
+
+void PeerSender::host_connected() {
+	QTcpSocket* socket_ = (QTcpSocket*)QObject::sender();
+
+	auto it = connection_map.find({socket_->peerAddress().toIPv4Address(), socket_->peerPort()});
+	auto& [msg, ipw] = it->second;
+
+	message_send(socket_, msg, ipw, false);
+
+	connection_map.erase(it);
+}
+
+void PeerSender::handle_connection_error() {
+	QTcpSocket* socket_ = (QTcpSocket*)QObject::sender();
+
+	if (socket_->error() == QAbstractSocket::SocketError::ConnectionRefusedError) {
+		socket_->abort();
+		auto it = connection_map.find({socket_->peerAddress().toIPv4Address(), socket_->peerPort()});
+		auto& [msg, ipw] = it->second;
+
+		message_send(socket_, msg, ipw, true);
+
+		connection_map.erase(it);
+	}
+}
+
+void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrapper& ipw, bool relay = false) {
 	//serialize message
 	std::cout << (pk_t)msg->from() << std::endl;
 	std::cout << (pk_t)msg->to()   << std::endl;
     std::string serialized_msg, encrypted_msg;
 	msg->SerializeToString(&serialized_msg);
 
-	tcp_socket_->abort();
-	tcp_socket_->connectToHost(ipw.ipv4, 14128);
 
 	//encrypt message
 	auto& prng = prng_;
@@ -440,7 +484,12 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 
 			std::stringstream key_exchange_msg;
 			networking_->sign_and_encrypt_key(key_exchange_msg, aes_key, msg->from(), msg->to());
-			send_message_using_socket(tcp_socket_, key_exchange_msg.str(), true);
+
+			if (!relay)
+				send_message_using_socket(socket, key_exchange_msg.str(), true);
+			else
+				send_message_using_turn(socket, networking_, key_exchange_msg.str(), true);
+
 			std::cout << "Key generated and message sent" << std::endl;
 			networking_->waiting_symmetrich_exchange.insert({msg->to(), std::move(msg)});
 			return;
@@ -482,7 +531,14 @@ void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
 	}
 
     //send message
-	send_message_using_socket( tcp_socket_, length_plus_msg.str());
+	if (!relay)
+		send_message_using_socket( socket, length_plus_msg.str());
+	else
+		send_message_using_turn(socket, networking_, length_plus_msg.str());
+}
+
+void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
+	try_connect(msg, ipw);
 }
 
 void Networking::decrypt_encrypted_messages(pk_t original_sender) {

@@ -1,0 +1,24 @@
+#include "LifetimeAttribute.hpp"
+
+LifetimeAttribute::LifetimeAttribute() : StunMessageAttribute::StunMessageAttribute()  {
+    stun_attr_type = STUN_ATTR_LIFETIME;
+    attribute_type = StunAttributeEnum::lifetime;
+}
+
+std::uint16_t LifetimeAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {
+    StunMessageAttribute::read_stun_attribute(input, length, type);
+
+    input >> time;
+
+    return 4;
+}
+
+void LifetimeAttribute::write_stun_attribute(QDataStream& output) {
+    output << time;
+}
+
+void LifetimeAttribute::initialize(std::uint32_t t, StunMessageHeader* h) {
+    StunMessageAttribute::initialize(4, h);
+
+    time = t;
+}

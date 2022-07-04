@@ -372,3 +372,9 @@ void MainWindow::on_textEdit_article_cursorPositionChanged()
 	std::cout << tc.blockNumber() << std::endl;
 }
 
+
+void MainWindow::on_stunButton_clicked()
+{
+	ctx->p.send_stun_binding_request();
+}
+

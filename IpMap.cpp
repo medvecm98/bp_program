@@ -15,12 +15,13 @@ void IpMap::remove_from_map(pk_t pk) {
  * @param ip IP to use.
  * @return True, if update took place.
  */
-bool IpMap::update_ip(pk_t pk, const QHostAddress& ip) {
+bool IpMap::update_ip(pk_t pk, const QHostAddress& ip, std::uint16_t port /*= 14128*/) {
 	if (map_.find(pk) == map_.end()) {
-		return map_.insert({pk, IpWrapper(ip)}).second;
+		return map_.emplace(pk, IpWrapper(ip, port)).second;
 	}
 	else {
 		map_.at(pk).ipv4 = ip;
+		map_.at(pk).port = port;
 		return true;
 	}
 }
@@ -33,13 +34,14 @@ bool IpMap::update_ip(pk_t pk, const QHostAddress& ip) {
  * @param ip6 IPv6 to use.
  * @return True, if update took place.
  */
-bool IpMap::update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6) {
+bool IpMap::update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port /*= 14128*/) {
 	if (map_.find(pk) == map_.end()) {
-		return map_.insert({pk, IpWrapper(ip4, ip6)}).second;
+		return map_.insert({pk, IpWrapper(ip4, ip6, port)}).second;
 	}
 	else {
 		map_.at(pk).ipv4 = ip4;
 		map_.at(pk).ipv6 = ip6;
+		map_.at(pk).port = port;
 		return true;
 	}
 }
@@ -82,6 +84,16 @@ QHostAddress IpMap::get_ip6(pk_t pk) {
 	}
 
 	return QHostAddress();
+}
+
+std::uint16_t IpMap::get_port(pk_t pk) {
+	auto it = map_.find(pk);
+	if (it != map_.end()) {
+		//element was found in map
+		return it->second.port;
+	}
+
+	throw std::logic_error("Such user was not found...");
 }
 
 std::shared_ptr<rsa_public_optional> IpMap::get_rsa_public(pk_t pk) {

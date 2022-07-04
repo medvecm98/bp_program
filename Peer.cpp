@@ -763,8 +763,8 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		CryptoPP::SecByteBlock key_encrypted(reinterpret_cast<const CryptoPP::byte*>(&key_str[0]), key_str.size());
 		CryptoPP::SecByteBlock signature(reinterpret_cast<const CryptoPP::byte*>(&signature_str[0]), signature_str.size());
 
-		CryptoPP::RSASS<CryptoPP::PSSR, CryptoPP::SHA256>::Verifier verifier(networking_->ip_map_.get_rsa_public(msg->from())->value());
-		CryptoPP::RSAES_OAEP_SHA_Decryptor rsa_decryptor(networking_->ip_map_.private_rsa.value());
+		signer_verifier::Verifier verifier(networking_->ip_map_.get_rsa_public(msg->from())->value());
+		rsa_encryptor_decryptor::Decryptor rsa_decryptor(networking_->ip_map_.private_rsa.value());
 
 		std::string key_decrypted_str;
 
@@ -838,4 +838,8 @@ void Peer::handle_error(unique_ptr_message msg) {
 			generate_article_all_message(destination, msg->article_sol().article_hash());
 		}
 	}
+}
+
+void Peer::send_stun_binding_request() {
+	networking_->get_stun_client()->binding_request();
 }
