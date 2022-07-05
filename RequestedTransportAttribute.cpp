@@ -22,6 +22,8 @@ std::uint16_t RequestedTransportAttribute::read_stun_attribute(QDataStream& inpu
 }
 
 void RequestedTransportAttribute::write_stun_attribute(QDataStream& output) {
+    StunMessageAttribute::write_stun_attribute(output);
+    
     output << protocol_shifted;
 }
 

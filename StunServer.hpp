@@ -36,7 +36,12 @@ private:
     void init_server(QHostAddress address, std::uint16_t port = 3478);
     bool check_attribute(quint16 attr);
     bool check_validity_all_attributes(stun_header_ptr stun_message, stun_attr_type_vec& output);
+    void process_request_identify(stun_header_ptr message_orig, stun_header_ptr message_new);
+    void process_request_allocate(stun_header_ptr message_orig, stun_header_ptr message_new);
+    void create_response_success_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint32_t lifetime);
+    void create_response_success_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id, FiveTuple ft);
     void send_stun_message(QTcpSocket* socket , stun_header_ptr stun_message);
+    void create_response_error_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id);
     std::shared_ptr<QTcpServer> tcp_server_;
     QTcpSocket* tcp_socket_;
     QDataStream in_stream;

@@ -20,7 +20,7 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 
 	networking_->enroll_message_to_be_sent(MFW::SetMessageContextOneWay(
 		MFW::PublicKeyFactory(
-			public_key_,
+			public_identifier_,
 			newspaper_key,
 			networking_->ip_map_.my_ip.key_pair.first.value()
 		)
@@ -38,7 +38,7 @@ void Peer::load_ip_authorities(pk_t newspaper_key) {
 	networking_->enroll_message_to_be_sent(
 		MFW::ReqCredentialsFactory(
 			MFW::CredentialsFactory(
-				public_key_, 
+				public_identifier_, 
 				newspaper_key
 			),
 			true, false, false, false,
@@ -57,8 +57,8 @@ void Peer::load_ip_authorities(pk_t newspaper_key) {
  */
 void Peer::init_newspaper(my_string name) {
 	newspaper_name_ = name;
-	newspaper_id_ = public_key_;
-	news_.insert({newspaper_id_, NewspaperEntry(public_key_, newspaper_id_, newspaper_name_)}); //our news are in same db as all the others
+	newspaper_id_ = public_identifier_;
+	news_.insert({newspaper_id_, NewspaperEntry(public_identifier_, newspaper_id_, newspaper_name_)}); //our news are in same db as all the others
 }
 
 /**
@@ -149,7 +149,7 @@ size_t Peer::list_all_articles_by_me(article_container &articles, const std::set
 		for (auto i = news_iterator->second.get_const_iterator_database(); i != i_end; i++) {
 			if (!categories.empty()) {
 				for (auto &&category : categories) {
-					if ((i->second.author_id() == public_key_) && (categories.empty() || i->second.is_in_category(category))) {
+					if ((i->second.author_id() == public_identifier_) && (categories.empty() || i->second.is_in_category(category))) {
 						articles.insert(std::make_shared<Article>(i->second));
 						article_counter++;
 						break;
@@ -157,7 +157,7 @@ size_t Peer::list_all_articles_by_me(article_container &articles, const std::set
 				}
 			}
 			else {
-				if (i->second.author_id() == public_key_) {
+				if (i->second.author_id() == public_identifier_) {
 					articles.insert(std::make_shared<Article>(i->second));
 					article_counter++;
 					std::cout << "added article" << std::endl;
@@ -314,7 +314,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 
 			auto user_check_msg = MFW::UpdateSeqNumber(
 				MFW::ReqUserIsMemberFactory(
-					MFW::UserIsMemberFactory(public_key_, 
+					MFW::UserIsMemberFactory(public_identifier_, 
 						news_[ message->article_all().header().news_id()].get_id(), 
 						message->from()), 
 					message->article_all().level()),
@@ -334,7 +334,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 
 				unique_ptr_message article_msg = MFW::RespArticleDownloadFactory(
 					MFW::ArticleDownloadFactory(
-						public_key_, 
+						public_identifier_, 
 						message->from(), 
 						article.value()->main_hash(), 
 						final_level),
@@ -357,7 +357,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 					networking_->enroll_message_to_be_sent(
 						MFW::SetMessageContextOneWay(
 							MFW::ArticleSolicitationFactory(
-								public_key_,
+								public_identifier_,
 								message->from(),
 								message->article_all().article_hash(),
 								article_peers,
@@ -375,7 +375,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 					networking_->enroll_message_to_be_sent(
 						MFW::SetMessageContextOneWay(
 							MFW::ArticleSolicitationFactory(
-								public_key_,
+								public_identifier_,
 								message->from(),
 								message->article_all().article_hash(),
 								article_peers,
@@ -388,7 +388,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 					networking_->enroll_message_to_be_sent(
 						MFW::SetMessageContextError(
 							MFW::ArticleSolicitationFactory(
-								public_key_,
+								public_identifier_,
 								message->from(),
 								message->article_all().article_hash(),
 								std::vector<pk_t>(),
@@ -406,7 +406,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 			networking_->enroll_message_to_be_sent(
 				MFW::RespArticleHeaderFactory(
 					MFW::ArticleHeaderFactory(
-						public_key_,
+						public_identifier_,
 						message->from(),
 						message->article_header().article_hash()
 					),
@@ -437,7 +437,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 		networking_->enroll_message_to_be_sent(
 			MFW::RespArticleListFactory(
 				MFW::ArticleListFactory(
-					public_key_,
+					public_identifier_,
 					message->from()
 				),
 				articles
@@ -454,7 +454,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 		networking_->enroll_message_to_be_sent(
 			MFW::RespUserIsMemberFactory(
 				MFW::UserIsMemberFactory(
-					public_key_,
+					public_identifier_,
 					message->from(),
 					message->user_is_member().user_pk()
 				),
@@ -502,7 +502,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 	}
 	else if (type == np2ps::UPDATE_MARGIN) {
 		auto article = find_article(message->update_margin().article_pk());
-		if (article.has_value() && (article.value()->author_id() == public_key_)) {
+		if (article.has_value() && (article.value()->author_id() == public_identifier_)) {
 			if (message->update_margin().m_action() == np2ps::ADD) {
 				for (int i = 0; i < message->update_margin().margin().margins_size(); i++) {
 					article.value()->add_margin(message->from(), Margin(
@@ -580,7 +580,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 		networking_->enroll_message_to_be_sent(
 			MFW::RespCredentialsFactory(
 				MFW::CredentialsFactory(
-					public_key_,
+					public_identifier_,
 					message->from()
 				),
 				resp_ip4, resp_ip6, resp_rsa_public, resp_eax
@@ -699,7 +699,7 @@ void Peer::generate_article_all_message(pk_t destination, hash_t article_hash) {
 	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextRequest(
 			MFW::ArticleDownloadFactory(
-				public_key_,
+				public_identifier_,
 				destination,
 				article_hash,
 				(article_headers_only.find(article_hash) != article_headers_only.end()) 
@@ -723,7 +723,7 @@ void Peer::generate_article_header_message(pk_t destination, hash_t article_hash
 	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextRequest(
 			MFW::ArticleHeaderFactory(
-				public_key_,
+				public_identifier_,
 				destination,
 				article_hash
 			)
@@ -798,7 +798,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		}
 
 		unique_ptr_message _msg = std::make_shared<proto_message>();
-		_msg->set_from(public_key_);
+		_msg->set_from(public_identifier_);
 		_msg->set_to(msg->from());
 		_msg->set_msg_ctx(np2ps::RESPONSE);
 		_msg->set_msg_type(np2ps::SYMMETRIC_KEY);
@@ -814,7 +814,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		networking_->enroll_message_to_be_sent(
 			MFW::SetMessageContextResponse(
 				MFW::PublicKeyFactory(
-					public_key_,
+					public_identifier_,
 					msg->from(),
 					networking_->ip_map_.my_ip.key_pair.first.value()
 				)

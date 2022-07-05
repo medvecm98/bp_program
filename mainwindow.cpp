@@ -378,3 +378,9 @@ void MainWindow::on_stunButton_clicked()
 	ctx->p.send_stun_binding_request();
 }
 
+
+void MainWindow::on_pushButton_3_clicked()
+{
+	ctx->p.stun_allocate();
+}
+

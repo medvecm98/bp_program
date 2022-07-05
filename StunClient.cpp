@@ -1,6 +1,6 @@
 #include "StunClient.hpp"
 
-StunClient::StunClient() {
+StunClient::StunClient(Networking* networking) {
     tcp_socket_ = std::make_shared<QTcpSocket>();
 
     in.setDevice(tcp_socket_.get());
@@ -21,9 +21,10 @@ StunClient::StunClient() {
 
     stun_server.first = QHostAddress(QString("127.0.0.1"));
     stun_server.second = STUN_PORT;
+    networking_ = networking;
 }
 
-StunClient::StunClient(std::shared_ptr<Networking> networking, QHostAddress address, std::uint16_t port_stun) : StunClient::StunClient() {
+StunClient::StunClient(Networking* networking, QHostAddress address, std::uint16_t port_stun) : StunClient::StunClient(networking) {
     stun_server.first = address;
     stun_server.second = port_stun;
     networking_ = networking;
@@ -82,11 +83,21 @@ void StunClient::handle_received_message(stun_header_ptr stun_message_header) {
             MessageProcessor<CResponseSuccessTag, MBindingTag>::process(mpps);
             std::cout << "IP: " << client_IP.toStdString() << ", port: " << mpps.port << std::endl;
         }
+        else if (stun_message_header->stun_method == StunMethodEnum::allocate) {
+            MPProcess<CResponseSuccessTag, MAllocateTag> mp(stun_message_header, &networking_->ip_map_);
+            MessageProcessor<CResponseSuccessTag, MAllocateTag>::process(mp);
+        }
+        else if (stun_message_header->stun_method == StunMethodEnum::identify) {
+            process_response_success_identify(stun_message_header);
+        }
     }
     else if (stun_message_header->stun_class == StunClassEnum::response_error) {
         if (stun_message_header->stun_method == StunMethodEnum::binding) {
             MPProcess<CResponseErrorTag, MBindingTag> mppe(stun_message_header);
             MessageProcessor<CResponseErrorTag, MBindingTag>::process(mppe);
+        }
+        else if (stun_message_header->stun_method == StunMethodEnum::identify) {
+            process_response_error_identify(stun_message_header);
         }
     }
     else if (stun_message_header->stun_class == StunClassEnum::indication) {
@@ -105,8 +116,6 @@ void StunClient::handle_received_message(stun_header_ptr stun_message_header) {
 
 /**
  * @brief Receives STUN messsage from network.
- * 
- * 
  */
 void StunClient::receive_msg() {
     std::cout << "SC: message received" << std::endl;
@@ -140,6 +149,12 @@ void StunClient::binding_request() {
     //receive_msg();
 }
 
+void StunClient::allocate_request() {
+    stun_header_ptr msg = std::make_shared<StunMessageHeader>();
+    create_request_allocate(msg, 600, networking_->get_peer_public_id());
+    send_stun_message(msg);
+}
+
 void StunClient::create_binding_request(stun_header_ptr stun_msg) {
     MPCreate<CRequestTag, MBindingTag> mpc(rng, stun_msg);
     MessageProcessor<CRequestTag, MBindingTag>::create(mpc);
@@ -166,4 +181,61 @@ void StunClient::error(QAbstractSocket::SocketError socketError) {
 
 void StunClient::init_client(QHostAddress address, std::uint16_t port) {
 
+}
+
+void StunClient::create_request_identify(stun_header_ptr stun_message, pk_t who) {
+    stun_message->stun_class = StunClassEnum::request;
+    stun_message->stun_method = StunMethodEnum::identify;
+
+    auto pia = std::make_shared<PublicIdentifierAttribute>();
+
+    pia->initialize(who, stun_message.get());
+
+    stun_message->append_attribute(pia);
+    stun_message->generate_tid(rng);
+}
+
+void StunClient::process_response_success_identify(stun_header_ptr stun_message) {
+    PublicIdentifierAttribute* pia;
+    XorRelayedAddressAttribute* xraa;
+    for (auto&& attr : stun_message->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::public_identifier) {
+            pia = (PublicIdentifierAttribute*)attr.get();
+        }
+        if (attr->attribute_type == StunAttributeEnum::xor_relayed_address) {
+            xraa = (XorRelayedAddressAttribute*)attr.get();
+        }
+    }
+    networking_->ip_map_.update_ip(pia->get_public_identifier(), QHostAddress(xraa->get_address()), xraa->get_port());
+}
+
+void StunClient::process_response_error_identify(stun_header_ptr stun_message) {
+    PublicIdentifierAttribute* pia;
+    for (auto&& attr : stun_message->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::public_identifier) {
+            pia = (PublicIdentifierAttribute*)attr.get();
+        }
+    }
+    std::cout << "Identifier: " << pia->get_public_identifier() << " was not found." << std::endl;
+}
+
+void StunClient::create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id) {
+    stun_message->stun_class = StunClassEnum::request;
+    stun_message->stun_method = StunMethodEnum::allocate;
+
+    std::shared_ptr<RequestedTransportAttribute> rta = std::make_shared<RequestedTransportAttribute>();
+    rta->initialize(IANA_TCP, stun_message.get());
+    stun_message->append_attribute(rta);
+
+    auto pia = std::make_shared<PublicIdentifierAttribute>();
+    pia->initialize(public_id, stun_message.get());
+    stun_message->append_attribute(pia);
+
+    if (lifetime != 600) {
+        std::shared_ptr<LifetimeAttribute> la = std::make_shared<LifetimeAttribute>();
+        la->initialize(lifetime, stun_message.get());
+        stun_message->append_attribute(la);
+    }
+
+    stun_message->generate_tid(rng);
 }

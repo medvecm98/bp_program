@@ -569,3 +569,11 @@ void Networking::symmetric_exchanged(pk_t other_peer) {
 		break;
 	}
 }
+
+void Networking::set_peer_public_id(pk_t pid) {
+	peer_public_id = pid;
+}
+
+pk_t Networking::get_peer_public_id() {
+	return peer_public_id;
+}

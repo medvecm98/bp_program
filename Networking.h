@@ -148,7 +148,7 @@ public:
 		}
 
 		stun_server = std::make_shared<StunServer>();
-		stun_client = std::make_shared<StunClient>();
+		stun_client = std::make_shared<StunClient>(this);
 
 		std::cout << ip_map_.my_ip.ipv4.toString().toStdString() << '\n';
 
@@ -231,6 +231,9 @@ public:
 
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
+	void set_peer_public_id(pk_t pid);
+	pk_t get_peer_public_id();
+
 	IpMap ip_map_;
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles;
 	std::unordered_multimap<pk_t, unique_ptr_message> waiting_symmetrich_exchange;
@@ -257,6 +260,7 @@ private:
 	bool sender_receiver_initialized;
 	std::shared_ptr<PeerSender> sender_;
 	std::shared_ptr<PeerReceiver> receiver_;
+	pk_t peer_public_id;
 	
 	QDataStream in_;
 

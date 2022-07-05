@@ -28,6 +28,8 @@ $$ |  $$ |$$ |$$ |\$$$$$$  |\$$$$$$$\\$$$$$$$ | \$$$$  |\$$$$$$$\
 template<>
 struct MPProcess<CRequestTag, MAllocateTag> {
     MPProcess() = default;
+    MPProcess(std::map<pk_t, TurnAllocation>& a, QTcpSocket* so, QTcpServer* se, stun_header_ptr mo, stun_header_ptr mn)
+        : allocations(a), socket(so), server(se), message_orig(mo), message_new(mn) {}
     std::map<pk_t, TurnAllocation>& allocations;
     QTcpSocket* socket;
     QTcpServer* server;
@@ -37,9 +39,9 @@ struct MPProcess<CRequestTag, MAllocateTag> {
 template<>
 struct MPProcess<CResponseSuccessTag, MAllocateTag> {
     MPProcess() = default;
-    MPProcess(stun_header_ptr mo, QString& qs, IpMap& ip_map_) : message_orig(mo), ip_map(ip_map_) {}
+    MPProcess(stun_header_ptr mo, IpMap* ip_map_) : message_orig(mo), ip_map(ip_map_) {}
     stun_header_ptr message_orig;
-    IpMap& ip_map;
+    IpMap* ip_map;
 };
 
 template<>

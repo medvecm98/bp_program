@@ -76,6 +76,12 @@ void StunServer::reply() {
                 auto mp = MPProcess<CRequestTag, MBindingTag>(stun_message, stun_new, tcp_socket_, unknown_cr_attributes);
                 MessageProcessor<CRequestTag, MBindingTag>::process(mp);
             }
+            else if (stun_message->stun_method == StunMethodEnum::allocate) {
+                process_request_allocate(stun_message, stun_new);
+            }
+            else if (stun_message->stun_method == StunMethodEnum::identify) {
+                process_request_identify(stun_message, stun_new);
+            }
         }
         else if (stun_message->stun_class == StunClassEnum::indication) {
             if (stun_message->stun_method == StunMethodEnum::binding) {
@@ -121,4 +127,128 @@ void StunServer::send_stun_message(QTcpSocket* socket , stun_header_ptr stun_mes
     out_stream.setVersion(QDataStream::Qt_5_0);
     stun_message->write_stun_message(out_stream);
     socket->write(block);
+}
+
+void StunServer::process_request_identify(stun_header_ptr message_orig, stun_header_ptr message_new) {
+    PublicIdentifierAttribute* pia;
+    for (auto&& attr : message_orig->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::public_identifier) {
+            pia = (PublicIdentifierAttribute*)attr.get();
+        }
+    }
+
+    auto find_it = allocations.find(pia->get_public_identifier());
+    if (find_it == allocations.end()) {
+        create_response_error_identify(message_orig, message_new, pia->get_public_identifier());
+    }
+    else {
+        create_response_success_identify(message_orig, message_new, pia->get_public_identifier(), find_it->second.five_tuple);
+    }
+}
+
+void StunServer::create_response_success_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id, FiveTuple ft) {
+    message_new->stun_method = StunMethodEnum::identify;
+    message_new->stun_class = StunClassEnum::response_success;
+
+    auto xraa = std::make_shared<XorRelayedAddressAttribute>();
+    auto pia = std::make_shared<PublicIdentifierAttribute>();
+
+    pia->initialize(public_id, message_new.get());
+    xraa->initialize(message_new.get(), STUN_IPV4, ft.client_ipv4, ft.client_port);
+
+    message_new->append_attribute(pia);
+    message_new->append_attribute(xraa);
+
+    message_new->copy_tid(message_orig);
+}
+
+void StunServer::create_response_error_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id) {
+    message_new->stun_method = StunMethodEnum::identify;
+    message_new->stun_class = StunClassEnum::response_error;
+
+    auto pia = std::make_shared<PublicIdentifierAttribute>();
+
+    pia->initialize(public_id, message_new.get());
+
+    message_new->append_attribute(pia);
+
+    message_new->copy_tid(message_orig);
+}
+
+void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_header_ptr message_new) {
+        pk_t public_identifier;
+        bool request_transport_found = false;
+        std::uint32_t protocol;
+        std::uint32_t lifetime = 600;
+
+        for (auto&& attr : message_orig->attributes) {
+            if (attr->attribute_type == StunAttributeEnum::requested_transport) {
+                request_transport_found = true;
+
+                protocol = ((RequestedTransportAttribute*)attr.get())->get_protocol();
+            }
+            if (attr->attribute_type == StunAttributeEnum::lifetime) {
+                std::uint32_t temp;
+
+                temp = ((LifetimeAttribute*)attr.get())->time;
+                if (temp >= lifetime && temp <= MAX_TIME) {
+                    lifetime = temp;
+                }
+                else if (temp > MAX_TIME) {
+                    lifetime = MAX_TIME;
+                }
+            }
+            if (attr->attribute_type == StunAttributeEnum::public_identifier) {
+                public_identifier = ((PublicIdentifierAttribute*)attr.get())->get_public_identifier();
+            }
+        }
+
+        if (!request_transport_found) {
+            //TODO: error 400 (bad request)
+        }
+
+        if (protocol != IANA_TCP && protocol != IANA_UDP) {
+            //TODO: error 442 (unsupported transport protocol)
+        }
+
+        auto it = allocations.find(public_identifier);
+        if (it == allocations.end()) {
+            FiveTuple ft;
+
+            ft.client_ipv4 = tcp_socket_->peerAddress();
+            ft.client_port = tcp_socket_->peerPort();
+            ft.server_ipv4 = tcp_server_->serverAddress();
+            ft.server_port = tcp_server_->serverPort();
+            ft.protocol = protocol;
+
+            allocations.emplace(public_identifier, TurnAllocation(ft, lifetime));
+            auto a = allocations.at(public_identifier);
+            std::cout << "Added allocation:" << std::endl;
+            std::cout << "  IP:   " << a.five_tuple.client_ipv4.toString().toStdString() << std::endl;
+            std::cout << "  port: " << a.five_tuple.client_port << std::endl;
+            std::cout << "  time: " << a.time_to_expiry << std::endl;
+            std::cout << "  ID:   " << public_identifier << std::endl;
+        }
+        else {
+            throw public_identifier_already_allocated("Sadly, this identifier is already allocated.");
+            //TODO: send back error 437 (Allocation Mismatch)
+        }
+
+        create_response_success_allocate(message_orig, message_new, lifetime);
+}
+
+void StunServer::create_response_success_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint32_t lifetime) {
+    message_new->stun_class = StunClassEnum::response_success;
+    message_new->stun_method = StunMethodEnum::allocate;
+        
+    message_new->copy_tid(message_orig);
+
+    std::shared_ptr<XorMappedAddressAttribute> xma = std::make_shared<XorMappedAddressAttribute>();
+    xma->initialize(message_new.get(), STUN_IPV4, tcp_socket_);
+
+    std::shared_ptr<LifetimeAttribute> la = std::make_shared<LifetimeAttribute>();
+    la->initialize(lifetime, message_new.get());
+
+    message_new->append_attribute(xma);
+    message_new->append_attribute(la);
 }

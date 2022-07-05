@@ -14,6 +14,7 @@ std::uint16_t LifetimeAttribute::read_stun_attribute(QDataStream& input, std::ui
 }
 
 void LifetimeAttribute::write_stun_attribute(QDataStream& output) {
+    StunMessageAttribute::write_stun_attribute(output);
     output << time;
 }
 

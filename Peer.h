@@ -44,8 +44,10 @@ public:
 		newspaper_name_ = "";
 		networking_->init_sender_receiver(&news_);
 		CryptoPP::AutoSeededRandomPool prng;
-		std::random_device rd("/dev/urandom");
-		public_key_ = rd();
+		public_identifier_ = prng.GenerateByte();
+		networking_->set_peer_public_id(public_identifier_);
+		//public_identifier_ = (std::uint64_t)prng.GenerateWord32() << 32 | (std::uint64_t)prng.GenerateWord32();
+		std::cout << "Public ID: " << public_identifier_ << std::endl;
 
 		CryptoPP::RSA::PrivateKey private_key_new;
 		private_key_new.GenerateRandomWithKeySize(prng, 2048);
@@ -126,7 +128,7 @@ public:
 		networking_->enroll_message_to_be_sent(
 			MFW::ReqArticleListFactory(
 				MFW::ArticleListFactory(
-					public_key_,
+					public_identifier_,
 					destination
 				),
 				std::vector<my_string>()
@@ -146,7 +148,7 @@ public:
 		networking_->enroll_message_to_be_sent(
 			MFW::ReqArticleListFactory<Container>(
 				MFW::ArticleListFactory(
-					public_key_,
+					public_identifier_,
 					destination
 				),
 				categories
@@ -172,7 +174,7 @@ public:
 			networking_->enroll_message_to_be_sent(
 				MFW::SetMessageContextRequest(
 					MFW::UpdateMarginAddFactory(
-						public_key_,
+						public_identifier_,
 						author,
 						article_hash,
 						vm
@@ -200,7 +202,7 @@ public:
 			networking_->enroll_message_to_be_sent(
 				MFW::SetMessageContextRequest(
 					MFW::UpdateMarginAddFactory(
-						public_key_,
+						public_identifier_,
 						author,
 						article_hash,
 						vm
@@ -243,7 +245,7 @@ public:
 			networking_->enroll_message_to_be_sent(
 				MFW::SetMessageContextRequest(
 					MFW::UpdateMarginUpdateFactory(
-						public_key_,
+						public_identifier_,
 						author,
 						article_hash,
 						vm
@@ -285,7 +287,7 @@ public:
 			networking_->enroll_message_to_be_sent(
 				MFW::SetMessageContextRequest(
 					MFW::UpdateMarginRemoveFactory(
-						public_key_,
+						public_identifier_,
 						author,
 						article_hash,
 						vm
@@ -304,7 +306,7 @@ public:
 	 * @return pk_t Public identifier.
 	 */
 	pk_t get_public_key() {
-		return public_key_;
+		return public_identifier_;
 	}
 
 	/**
@@ -323,7 +325,7 @@ public:
 	 * 
 	 */
 	void print_contents() {
-		std::cout << "public_key_ " << public_key_ << std::endl;
+		std::cout << "public_identifier_ " << public_identifier_ << std::endl;
 		std::cout << "name_ " << name_ << std::endl;
 		std::cout << "newspaper_id_ " << newspaper_id_ << std::endl;
 		std::cout << "newspaper_name_ " << newspaper_name_ << std::endl;
@@ -371,7 +373,7 @@ public:
 	void serialize(Archive& ar, const unsigned int version) {
 		ar & user_map;
 		ar & news_;
-		ar & public_key_;
+		ar & public_identifier_;
 		ar & name_;
 		ar & networking_;
 		ar & margins_added_;
@@ -387,6 +389,10 @@ public:
 
 	void networking_init_sender_receiver() {
 		networking_->init_sender_receiver(&news_);
+	}
+
+	void stun_allocate() {
+		networking_->get_stun_client()->allocate_request();
 	}
 
 public slots:
@@ -438,7 +444,7 @@ signals:
 
 private:
 	//reader part
-	pk_t public_key_; //public identifier of my peer
+	pk_t public_identifier_; //public identifier of my peer
 	my_string name_; //name of my peer
 	std::shared_ptr<Networking> networking_; //networking, for handling sending and receiving
 	news_database news_; //list of all downloaded articles, mapped by their Newspapers

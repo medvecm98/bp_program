@@ -24,9 +24,10 @@ class Networking;
 class StunClient : public QObject {
     Q_OBJECT
 public:
-    StunClient();
-    StunClient(std::shared_ptr<Networking> networking, QHostAddress address, std::uint16_t port_stun = 3478);
+    StunClient(Networking*  networking);
+    StunClient(Networking*  networking, QHostAddress address, std::uint16_t port_stun = 3478);
     void binding_request();
+    void allocate_request();
     void send_stun_message(stun_header_ptr stun_message);
 
 private slots:
@@ -39,12 +40,18 @@ private:
     void init_client(QHostAddress address, std::uint16_t port = 3478);
     void handle_received_message(stun_header_ptr stun_message_header);
 
+    void create_request_identify(stun_header_ptr stun_message, pk_t who);
+    void create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id);
+
+    void process_response_success_identify(stun_header_ptr stun_message);
+    void process_response_error_identify(stun_header_ptr stun_message);
+
     std::shared_ptr<QTcpSocket> tcp_socket_;
     QDataStream in;
     CryptoPP::AutoSeededRandomPool rng;
     stun_server_pair stun_server;
     factory_map stun_attribute_factories;
-    std::shared_ptr<Networking> networking_;
+    Networking* networking_;
 };
 using stun_client_ptr = std::shared_ptr<StunClient>;
 

@@ -30,16 +30,18 @@ template <>
 struct MessageProcessor<CResponseSuccessTag, MAllocateTag> {
     static void process(MPProcess<CResponseSuccessTag, MAllocateTag>& mpp) {
         XorMappedAddressAttribute* xma;
-        PublicIdentifierAttribute* pia;
+        LifetimeAttribute* la;
         for (auto&& attr : mpp.message_orig->attributes) {
             if (attr->attribute_type == StunAttributeEnum::xor_mapped_address) {
                 xma = (XorMappedAddressAttribute*)attr.get();
             }
-            if (attr->attribute_type == StunAttributeEnum::public_identifier) {
-                pia = (PublicIdentifierAttribute*)attr.get();
+            if (attr->attribute_type == StunAttributeEnum::lifetime) {
+                la = (LifetimeAttribute*)attr.get();
             }
         }
-        mpp.ip_map.update_ip(pia->public_identifier, QHostAddress(xma->get_address()), xma->get_port());
+
+        mpp.ip_map->my_ip.ipv4 = QHostAddress(xma->get_address());
+        mpp.ip_map->my_ip.port = xma->get_port();
     }
 
     static void create(MPCreate<CResponseSuccessTag, MAllocateTag>& mpc) {
@@ -54,8 +56,9 @@ struct MessageProcessor<CResponseSuccessTag, MAllocateTag> {
         std::shared_ptr<LifetimeAttribute> la = std::make_shared<LifetimeAttribute>();
         la->initialize(mpc.lifetime, mpc.message_new.get());
 
-        mpc.message_new->attributes.push_back(xma);
-        mpc.message_new->attributes.push_back(la);
+
+        mpc.message_new->append_attribute(xma);
+        mpc.message_new->append_attribute(la);
     }
 };
 
@@ -116,6 +119,12 @@ struct MessageProcessor<CRequestTag, MAllocateTag> {
             ft.protocol = protocol;
 
             mpp.allocations.emplace(public_identifier, TurnAllocation(ft, lifetime));
+            auto a = mpp.allocations.at(public_identifier);
+            std::cout << "Added allocation:" << std::endl;
+            std::cout << "  IP:   " << a.five_tuple.client_ipv4.toString().toStdString() << std::endl;
+            std::cout << "  port: " << a.five_tuple.client_port << std::endl;
+            std::cout << "  time: " << a.time_to_expiry << std::endl;
+            std::cout << "  ID:   " << public_identifier << std::endl;
         }
         else {
             throw public_identifier_already_allocated("Sadly, this identifier is already allocated.");
