@@ -12,7 +12,6 @@
 #include "Message.h"
 #include "Peer.h"
 #include "Networking.h"
-#include "openssl/rsa.h"
 #include "programcontext.h"
 #include "form.h"
 #include "add_newspaper.h"
