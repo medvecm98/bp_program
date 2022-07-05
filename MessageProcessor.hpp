@@ -180,7 +180,8 @@ struct MessageProcessor<CResponseSuccessTag, MBindingTag> {
         std::cout << "MessageProcessor<CResponseSuccessTag, MBindingTag> attributes size: " << mpp.message_orig->attributes.size() << std::endl;
         for (auto&& attr : mpp.message_orig->attributes) {
             if (attr->attribute_type == StunAttributeEnum::xor_mapped_address) {
-                mpp.response = ((XorMappedAddressAttribute*)attr.get())->get_address_qstring();
+                mpp.response = QHostAddress(((XorMappedAddressAttribute*)attr.get())->get_address()).toString();
+                mpp.port = ((XorMappedAddressAttribute*)attr.get())->get_port();
             }
         }
     }

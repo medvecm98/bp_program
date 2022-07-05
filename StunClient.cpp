@@ -80,7 +80,7 @@ void StunClient::handle_received_message(stun_header_ptr stun_message_header) {
             QString client_IP("lol");
             MPProcess<CResponseSuccessTag, MBindingTag> mpps(stun_message_header, client_IP);
             MessageProcessor<CResponseSuccessTag, MBindingTag>::process(mpps);
-            std::cout << client_IP.toStdString() << std::endl;
+            std::cout << "IP: " << client_IP.toStdString() << ", port: " << mpps.port << std::endl;
         }
     }
     else if (stun_message_header->stun_class == StunClassEnum::response_error) {

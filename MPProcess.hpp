@@ -77,9 +77,10 @@ struct MPProcess<CIndicationTag, MBindingTag> {
 template<>
 struct MPProcess<CResponseSuccessTag, MBindingTag> {
     MPProcess() = default;
-    MPProcess(stun_header_ptr mo, QString& qs) : message_orig(mo), response(qs) {}
+    MPProcess(stun_header_ptr mo, QString& qs) : message_orig(mo), response(qs), port(0) {}
     stun_header_ptr message_orig;
     QString& response;
+    std::uint16_t port;
 };
 
 template<>

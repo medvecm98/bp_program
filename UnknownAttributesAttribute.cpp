@@ -1,6 +1,6 @@
 #include "UnknownAttributesAttribute.hpp"
 
-UnknownAttributesAttribute::UnknownAttributesAttribute() {
+UnknownAttributesAttribute::UnknownAttributesAttribute() : StunMessageAttribute::StunMessageAttribute() {
     attribute_type = StunAttributeEnum::unknown_attributes;
     stun_attr_type = STUN_ATTR_UNKNOWN_ATTRIBUTES;
 }
