@@ -55,19 +55,19 @@ public:
 
 		CryptoPP::RSA::PublicKey pk2;
 
-		/*CryptoPP::ByteQueue bq;
+		CryptoPP::ByteQueue bq;
 		public_key_new.Save(bq);
 		std::string output;
 		CryptoPP::StringSink ss(output);
 		bq.CopyTo(ss);
+		ss.MessageEnd();
 		std::cout << output.size() << std::endl;
 
 		bq = CryptoPP::ByteQueue();
-		CryptoPP::StringSource ss(output, true);
-		ss.CopyTo(bq);
+		CryptoPP::StringSource ss1(output, true);
+		ss1.CopyTo(bq);
+		bq.MessageEnd();
 		pk2.Load(bq);
-
-		std::cout << (pk2 == public_key_new) << std::endl;*/
 
 		networking_->ip_map_.my_ip.add_rsa_key(std::move(public_key_new));
 		networking_->ip_map_.private_rsa = {std::move(private_key_new)};

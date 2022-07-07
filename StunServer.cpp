@@ -179,8 +179,8 @@ void StunServer::create_response_success_identify(stun_header_ptr message_orig, 
 
     message_new->append_attribute(pia);
     message_new->append_attribute(xraa);
-    message_new->append_attribute(pka);
     message_new->append_attribute(ria);
+    message_new->append_attribute(pka);
 
     message_new->copy_tid(message_orig);
 }

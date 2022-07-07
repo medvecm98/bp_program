@@ -16,7 +16,8 @@ void PublicKeyAttribute::initialize(const CryptoPP::RSA::PublicKey& public_key, 
 std::uint16_t PublicKeyAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {
     StunMessageAttribute::read_stun_attribute(input, length, type);
     
-    QString val(length);
+    QByteArray val;
+    val.resize(length);
     input >> val;
     value = val.toStdString();
 
@@ -28,7 +29,7 @@ std::uint16_t PublicKeyAttribute::read_stun_attribute(QDataStream& input, std::u
 void PublicKeyAttribute::write_stun_attribute(QDataStream& output) {
     StunMessageAttribute::write_stun_attribute(output);
 
-    QString val = QString::fromStdString(value);
+    QByteArray val(value.data(), value.size());
     output << val;
     pad(output, val.size());
 }
@@ -44,10 +45,12 @@ void PublicKeyAttribute::set_value(const CryptoPP::RSA::PublicKey& public_key) {
 CryptoPP::RSA::PublicKey PublicKeyAttribute::get_value() {
     CryptoPP::RSA::PublicKey pk;
     CryptoPP::ByteQueue bq;
+
     CryptoPP::StringSource ss(value, true);
-    ss.CopyTo(bq);
-    pk.Load(bq);
+    ss.TransferTo(bq);
     bq.MessageEnd();
+
+    pk.Load(bq);
     return pk;
 }
 
