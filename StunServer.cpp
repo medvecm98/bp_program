@@ -229,9 +229,9 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
             //TODO: error 442 (unsupported transport protocol)
         }
 
-        auto address = networking_->ip_map_.get_ip4(public_identifier);
+        /*auto address = networking_->ip_map_.get_ip4(public_identifier);
         auto port = networking_->ip_map_.get_port(public_identifier);
-        auto rsa_public = networking_->ip_map_.get_rsa_public(public_identifier);
+        auto rsa_public = networking_->ip_map_.get_rsa_public(public_identifier);*/
 
         if (networking_->ip_map_.have_ip4(public_identifier) && networking_->ip_map_.have_rsa_public(public_identifier)) {
             throw public_identifier_already_allocated("Sadly, this identifier is already allocated.");
