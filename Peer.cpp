@@ -15,10 +15,13 @@ void Peer::enroll_new_article(Article a) {
  * @param newspaper_ip_domain IP, or domain name, of the newspaper.
  */
 void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain) {
+	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
+	networking_->get_stun_client()->add_stun_server(QHostAddress(QString::fromStdString(newspaper_ip_domain)), STUN_PORT, newspaper_key);
+	networking_->get_stun_client()->allocate_request(newspaper_key);
+
 	std::cout << "adding new newspaper" << std::endl;
 	newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name));
 	std::cout << "emplaced" << std::endl;
-	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
 	std::cout << "added to map" << std::endl;
 
 	networking_->enroll_message_to_be_sent(MFW::SetMessageContextOneWay(
