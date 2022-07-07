@@ -87,6 +87,25 @@ void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id)
     
 }
 
+void StunClient::send_stun_message_transport_address(stun_header_ptr stun_message, QHostAddress address, std::uint16_t port) {
+    tcp_socket_->abort();
+        tcp_socket_->connectToHost(address, port);
+
+        if (!tcp_socket_->waitForConnected(10000))
+            throw std::logic_error("Connection to STUN server timed-out. (10 seconds)");
+    QByteArray block;
+    QDataStream out_stream(&block, QIODevice::WriteOnly);
+    out_stream.setVersion(QDataStream::Qt_5_0);
+    stun_message->write_stun_message(out_stream);
+    //stun_message->print_message();
+    //printQByteArray(block);
+    int b = 0;
+    if ((b = tcp_socket_->write(block)) == -1)
+        std::cout << "SC: Error occured while writing the block" << std::endl;
+    else
+        std::cout << "SC: bytes written: " << b << std::endl;
+}
+
 /**
  * @brief Handles received STUN message.
  * 
@@ -161,7 +180,7 @@ void StunClient::receive_msg() {
 void StunClient::binding_request() {
     stun_header_ptr msg = std::make_shared<StunMessageHeader>();
     create_binding_request(msg);
-    send_stun_message(msg, get_stun_server_any());
+    send_stun_message_transport_address(msg, stun_server.first, stun_server.second);
 
     //receive_msg();
 }

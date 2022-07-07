@@ -30,6 +30,7 @@ public:
     void allocate_request(pk_t where);
     void identify(pk_t who);
     void send_stun_message(stun_header_ptr stun_message, pk_t public_id);
+    void send_stun_message_transport_address(stun_header_ptr stun_message, QHostAddress address, std::uint16_t port);
     void add_stun_server(QHostAddress address, std::uint16_t port, pk_t pid);
     void stun_server_connected();
     void stun_server_connection_error();
