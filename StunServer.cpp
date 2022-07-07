@@ -140,9 +140,20 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
 
     std::cout << "Request for pid: " << pia->get_public_identifier() << std::endl;
 
-    auto address = networking_->ip_map_.get_ip4(pia->get_public_identifier());
-    auto port = networking_->ip_map_.get_port(pia->get_public_identifier());
-    auto rsa_public = networking_->ip_map_.get_rsa_public(pia->get_public_identifier());
+    QHostAddress address;
+    std::uint16_t port;
+    rsa_public_optional* rsa_public;
+
+    if (pia->get_public_identifier() == networking_->get_peer_public_id()) {
+        address = networking_->ip_map_.my_ip.ipv4;
+        port = networking_->ip_map_.my_ip.port;
+        rsa_public = &networking_->ip_map_.my_ip.key_pair.first;
+    }
+    else {
+        address = networking_->ip_map_.get_ip4(pia->get_public_identifier());
+        port = networking_->ip_map_.get_port(pia->get_public_identifier());
+        rsa_public = networking_->ip_map_.get_rsa_public(pia->get_public_identifier()).get();
+    }
 
     if (!rsa_public->has_value()) {
         create_response_error_identify(message_orig, message_new, pia->get_public_identifier());
