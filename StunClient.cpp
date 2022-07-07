@@ -21,7 +21,7 @@ StunClient::StunClient(Networking* networking) {
     stun_attribute_factories.emplace(STUN_ATTR_REQUESTED_TRANSPORT, std::make_shared<RequestedTransportAttributeFactory>());
     stun_attribute_factories.emplace(STUN_ATTR_PUBLIC_KEY, std::make_shared<PublicKeyAttributeFactory>());
 
-    stun_server.first = QHostAddress(QString("127.0.0.1"));
+    stun_server.first = QHostAddress(QString("10.19.160.208"));
     stun_server.second = STUN_PORT;
     networking_ = networking;
 }

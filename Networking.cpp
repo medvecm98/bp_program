@@ -142,10 +142,12 @@ void Networking::send_message(unique_ptr_message msg) {
 
     auto ip_map_iter = ip_map_.get_wrapper_for_pk(msg->to());
 	if (ip_map_iter != ip_map_.get_map_end() && msg->msg_type() == np2ps::PUBLIC_KEY) {
+		std::cout << "got here uwu" << std::endl;
 		IpWrapper& ipw = ip_map_iter->second;
 		sender_->message_send(std::move(msg), ipw);
 	}
 	else if (ip_map_iter != ip_map_.get_map_end() && ip_map_iter->second.key_pair.first.has_value()) {
+		std::cout << "got here uwu 2" << std::endl;
 		IpWrapper& ipw = ip_map_iter->second;
 		//auto msg = std::move(to_send_msg.front());
 		//to_send_msg.pop();
@@ -429,16 +431,18 @@ PeerSender::PeerSender(networking_ptr net) {
 void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
 	std::shared_ptr<QTcpSocket> socket_ = std::make_shared<QTcpSocket>();
 
-	QObject::connect(socket_.get(), &QTcpSocket::hostFound, this, &PeerSender::host_connected);
+	QObject::connect(socket_.get(), &QTcpSocket::connected, this, &PeerSender::host_connected);
 	QObject::connect(socket_.get(), &QTcpSocket::errorOccurred, this, &PeerSender::handle_connection_error);
 
+	connection_map.emplace(std::make_pair(ipw.ipv4.toIPv4Address(), ipw.port), std::make_pair(msg, ipw));
 	socket_->connectToHost(ipw.ipv4, ipw.port);
 
-	connection_map.emplace(std::make_pair(ipw.ipv4.toIPv4Address(), ipw.port), std::make_pair(msg, ipw));
 }
 
 void PeerSender::host_connected() {
+	std::cout << "Host successfuly connected" << std::endl;
 	QTcpSocket* socket_ = (QTcpSocket*)QObject::sender();
+	std::cout << socket_->peerAddress().toString().toStdString() << ' ' << socket_->peerPort() << std::endl;
 
 	auto it = connection_map.find({socket_->peerAddress().toIPv4Address(), socket_->peerPort()});
 	auto& [msg, ipw] = it->second;
@@ -449,6 +453,8 @@ void PeerSender::host_connected() {
 }
 
 void PeerSender::handle_connection_error() {
+	std::cout << "Host non-successfuly connected" << std::endl;
+
 	QTcpSocket* socket_ = (QTcpSocket*)QObject::sender();
 
 	if (socket_->error() == QAbstractSocket::SocketError::ConnectionRefusedError) {
