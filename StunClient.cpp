@@ -311,7 +311,7 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
     }
     networking_->ip_map_.my_ip.ipv4 = QHostAddress(xma->get_address());
     networking_->ip_map_.my_ip.port = xma->get_port();
-    add_stun_server(tcp_socket->peerAddress(), tcp_socket->peerPort(), pia->get_public_identifier());
+    add_stun_server(tcp_socket, pia->get_public_identifier());
     emit confirmed_newspaper(pia->get_public_identifier());
 }
 
@@ -355,29 +355,15 @@ pk_t StunClient::get_stun_server_any() {
 void StunClient::stun_server_connected() {
     std::cout << "STUN server added and connected for: " << stun_server_awaiting_confirmation << std::endl;
     QTcpSocket* socket = (QTcpSocket*) QObject::sender();
-    socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
-    networking_->ip_map_.set_tcp_socket(stun_server_awaiting_confirmation, socket);
-    stun_servers.push_back(stun_server_awaiting_confirmation);
 }
 
 void StunClient::stun_server_connection_error() {
     std::cout << "STUN connection to " << stun_server_awaiting_confirmation << " failed." << std::endl;
 }
 
-void StunClient::add_stun_server(QHostAddress address, std::uint16_t port, pk_t pid) {
-    networking_->ip_map_.update_ip(pid, address, port);
-    QTcpSocket* tcp_socket = new QTcpSocket(this);
-
-    QObject::connect(tcp_socket, &QIODevice::readyRead, this, &StunClient::receive_msg);
-    QObject::connect(tcp_socket, &QAbstractSocket::disconnected, this, &QObject::deleteLater);
-
-    stun_server_awaiting_confirmation = pid;
-
-    auto c1 = QObject::connect(tcp_socket, &QAbstractSocket::errorOccurred, this, &StunClient::stun_server_connection_error);
-    auto c2 = QObject::connect(tcp_socket, &QAbstractSocket::connected, this, &StunClient::stun_server_connected);
-
-    tcp_socket->connectToHost(address, port);
-
-    QObject::disconnect(c1);
-    QObject::disconnect(c2);
+void StunClient::add_stun_server(QTcpSocket* tcp_socket_, pk_t pid) {
+    networking_->ip_map_.update_ip(pid, tcp_socket_->peerAddress(), tcp_socket_->peerPort());
+    tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+    networking_->ip_map_.set_tcp_socket(pid, tcp_socket_);
+    stun_servers.push_back(pid);
 }
