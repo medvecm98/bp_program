@@ -19,7 +19,7 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 	networking_->get_stun_client()->add_stun_server(QHostAddress(QString::fromStdString(newspaper_ip_domain)), STUN_PORT, newspaper_key);
 	networking_->get_stun_client()->allocate_request(newspaper_key);
 
-	std::cout << "adding new newspaper" << std::endl;
+	/*std::cout << "adding new newspaper" << std::endl;
 	newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name));
 	std::cout << "emplaced" << std::endl;
 	std::cout << "added to map" << std::endl;
@@ -31,7 +31,7 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 			networking_->ip_map_.my_ip.key_pair.first.value()
 		)
 	));
-	std::cout << "enrolled" << std::endl;
+	std::cout << "enrolled" << std::endl;*/
 }
 
 /**
