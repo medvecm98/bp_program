@@ -10,6 +10,7 @@ void PublicKeyAttribute::initialize(const CryptoPP::RSA::PublicKey& public_key, 
 	public_key.Save(bq);
 	CryptoPP::StringSink ss(value);
 	bq.CopyTo(ss);
+    StunMessageAttribute::initialize(value.size(), h);
 }
 
 std::uint16_t PublicKeyAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {
