@@ -435,6 +435,7 @@ void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
 	QObject::connect(socket_.get(), &QTcpSocket::errorOccurred, this, &PeerSender::handle_connection_error);
 
 	connection_map.emplace(std::make_pair(ipw.ipv4.toIPv4Address(), ipw.port), std::make_pair(msg, ipw));
+	std::cout << "PeerSender::try_connect Connecting to host: " << ipw.ipv4.toString().toStdString() << " and port " << ipw.port << std::endl; 
 	socket_->connectToHost(ipw.ipv4, ipw.port);
 
 }
