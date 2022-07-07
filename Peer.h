@@ -90,6 +90,9 @@ public:
 		QObject::connect(this, &Peer::got_newspaper_confirmation, 
 						 this, &Peer::allocate_on_stun_server);
 
+		QObject::connect(networking_->get_stun_client().get(), &StunClient::confirmed_newspaper,
+							this, &Peer::newspaper_confirm);
+
 		
 	}
 
@@ -421,6 +424,8 @@ public slots:
 
 	void allocate_on_stun_server(pk_t target);
 
+	void newspaper_confirm(pk_t pid);
+
 
 signals:
 	/**
@@ -465,6 +470,7 @@ signals:
 	 * @param other_peer Other peer that will share this symmetric key.
 	 */
 	void symmetric_key_exchanged(pk_t other_peer);
+
 
 
 private:

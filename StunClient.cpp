@@ -312,6 +312,7 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
     networking_->ip_map_.my_ip.ipv4 = QHostAddress(xma->get_address());
     networking_->ip_map_.my_ip.port = xma->get_port();
     add_stun_server(tcp_socket->peerAddress(), tcp_socket->peerPort(), pia->get_public_identifier());
+    emit confirmed_newspaper(pia->get_public_identifier());
 }
 
 void StunClient::check_for_nat() {

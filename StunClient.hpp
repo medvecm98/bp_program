@@ -36,6 +36,9 @@ public:
     void stun_server_connection_error();
     void process_response_success_allocate(QTcpSocket* tcp_socket, stun_header_ptr message_orig);
 
+signals:
+    void confirmed_newspaper(pk_t pid);
+
 private slots:
     void accept();
     void error(QAbstractSocket::SocketError socketError);

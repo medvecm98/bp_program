@@ -138,7 +138,7 @@ class Networking : public QObject, public std::enable_shared_from_this<Networkin
 
 public:
 	friend StunClient;	
-	
+
 	Networking() {
 		sender_receiver_initialized = false;
 
