@@ -273,5 +273,18 @@ void StunMessageAttribute::write_stun_attribute(QDataStream& output) {
     output << stun_attr_type << stun_attr_length;
 }
 
+void StunMessageAttribute::pad(QDataStream& output, std::uint16_t length) {
+    quint8 zero_byte = 0;
+    while ((length % 4) != 0) {
+        output << zero_byte;
+        length++;
+    }
+}
 
-
+void StunMessageAttribute::unpad(QDataStream& input, std::uint16_t length) {
+    quint8 zero_byte = 0;
+    while ((length % 4) != 0) {
+        input >> zero_byte;
+        length++;
+    }
+}

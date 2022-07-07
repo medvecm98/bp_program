@@ -46,22 +46,32 @@ bool IpMap::update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6,
 	}
 }
 
-bool IpMap::update_rsa_public(pk_t pk, const std::string& eax) {
-	if (map_.find(pk) == map_.end()) {
-		return false;
-	}
-	else {
-		map_.at(pk).add_rsa_key(eax);
-		return true;
-	}
-}
-
-bool IpMap::update_eax(pk_t pk, const std::string& rsa) {
+bool IpMap::update_rsa_public(pk_t pk, const std::string& rsa) {
 	if (map_.find(pk) == map_.end()) {
 		return false;
 	}
 	else {
 		map_.at(pk).add_rsa_key(rsa);
+		return true;
+	}
+}
+
+bool IpMap::update_rsa_public(pk_t pk, const CryptoPP::RSA::PublicKey& rsa) {
+	if (map_.find(pk) == map_.end()) {
+		return false;
+	}
+	else {
+		map_.at(pk).add_rsa_key(rsa);
+		return true;
+	}
+}
+
+bool IpMap::update_eax(pk_t pk, const std::string& eax) {
+	if (map_.find(pk) == map_.end()) {
+		return false;
+	}
+	else {
+		map_.at(pk).add_eax_key(eax);
 		return true;
 	}
 }
@@ -190,3 +200,21 @@ void IpMap::deserialize_keys() {
 		private_rsa.value().Load(bq);
 	}
 }	
+
+void IpMap::set_tcp_socket(pk_t pk, QTcpSocket* tcp_socket_) {
+	if (map_.find(pk) == map_.end()) {
+		return;
+	}
+	else {
+		map_.at(pk).copy_tcp_socket(tcp_socket_);
+	}	
+}
+		
+QTcpSocket* IpMap::get_tcp_socket(pk_t pk) {
+	if (map_.find(pk) == map_.end()) {
+		return NULL;
+	}
+	else {
+		return map_.at(pk).get_tcp_socket();
+	}	
+}

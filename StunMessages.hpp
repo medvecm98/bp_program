@@ -31,6 +31,8 @@
 #define STUN_ATTR_LIFETIME 0x000D
 #define STUN_ATTR_PUBLIC_IDENTIFIER 0x001F
 #define STUN_ATTR_REQUESTED_TRANSPORT 0x0019
+#define STUN_ATTR_PUBLIC_KEY 0x002B
+#define STUN_ATTR_RELAYED_PUBLIC_IDENTIFIER 0x002C
 
 #define STUN_METHOD_BINDING 0x001
 #define STUN_METHOD_ALLOCATE 0X003
@@ -71,7 +73,9 @@ enum class StunAttributeEnum {
     lifetime = 4,
     xor_relayed_address = 5,
     public_identifier = 6,
-    data = 7
+    data = 7,
+    public_key = 8,
+    relayed_publid_identifier = 9
 };
 
 class StunMessageAttribute {
@@ -91,6 +95,10 @@ public:
     virtual std::uint16_t read_stun_attribute(QDataStream&, std::uint16_t length, std::uint16_t type);
 
     virtual void write_stun_attribute(QDataStream&);
+
+    virtual void pad(QDataStream& output, std::uint16_t length);
+
+    virtual void unpad(QDataStream& input, std::uint16_t length);
 
     std::uint16_t stun_attr_type, stun_attr_length;
     StunAttributeEnum attribute_type;

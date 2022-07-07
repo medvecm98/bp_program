@@ -9,6 +9,7 @@
 #include "GlobalUsing.h"
 #include "MessageProcessor.hpp"
 #include "TurnAllocation.hpp"
+#include "Networking.h"
 
 #include <QObject>
 #include <QApplication>
@@ -17,13 +18,14 @@
 #include <QtNetwork/QNetworkInterface>
 #include <QtCore>
 
+class Networking;
 
 
 class StunServer : public QObject {
     Q_OBJECT
 public:
-    StunServer();
-    StunServer(QHostAddress address, std::uint16_t port = 3478);
+    StunServer(Networking* networking_);
+    StunServer(Networking* networking_, QHostAddress address, std::uint16_t port = 3478);
 
 private slots:
     void reply();
@@ -37,9 +39,9 @@ private:
     bool check_attribute(quint16 attr);
     bool check_validity_all_attributes(stun_header_ptr stun_message, stun_attr_type_vec& output);
     void process_request_identify(stun_header_ptr message_orig, stun_header_ptr message_new);
-    void process_request_allocate(stun_header_ptr message_orig, stun_header_ptr message_new);
-    void create_response_success_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint32_t lifetime);
-    void create_response_success_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id, FiveTuple ft);
+    void process_request_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, QTcpSocket* socket);
+    void create_response_success_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint32_t lifetime, QTcpSocket* socket);
+    void create_response_success_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id, QHostAddress client_ipv4, std::uint16_t port, CryptoPP::RSA::PublicKey& key);
     void send_stun_message(QTcpSocket* socket , stun_header_ptr stun_message);
     void create_response_error_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id);
     std::shared_ptr<QTcpServer> tcp_server_;
@@ -48,7 +50,8 @@ private:
     stun_attr_type_vec unknown_cr_attributes;
     std::set<quint16> known_cr_attributes;
     factory_map stun_attribute_factories;
-    std::map<pk_t, TurnAllocation> allocations;
+    //std::map<pk_t, TurnAllocation> allocations;
+    Networking* networking_;
 };
 
 #endif

@@ -15,7 +15,7 @@ void Peer::enroll_new_article(Article a) {
  * @param newspaper_ip_domain IP, or domain name, of the newspaper.
  */
 void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain) {
-	newspapers_awaiting_confirmation.insert({newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name)});
+	newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name));
 	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
 
 	networking_->enroll_message_to_be_sent(MFW::SetMessageContextOneWay(
@@ -685,6 +685,10 @@ void Peer::handle_responses(unique_ptr_message message) {
 	else if (type == np2ps::SYMMETRIC_KEY) {
 		emit symmetric_key_exchanged(message->from());
 	}
+}
+
+void Peer::allocate_on_stun_server(pk_t target) {
+	networking_->get_stun_client()->allocate_request(target);
 }
 
 /**

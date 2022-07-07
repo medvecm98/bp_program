@@ -53,6 +53,22 @@ public:
 		private_key_new.GenerateRandomWithKeySize(prng, 2048);
 		CryptoPP::RSA::PublicKey public_key_new(private_key_new);
 
+		CryptoPP::RSA::PublicKey pk2;
+
+		/*CryptoPP::ByteQueue bq;
+		public_key_new.Save(bq);
+		std::string output;
+		CryptoPP::StringSink ss(output);
+		bq.CopyTo(ss);
+		std::cout << output.size() << std::endl;
+
+		bq = CryptoPP::ByteQueue();
+		CryptoPP::StringSource ss(output, true);
+		ss.CopyTo(bq);
+		pk2.Load(bq);
+
+		std::cout << (pk2 == public_key_new) << std::endl;*/
+
 		networking_->ip_map_.my_ip.add_rsa_key(std::move(public_key_new));
 		networking_->ip_map_.private_rsa = {std::move(private_key_new)};
 
@@ -70,6 +86,11 @@ public:
 
 		QObject::connect(this, &Peer::symmetric_key_exchanged, 
 						 &(*networking_), &Networking::symmetric_exchanged);
+
+		QObject::connect(this, &Peer::got_newspaper_confirmation, 
+						 this, &Peer::allocate_on_stun_server);
+
+		
 	}
 
 	void load_ip_authorities(pk_t newspaper_key); //to load the IPs of authorities
@@ -392,11 +413,14 @@ public:
 	}
 
 	void stun_allocate() {
-		networking_->get_stun_client()->allocate_request();
+		//networking_->get_stun_client()->allocate_request();
 	}
 
 public slots:
 	void handle_message(unique_ptr_message message);
+
+	void allocate_on_stun_server(pk_t target);
+
 
 signals:
 	/**
@@ -441,6 +465,7 @@ signals:
 	 * @param other_peer Other peer that will share this symmetric key.
 	 */
 	void symmetric_key_exchanged(pk_t other_peer);
+
 
 private:
 	//reader part

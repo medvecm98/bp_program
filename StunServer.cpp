@@ -1,13 +1,13 @@
 #include "StunServer.hpp"
 
-StunServer::StunServer() {
+StunServer::StunServer(Networking* n) : networking_(n) {
     init_server(QHostAddress(QString("127.0.0.1")), STUN_PORT);
 
     connect(tcp_server_.get(), &QTcpServer::newConnection, 
             this, &StunServer::new_connection);
 }
 
-StunServer::StunServer(QHostAddress address, std::uint16_t port) {
+StunServer::StunServer(Networking* n, QHostAddress address, std::uint16_t port) : networking_(n) {
     init_server(address, port);
 
     connect(tcp_server_.get(), &QTcpServer::newConnection, 
@@ -55,6 +55,7 @@ void StunServer::new_connection() {
 }
 
 void StunServer::reply() {
+    QTcpSocket* socket = (QTcpSocket*) QObject::sender();
     std::cout << "STUN server: replying to STUN message" << std::endl;
 
     stun_header_ptr stun_message = std::make_shared<StunMessageHeader>();
@@ -73,11 +74,11 @@ void StunServer::reply() {
 
         if (stun_message->stun_class == StunClassEnum::request) {
             if (stun_message->stun_method == StunMethodEnum::binding) {
-                auto mp = MPProcess<CRequestTag, MBindingTag>(stun_message, stun_new, tcp_socket_, unknown_cr_attributes);
+                auto mp = MPProcess<CRequestTag, MBindingTag>(stun_message, stun_new, socket, unknown_cr_attributes);
                 MessageProcessor<CRequestTag, MBindingTag>::process(mp);
             }
             else if (stun_message->stun_method == StunMethodEnum::allocate) {
-                process_request_allocate(stun_message, stun_new);
+                process_request_allocate(stun_message, stun_new, socket);
             }
             else if (stun_message->stun_method == StunMethodEnum::identify) {
                 process_request_identify(stun_message, stun_new);
@@ -92,14 +93,14 @@ void StunServer::reply() {
             throw invalid_stun_message_format_error("Invalid message received.");
         }
 
-        send_stun_message(tcp_socket_, stun_new);
+        send_stun_message(socket, stun_new);
     }
     catch (invalid_stun_message_format_error de) {
         in_stream.abortTransaction();
         std::cout << de.what() << std::endl;
     }
     catch (unknown_comprehension_required_attribute_error u) {
-        send_error(420, tcp_socket_, tcp_socket_->peerAddress(), tcp_socket_->peerPort());
+        send_error(420, socket, socket->peerAddress(), socket->peerPort());
     }
 }
 
@@ -137,27 +138,36 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
         }
     }
 
-    auto find_it = allocations.find(pia->get_public_identifier());
-    if (find_it == allocations.end()) {
+    auto address = networking_->ip_map_.get_ip4(pia->get_public_identifier());
+    auto port = networking_->ip_map_.get_port(pia->get_public_identifier());
+    auto rsa_public = networking_->ip_map_.get_rsa_public(pia->get_public_identifier());
+
+    if (!rsa_public->has_value()) {
         create_response_error_identify(message_orig, message_new, pia->get_public_identifier());
     }
     else {
-        create_response_success_identify(message_orig, message_new, pia->get_public_identifier(), find_it->second.five_tuple);
+        create_response_success_identify(message_orig, message_new, pia->get_public_identifier(), address, port, rsa_public->value());
     }
 }
 
-void StunServer::create_response_success_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id, FiveTuple ft) {
+void StunServer::create_response_success_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id, QHostAddress client_ipv4, std::uint16_t client_port, CryptoPP::RSA::PublicKey& key) {
     message_new->stun_method = StunMethodEnum::identify;
     message_new->stun_class = StunClassEnum::response_success;
 
     auto xraa = std::make_shared<XorRelayedAddressAttribute>();
     auto pia = std::make_shared<PublicIdentifierAttribute>();
+    auto pka = std::make_shared<PublicKeyAttribute>();
+    auto ria = std::make_shared<RelayedPublicIdentifierAttribute>();
 
     pia->initialize(public_id, message_new.get());
-    xraa->initialize(message_new.get(), STUN_IPV4, ft.client_ipv4, ft.client_port);
+    xraa->initialize(message_new.get(), STUN_IPV4, client_ipv4, client_port);
+    pka->initialize(key, message_new.get());
+    ria->initialize(networking_->get_peer_public_id(), message_new.get());
 
     message_new->append_attribute(pia);
     message_new->append_attribute(xraa);
+    message_new->append_attribute(pka);
+    message_new->append_attribute(ria);
 
     message_new->copy_tid(message_orig);
 }
@@ -175,11 +185,15 @@ void StunServer::create_response_error_identify(stun_header_ptr message_orig, st
     message_new->copy_tid(message_orig);
 }
 
-void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_header_ptr message_new) {
+void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, QTcpSocket* socket) {
         pk_t public_identifier;
         bool request_transport_found = false;
         std::uint32_t protocol;
         std::uint32_t lifetime = 600;
+        CryptoPP::RSA::PublicKey pk;
+        PublicKeyAttribute* pka;
+
+        IpMap& ipm = networking_->ip_map_;
 
         for (auto&& attr : message_orig->attributes) {
             if (attr->attribute_type == StunAttributeEnum::requested_transport) {
@@ -201,6 +215,10 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
             if (attr->attribute_type == StunAttributeEnum::public_identifier) {
                 public_identifier = ((PublicIdentifierAttribute*)attr.get())->get_public_identifier();
             }
+            if (attr->attribute_type == StunAttributeEnum::public_key) {
+                pka = (PublicKeyAttribute*)attr.get();
+                pk = pka->get_value();
+            }
         }
 
         if (!request_transport_found) {
@@ -211,44 +229,43 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
             //TODO: error 442 (unsupported transport protocol)
         }
 
-        auto it = allocations.find(public_identifier);
-        if (it == allocations.end()) {
-            FiveTuple ft;
+        auto address = networking_->ip_map_.get_ip4(public_identifier);
+        auto port = networking_->ip_map_.get_port(public_identifier);
+        auto rsa_public = networking_->ip_map_.get_rsa_public(public_identifier);
 
-            ft.client_ipv4 = tcp_socket_->peerAddress();
-            ft.client_port = tcp_socket_->peerPort();
-            ft.server_ipv4 = tcp_server_->serverAddress();
-            ft.server_port = tcp_server_->serverPort();
-            ft.protocol = protocol;
-
-            allocations.emplace(public_identifier, TurnAllocation(ft, lifetime));
-            auto a = allocations.at(public_identifier);
-            std::cout << "Added allocation:" << std::endl;
-            std::cout << "  IP:   " << a.five_tuple.client_ipv4.toString().toStdString() << std::endl;
-            std::cout << "  port: " << a.five_tuple.client_port << std::endl;
-            std::cout << "  time: " << a.time_to_expiry << std::endl;
-            std::cout << "  ID:   " << public_identifier << std::endl;
-        }
-        else {
+        if (networking_->ip_map_.have_ip4(public_identifier) && networking_->ip_map_.have_rsa_public(public_identifier)) {
             throw public_identifier_already_allocated("Sadly, this identifier is already allocated.");
             //TODO: send back error 437 (Allocation Mismatch)
         }
+        else {
+            networking_->ip_map_.update_ip(public_identifier, socket->peerAddress(), socket->peerPort());
+            networking_->ip_map_.update_rsa_public(public_identifier, pk);
 
-        create_response_success_allocate(message_orig, message_new, lifetime);
+            networking_->ip_map_.set_tcp_socket(public_identifier, socket);
+            std::cout << "Allocated: " << public_identifier << ", IP: " << ipm.get_ip4(public_identifier).toString().toStdString() << ", port: " << ipm.get_port(public_identifier) << std::endl;
+        }
+
+        create_response_success_allocate(message_orig, message_new, lifetime, socket);
 }
 
-void StunServer::create_response_success_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint32_t lifetime) {
+void StunServer::create_response_success_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint32_t lifetime, QTcpSocket* socket) {
     message_new->stun_class = StunClassEnum::response_success;
     message_new->stun_method = StunMethodEnum::allocate;
         
     message_new->copy_tid(message_orig);
 
     std::shared_ptr<XorMappedAddressAttribute> xma = std::make_shared<XorMappedAddressAttribute>();
-    xma->initialize(message_new.get(), STUN_IPV4, tcp_socket_);
+    xma->initialize(message_new.get(), STUN_IPV4, socket);
 
     std::shared_ptr<LifetimeAttribute> la = std::make_shared<LifetimeAttribute>();
     la->initialize(lifetime, message_new.get());
 
+    auto pia = std::make_shared<PublicIdentifierAttribute>();
+    pia->initialize(networking_->get_peer_public_id(), message_new.get());
+
     message_new->append_attribute(xma);
     message_new->append_attribute(la);
+    message_new->append_attribute(pia);
+
+    
 }

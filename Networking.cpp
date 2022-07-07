@@ -12,11 +12,11 @@ void send_message_using_socket(QTcpSocket* tcp_socket, const std::string& msg) {
 	tcp_socket->disconnectFromHost();
 }
 
-void send_message_using_turn(QTcpSocket* tcp_socket, networking_ptr networking_, std::string&& msg, bool disconnect = true) {
+void send_message_using_turn(QTcpSocket* tcp_socket, networking_ptr networking_, std::string&& msg, pk_t to, bool disconnect = true) {
 	stun_header_ptr m = std::make_shared<StunMessageHeader>();
 	MPCreate<CRequestTag, MSendTag> mpc(m, msg, tcp_socket, networking_->get_prng(), networking_->ip_map_);
 	MessageProcessor<CRequestTag, MSendTag>::create(mpc);
-	networking_->get_stun_client()->send_stun_message(mpc.message_to);
+	networking_->get_stun_client()->send_stun_message(mpc.message_to, networking_->ip_map_.get_wrapper_for_pk(to)->second.preferred_stun_server);
 }
 
 void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg, bool disconnect = true) {
@@ -138,6 +138,8 @@ void Networking::send_message_again_ip(pk_t message_originally_to) {
  * @param msg Pointer to message to send.
  */
 void Networking::send_message(unique_ptr_message msg) {
+	
+
     auto ip_map_iter = ip_map_.get_wrapper_for_pk(msg->to());
 	if (ip_map_iter != ip_map_.get_map_end() && msg->msg_type() == np2ps::PUBLIC_KEY) {
 		IpWrapper& ipw = ip_map_iter->second;
@@ -152,7 +154,7 @@ void Networking::send_message(unique_ptr_message msg) {
 	else {
 		//request IP and public key from authority
 		std::cout << "requesting IP and public key" << std::endl;
-		auto news_end = news_db->cend();
+		/*auto news_end = news_db->cend();
 		for (auto news_iter = news_db->cbegin(); news_iter != news_end; news_iter++) {
 			std::shared_ptr<std::string> request_string = std::make_shared<std::string>();
 			request_string->append("r");
@@ -167,8 +169,9 @@ void Networking::send_message(unique_ptr_message msg) {
 					{request_string}, {}, {}, {}
 				)
 			);
-		}
-		waiting_ip.insert({msg->to(), msg});
+		}*/
+		stun_client->identify(msg->to());
+		waiting_ip.emplace(msg->to(), msg);
 	}
 }
 
@@ -181,7 +184,7 @@ void Networking::send_message(unique_ptr_message msg) {
  */
 void check_ip(QTcpSocket* tcp_socket, pk_t pk_id, IpMap& ip_map_) {
 	if (!ip_map_.have_ip4(pk_id)) {
-		ip_map_.update_ip(pk_id, tcp_socket->peerAddress());
+		ip_map_.update_ip(pk_id, tcp_socket->peerAddress(), tcp_socket->peerPort());
 	}
 }
 
@@ -534,7 +537,7 @@ void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrap
 	if (!relay)
 		send_message_using_socket( socket, length_plus_msg.str());
 	else
-		send_message_using_turn(socket, networking_, length_plus_msg.str());
+		send_message_using_turn(socket, networking_, length_plus_msg.str(), msg->to());
 }
 
 void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {

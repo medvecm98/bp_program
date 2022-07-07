@@ -1,13 +1,14 @@
 #include "StunClient.hpp"
 
 StunClient::StunClient(Networking* networking) {
-    tcp_socket_ = std::make_shared<QTcpSocket>();
+    tcp_socket_ = new QTcpSocket(this);
 
-    in.setDevice(tcp_socket_.get());
+    in.setDevice(tcp_socket_);
     in.setVersion(QDataStream::Qt_5_0);
 
-    connect(tcp_socket_.get(), &QIODevice::readyRead, this, &StunClient::receive_msg);
-    connect(tcp_socket_.get(), &QAbstractSocket::errorOccurred, this, &StunClient::error);
+    connect(tcp_socket_, &QIODevice::readyRead, this, &StunClient::receive_msg);
+    connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &StunClient::error);
+    connect(tcp_socket_, &QAbstractSocket::disconnected, this, &QObject::deleteLater);
 
     /* ATTRIBUTE FACTORIES ARE INITIALIZED HERE */
     stun_attribute_factories.emplace(STUN_ATTR_XOR_MAPPED_ADDRESS, std::make_shared<XorMappedAddressAttributeFactory>());
@@ -18,6 +19,7 @@ StunClient::StunClient(Networking* networking) {
     stun_attribute_factories.emplace(STUN_ATTR_PUBLIC_IDENTIFIER, std::make_shared<PublicIdentifierAttributeFactory>());
     stun_attribute_factories.emplace(STUN_ATTR_XOR_RELAYED_ADDRESS, std::make_shared<XorRelayedAddressAttributeFactory>());
     stun_attribute_factories.emplace(STUN_ATTR_REQUESTED_TRANSPORT, std::make_shared<RequestedTransportAttributeFactory>());
+    stun_attribute_factories.emplace(STUN_ATTR_PUBLIC_KEY, std::make_shared<PublicKeyAttributeFactory>());
 
     stun_server.first = QHostAddress(QString("127.0.0.1"));
     stun_server.second = STUN_PORT;
@@ -27,7 +29,6 @@ StunClient::StunClient(Networking* networking) {
 StunClient::StunClient(Networking* networking, QHostAddress address, std::uint16_t port_stun) : StunClient::StunClient(networking) {
     stun_server.first = address;
     stun_server.second = port_stun;
-    networking_ = networking;
 }
 
 void printQByteArray(QByteArray& a) {
@@ -45,15 +46,31 @@ void printQByteArray(QByteArray& a) {
     }
 }
 
-void StunClient::send_stun_message(stun_header_ptr stun_message) {
+void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id) {
     std::cout << "STUN client: sending STUN message" << std::endl;
-    auto& [addr, port] = stun_server;
 
-    tcp_socket_->abort();
-    tcp_socket_->connectToHost(addr, port);
+    if (!networking_->ip_map_.have_ip4(public_id)) {
+        throw std::logic_error("Missing public_id of provided STUN server.");
+    }
 
-    if (!tcp_socket_->waitForConnected(10000))
-        throw std::logic_error("Connection to STUN server timed-out. (10 seconds)");
+    auto addr = networking_->ip_map_.get_ip4(public_id);
+    auto port = networking_->ip_map_.get_port(public_id);
+    
+    if (networking_->ip_map_.get_tcp_socket(public_id) && networking_->ip_map_.get_tcp_socket(public_id)->isOpen()) {
+        tcp_socket_ = networking_->ip_map_.get_tcp_socket(public_id);
+    }
+    else {
+        tcp_socket_->abort();
+        tcp_socket_->connectToHost(addr, port);
+
+        if (!tcp_socket_->waitForConnected(10000))
+            throw std::logic_error("Connection to STUN server timed-out. (10 seconds)");
+    }
+
+    if (stun_message->stun_class == StunClassEnum::request && stun_message->stun_method == StunMethodEnum::allocate) {
+        tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+        networking_->ip_map_.set_tcp_socket(public_id, tcp_socket_);
+    }
 
     QByteArray block;
     QDataStream out_stream(&block, QIODevice::WriteOnly);
@@ -121,7 +138,7 @@ void StunClient::receive_msg() {
     std::cout << "SC: message received" << std::endl;
     QDataStream in_stream;
     in_stream.setVersion(QDataStream::Qt_5_0);
-    in_stream.setDevice(tcp_socket_.get());
+    in_stream.setDevice(tcp_socket_);
     in_stream.startTransaction();
     
     stun_header_ptr stun_message_header = std::make_shared<StunMessageHeader>();
@@ -144,15 +161,15 @@ void StunClient::receive_msg() {
 void StunClient::binding_request() {
     stun_header_ptr msg = std::make_shared<StunMessageHeader>();
     create_binding_request(msg);
-    send_stun_message(msg);
+    send_stun_message(msg, get_stun_server_any());
 
     //receive_msg();
 }
 
-void StunClient::allocate_request() {
+void StunClient::allocate_request(pk_t where) {
     stun_header_ptr msg = std::make_shared<StunMessageHeader>();
     create_request_allocate(msg, 600, networking_->get_peer_public_id());
-    send_stun_message(msg);
+    send_stun_message(msg, where);
 }
 
 void StunClient::create_binding_request(stun_header_ptr stun_msg) {
@@ -198,6 +215,8 @@ void StunClient::create_request_identify(stun_header_ptr stun_message, pk_t who)
 void StunClient::process_response_success_identify(stun_header_ptr stun_message) {
     PublicIdentifierAttribute* pia;
     XorRelayedAddressAttribute* xraa;
+    RelayedPublicIdentifierAttribute* ria;
+    PublicKeyAttribute* pka;
     for (auto&& attr : stun_message->attributes) {
         if (attr->attribute_type == StunAttributeEnum::public_identifier) {
             pia = (PublicIdentifierAttribute*)attr.get();
@@ -205,8 +224,24 @@ void StunClient::process_response_success_identify(stun_header_ptr stun_message)
         if (attr->attribute_type == StunAttributeEnum::xor_relayed_address) {
             xraa = (XorRelayedAddressAttribute*)attr.get();
         }
+        if (attr->attribute_type == StunAttributeEnum::relayed_publid_identifier) {
+            ria = (RelayedPublicIdentifierAttribute*)attr.get();
+        }
+        if (attr->attribute_type == StunAttributeEnum::public_key) {
+            pka = (PublicKeyAttribute*)attr.get();
+        }
     }
     networking_->ip_map_.update_ip(pia->get_public_identifier(), QHostAddress(xraa->get_address()), xraa->get_port());
+    networking_->ip_map_.get_wrapper_for_pk(pia->get_public_identifier())->second.preferred_stun_server = ria->get_public_identifier();
+    networking_->ip_map_.update_rsa_public(pia->get_public_identifier(), pka->get_value());
+
+    auto find_it_waiting_ip = networking_->waiting_ip.find(pia->get_public_identifier());
+
+    if (find_it_waiting_ip != networking_->waiting_ip.end()) {
+        auto msg = find_it_waiting_ip->second;
+        networking_->waiting_ip.erase(find_it_waiting_ip);
+        networking_->send_message(msg);
+    }
 }
 
 void StunClient::process_response_error_identify(stun_header_ptr stun_message) {
@@ -238,4 +273,90 @@ void StunClient::create_request_allocate(stun_header_ptr stun_message, std::uint
     }
 
     stun_message->generate_tid(rng);
+}
+
+void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_header_ptr message_orig) {
+    XorMappedAddressAttribute* xma;
+    LifetimeAttribute* la;
+    PublicIdentifierAttribute* pia;
+    for (auto&& attr : message_orig->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::xor_mapped_address) {
+            xma = (XorMappedAddressAttribute*)attr.get();
+        }
+        if (attr->attribute_type == StunAttributeEnum::lifetime) {
+            la = (LifetimeAttribute*)attr.get();
+        }
+        if (attr->attribute_type == StunAttributeEnum::public_identifier) {
+            pia = (PublicIdentifierAttribute*)attr.get();
+        }
+    }
+    networking_->ip_map_.my_ip.ipv4 = QHostAddress(xma->get_address());
+    networking_->ip_map_.my_ip.port = xma->get_port();
+    add_stun_server(tcp_socket->peerAddress(), tcp_socket->peerPort(), pia->get_public_identifier());
+}
+
+void StunClient::check_for_nat() {
+    auto msg = std::make_shared<StunMessageHeader>();
+    create_binding_request(msg);
+    send_stun_message(msg, get_stun_server_any());
+}
+
+void StunClient::process_response_success_binding(stun_header_ptr stun_message, QTcpSocket* socket_) {
+    XorMappedAddressAttribute* xmaa;
+    for (auto&& attr : stun_message->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::xor_mapped_address) {
+            xmaa = (XorMappedAddressAttribute*) attr.get();
+        }
+    }
+    if ((socket_->localAddress() == QHostAddress(xmaa->get_address())) && (socket_->localPort() == xmaa->get_port())) {}
+    else {
+        nat_active_flag = true;
+    }
+    networking_->ip_map_.my_ip.ipv4 = QHostAddress(xmaa->get_address());
+    networking_->ip_map_.my_ip.port = xmaa->get_port();
+}
+
+void StunClient::identify(pk_t who) {
+    auto msg = std::make_shared<StunMessageHeader>();
+    create_request_identify(msg, who);
+    auto preferred_stun_server = networking_->ip_map_.get_wrapper_for_pk(who)->second.preferred_stun_server;
+    if (preferred_stun_server == 0) {
+        send_stun_message(msg, get_stun_server_any());
+    }
+    else {
+        send_stun_message(msg, preferred_stun_server);
+    }
+}
+
+pk_t StunClient::get_stun_server_any() {
+    return stun_servers[0];
+}
+
+void StunClient::stun_server_connected() {
+    QTcpSocket* socket = (QTcpSocket*) QObject::sender();
+    socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+    networking_->ip_map_.set_tcp_socket(stun_server_awaiting_confirmation, socket);
+    stun_servers.push_back(stun_server_awaiting_confirmation);
+}
+
+void StunClient::stun_server_connection_error() {
+    std::cout << "STUN connection to " << stun_server_awaiting_confirmation << " failed." << std::endl;
+}
+
+void StunClient::add_stun_server(QHostAddress address, std::uint16_t port, pk_t pid) {
+    networking_->ip_map_.update_ip(pid, address, port);
+    QTcpSocket* tcp_socket = new QTcpSocket(this);
+
+    QObject::connect(tcp_socket, &QIODevice::readyRead, this, &StunClient::receive_msg);
+    QObject::connect(tcp_socket, &QAbstractSocket::disconnected, this, &QObject::deleteLater);
+
+    stun_server_awaiting_confirmation = pid;
+
+    auto c1 = QObject::connect(tcp_socket, &QAbstractSocket::errorOccurred, this, &StunClient::stun_server_connection_error);
+    auto c2 = QObject::connect(tcp_socket, &QAbstractSocket::hostFound, this, &StunClient::stun_server_connected);
+
+    tcp_socket->connectToHost(address, port);
+
+    QObject::disconnect(c1);
+    QObject::disconnect(c2);
 }

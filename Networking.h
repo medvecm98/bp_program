@@ -39,6 +39,7 @@ using msg_queue_ptr = std::shared_ptr< msg_queue>;
 using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
 
 class StunClient;
+class StunServer;
 
 #define PORT 14128
 static constexpr char NORMAL_MESSAGE = 'A';
@@ -131,10 +132,13 @@ private:
 };
 
 
+
 class Networking : public QObject, public std::enable_shared_from_this<Networking> {
 	Q_OBJECT
 
 public:
+	friend StunClient;	
+	
 	Networking() {
 		sender_receiver_initialized = false;
 
@@ -147,7 +151,7 @@ public:
 			}
 		}
 
-		stun_server = std::make_shared<StunServer>();
+		stun_server = std::make_shared<StunServer>(this);
 		stun_client = std::make_shared<StunClient>(this);
 
 		std::cout << ip_map_.my_ip.ipv4.toString().toStdString() << '\n';

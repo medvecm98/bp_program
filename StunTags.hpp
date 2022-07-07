@@ -3,6 +3,8 @@
 
 #include "Message.h"
 #include "DataAttribute.hpp"
+#include "PublicKeyAttribute.hpp"
+#include "RelayedPublicIdentifierAttribute.hpp"
 
 struct MBindingTag {};
 struct MAllocateTag {};

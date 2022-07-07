@@ -6,6 +6,7 @@
 #include "GlobalUsing.h"
 #include <unordered_map>
 #include <QtNetwork/QHostAddress>
+#include <QtNetwork/QTcpSocket>
 
 //types for map to store keys for given user
 using rsa_public_optional = std::optional< CryptoPP::RSA::PublicKey>;
@@ -56,9 +57,14 @@ struct IpWrapper {
 		key_pair.first = {std::move(pub_key)};
 	}
 
+	void add_rsa_key(const CryptoPP::RSA::PublicKey& pkey) {
+		key_pair.first = rsa_public_optional(pkey);
+	}
+
 	void add_rsa_key(CryptoPP::RSA::PublicKey&& pkey) {
 		key_pair.first = rsa_public_optional(pkey);
 	}
+
 
 	void add_eax_key(const std::string& ekey_str) {
 		key_pair.second = {CryptoPP::SecByteBlock(reinterpret_cast<const CryptoPP::byte*>(&ekey_str[0]), ekey_str.size())};
@@ -67,6 +73,14 @@ struct IpWrapper {
 
 	void add_eax_key(CryptoPP::SecByteBlock&& ekey) {
 		key_pair.second = eax_optional(ekey);
+	}
+
+	void copy_tcp_socket(QTcpSocket* socket) {
+		tcp_socket_ = socket;
+	}
+
+	QTcpSocket* get_tcp_socket() {
+		return tcp_socket_;
 	}
 
 	/**
@@ -148,11 +162,12 @@ struct IpWrapper {
 	std::uint16_t port;
 
 	//for TURN traversal
-	QHostAddress ipv4_relayed;
-	QHostAddress ipv6_relayed;
-	std::uint16_t port_relayed;
-	
+	QTcpSocket* tcp_socket_ = NULL; //for STUN servers
+	pk_t preferred_stun_server = 0;
+
 	rsa_eax_pair key_pair;
+	
+
 };
 
 using ip_map = std::unordered_map<pk_t, IpWrapper>;
