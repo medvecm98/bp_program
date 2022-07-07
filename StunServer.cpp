@@ -138,6 +138,8 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
         }
     }
 
+    std::cout << "Request for pid: " << pia->get_public_identifier() << std::endl;
+
     auto address = networking_->ip_map_.get_ip4(pia->get_public_identifier());
     auto port = networking_->ip_map_.get_port(pia->get_public_identifier());
     auto rsa_public = networking_->ip_map_.get_rsa_public(pia->get_public_identifier());

@@ -1,7 +1,7 @@
 #include "IpMap.h"
 
 bool IpMap::add_to_map(pk_t pk, IpWrapper&& ip) {
-	return map_.insert({pk, ip}).second;
+	return map_.emplace(pk, ip).second;
 }
 
 void IpMap::remove_from_map(pk_t pk) {

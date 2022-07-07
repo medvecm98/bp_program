@@ -87,8 +87,8 @@ public:
 		QObject::connect(this, &Peer::symmetric_key_exchanged, 
 						 &(*networking_), &Networking::symmetric_exchanged);
 
-		QObject::connect(this, &Peer::got_newspaper_confirmation, 
-						 this, &Peer::allocate_on_stun_server);
+		/*QObject::connect(this, &Peer::got_newspaper_confirmation, 
+						 this, &Peer::allocate_on_stun_server);*/
 
 		QObject::connect(networking_->get_stun_client().get(), &StunClient::confirmed_newspaper,
 							this, &Peer::newspaper_confirm);

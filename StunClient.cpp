@@ -54,9 +54,9 @@ void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id)
     }
 
     auto addr = networking_->ip_map_.get_ip4(public_id);
-    auto port = networking_->ip_map_.get_port(public_id);
+    auto port = STUN_PORT;
     
-    if (networking_->ip_map_.get_tcp_socket(public_id) && networking_->ip_map_.get_tcp_socket(public_id)->isOpen()) {
+    if (networking_->ip_map_.get_tcp_socket(public_id) && networking_->ip_map_.get_tcp_socket(public_id)->isValid()) {
         tcp_socket_ = networking_->ip_map_.get_tcp_socket(public_id);
     }
     else {
@@ -120,8 +120,7 @@ void StunClient::handle_received_message(stun_header_ptr stun_message_header) {
             std::cout << "IP: " << client_IP.toStdString() << ", port: " << mpps.port << std::endl;
         }
         else if (stun_message_header->stun_method == StunMethodEnum::allocate) {
-            MPProcess<CResponseSuccessTag, MAllocateTag> mp(stun_message_header, &networking_->ip_map_);
-            MessageProcessor<CResponseSuccessTag, MAllocateTag>::process(mp);
+            process_response_success_allocate(tcp_socket_, stun_message_header);
         }
         else if (stun_message_header->stun_method == StunMethodEnum::identify) {
             process_response_success_identify(stun_message_header);
@@ -186,6 +185,7 @@ void StunClient::binding_request() {
 }
 
 void StunClient::allocate_request(pk_t where) {
+    std::cout << "StunClient::allocate_request(pk_t where)\n";
     stun_header_ptr msg = std::make_shared<StunMessageHeader>();
     create_request_allocate(msg, 600, networking_->get_peer_public_id());
     send_stun_message(msg, where);
@@ -274,6 +274,7 @@ void StunClient::process_response_error_identify(stun_header_ptr stun_message) {
 }
 
 void StunClient::create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id) {
+    std::cout << "StunClient::create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id)\n";
     stun_message->stun_class = StunClassEnum::request;
     stun_message->stun_method = StunMethodEnum::allocate;
 
@@ -312,6 +313,7 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
     networking_->ip_map_.my_ip.ipv4 = QHostAddress(xma->get_address());
     networking_->ip_map_.my_ip.port = xma->get_port();
     add_stun_server(tcp_socket, pia->get_public_identifier());
+    std::cout << "Goo goo" << std::endl;
     emit confirmed_newspaper(pia->get_public_identifier());
 }
 

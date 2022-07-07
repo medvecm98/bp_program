@@ -15,17 +15,19 @@ void Peer::enroll_new_article(Article a) {
  * @param newspaper_ip_domain IP, or domain name, of the newspaper.
  */
 void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain) {
+	std::cout << "Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain)\n";
 	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
-	//networking_->get_stun_client()->add_stun_server(QHostAddress(QString::fromStdString(newspaper_ip_domain)), STUN_PORT, newspaper_key);
 	networking_->get_stun_client()->allocate_request(newspaper_key);
 
 	newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name));
 }
 
 void Peer::newspaper_confirm(pk_t pid) {
+	std::cout << "Peer::newspaper_confirm(pk_t pid)\n";
 	auto ne = newspapers_awaiting_confirmation.find(pid);
 	news_.emplace(pid, ne->second);
 	newspapers_awaiting_confirmation.erase(ne);
+	emit got_newspaper_confirmation(pid);
 }
 
 /**
