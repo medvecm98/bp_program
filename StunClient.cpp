@@ -352,6 +352,7 @@ pk_t StunClient::get_stun_server_any() {
 }
 
 void StunClient::stun_server_connected() {
+    std::cout << "STUN server added and connected for: " << stun_server_awaiting_confirmation << std::endl;
     QTcpSocket* socket = (QTcpSocket*) QObject::sender();
     socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
     networking_->ip_map_.set_tcp_socket(stun_server_awaiting_confirmation, socket);
@@ -372,7 +373,7 @@ void StunClient::add_stun_server(QHostAddress address, std::uint16_t port, pk_t 
     stun_server_awaiting_confirmation = pid;
 
     auto c1 = QObject::connect(tcp_socket, &QAbstractSocket::errorOccurred, this, &StunClient::stun_server_connection_error);
-    auto c2 = QObject::connect(tcp_socket, &QAbstractSocket::hostFound, this, &StunClient::stun_server_connected);
+    auto c2 = QObject::connect(tcp_socket, &QAbstractSocket::connected, this, &StunClient::stun_server_connected);
 
     tcp_socket->connectToHost(address, port);
 
