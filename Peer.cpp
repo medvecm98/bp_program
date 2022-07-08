@@ -7,6 +7,8 @@
  */
 void Peer::enroll_new_article(Article a) {
 	news_[a.news_id()].add_article(a.main_hash(),std::move(a));
+	PeerInfo* peer_info = &user_map[public_identifier_];
+	readers_.emplace(public_identifier_, peer_info);
 }
 
 /**
@@ -881,4 +883,12 @@ void Peer::handle_error(unique_ptr_message msg) {
 
 void Peer::send_stun_binding_request() {
 	networking_->get_stun_client()->binding_request();
+}
+
+bool Peer::remove_article(hash_t hash) {
+	for (auto&& news : news_) {
+		if (news.second.remove_article(hash))
+			return true;
+	}
+	return false;
 }

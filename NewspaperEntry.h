@@ -26,7 +26,7 @@ public:
 	NewspaperEntry() = default;
 	NewspaperEntry(pk_t first_key, pk_t id, const my_string& name);
 	void add_article(hash_t article_hash, Article&& article);
-	void remove_article(hash_t article_hash);
+	bool remove_article(hash_t article_hash);
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
 	database_iterator_t get_const_iterator_database() const;
 	database_iterator_t get_const_iterator_database_end() const;

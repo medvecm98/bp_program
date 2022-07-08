@@ -10,8 +10,8 @@ void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
 	_articles.insert_or_assign(article_hash, article);
 }
 
-void NewspaperEntry::remove_article(hash_t article_hash) {
-	_articles.erase(article_hash);
+bool NewspaperEntry::remove_article(hash_t article_hash) {
+	return _articles.erase(article_hash) > 0;
 }
 
 std::optional<article_ptr> NewspaperEntry::find_article_header(hash_t article_hash) {

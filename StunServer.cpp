@@ -1,7 +1,7 @@
 #include "StunServer.hpp"
 
 StunServer::StunServer(Networking* n) : networking_(n) {
-    init_server(QHostAddress(QString("127.0.0.1")), STUN_PORT);
+    init_server(QHostAddress(QString("10.19.0.1")), STUN_PORT);
 
     connect(tcp_server_.get(), &QTcpServer::newConnection, 
             this, &StunServer::new_connection);

@@ -386,3 +386,15 @@ void MainWindow::on_pushButton_3_clicked()
 	ctx->p.stun_allocate();
 }
 
+
+void MainWindow::on_pushButton_delete_article_clicked()
+{
+	hash_t h = ui->listWidget_articles->selectedItems().begin().i->t()->text().split(':').last().toULongLong();
+	if (ctx->p.remove_article(h)) {
+		qDeleteAll(ui->listWidget_articles->selectedItems());
+	}
+	else {
+		ui->textEdit_article->setText("Invalid article hash or article was not found in database.");
+	}
+}
+

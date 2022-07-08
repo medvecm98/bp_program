@@ -84,6 +84,8 @@ private slots:
 
 	void on_pushButton_3_clicked();
 
+	void on_pushButton_delete_article_clicked();
+
 private:
 	Ui::MainWindow *ui;
 	ProgramContext* ctx;

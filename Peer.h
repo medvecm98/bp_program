@@ -75,6 +75,8 @@ public:
 
 		newspaper_id_ = 0;
 
+		user_map.emplace(public_identifier_, PeerInfo(public_identifier_, 255));
+
 		/* slots and signals connections: */
 		QObject::connect(this, &Peer::ip_credentials_arrived,
 						 &(*networking_), &Networking::send_message_again_ip);
@@ -355,6 +357,8 @@ public:
 		std::cout << "newspaper_id_ " << newspaper_id_ << std::endl;
 		std::cout << "newspaper_name_ " << newspaper_name_ << std::endl;
 		std::cout << "news_ count: " << news_.size() << std::endl;
+		std::cout << "Reader count: " << readers_.size() << std::endl;
+		std::cout << "User count: " << user_map.size() << std::endl;
 	}
 
 	/**
@@ -419,6 +423,8 @@ public:
 	void stun_allocate() {
 		//networking_->get_stun_client()->allocate_request();
 	}
+
+	bool remove_article(hash_t hash);
 
 public slots:
 	void handle_message(unique_ptr_message message);
