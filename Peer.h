@@ -50,7 +50,7 @@ public:
 		std::cout << "Public ID: " << public_identifier_ << std::endl;
 
 		CryptoPP::RSA::PrivateKey private_key_new;
-		private_key_new.GenerateRandomWithKeySize(prng, 2048);
+		private_key_new.GenerateRandomWithKeySize(prng, 4096);
 		CryptoPP::RSA::PublicKey public_key_new(private_key_new);
 
 		CryptoPP::RSA::PublicKey pk2;

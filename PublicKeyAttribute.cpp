@@ -23,6 +23,8 @@ std::uint16_t PublicKeyAttribute::read_stun_attribute(QDataStream& input, std::u
 
     unpad(input, length);
 
+    std::cout << "Read PublicKeyAttribute length: " << value.length() << std::endl;
+
     return length;
 }
 
