@@ -314,6 +314,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 
 		if (user_not_found) {
 			/* if no user was found in database, we need to check with authority, what his level is */
+			std::cout << "ARTICLE_ALL User not found in database\n";
 
 			auto user_check_msg = MFW::UpdateSeqNumber(
 				MFW::ReqUserIsMemberFactory(
@@ -328,9 +329,11 @@ void Peer::handle_requests(unique_ptr_message message) {
 		}
 		else {
 			/* send user requested article */
+			std::cout << "ARTICLE_ALL User found in database\n";
 
 			auto article = find_article(message->article_all().article_hash());
 			if (article.has_value() && article.value()->article_present()) {
+				std::cout << "ARTICLE_ALL Article found.\n";
 				std::string article_whole;
 				//select only appropriate level
 				article.value()->select_level(article_whole, final_level);
@@ -349,6 +352,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 				networking_->enroll_message_to_be_sent(article_msg);
 			}
 			else {
+				std::cout << "ARTICLE_ALL Article not found.\n";
 				//article not found in database
 
 				std::vector<pk_t> article_peers;
