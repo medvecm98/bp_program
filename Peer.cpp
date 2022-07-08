@@ -495,8 +495,8 @@ void Peer::handle_requests(unique_ptr_message message) {
 				std::cout << "Article data update removal" << std::endl;
 				auto [bit, eit] = readers_.equal_range(message->article_data_update().article_pk());
 				for (auto it = bit; it != eit; it++) {
-					std::cout << "Iterator on : " << it->first << std::endl;
-					if (it->first == message->from()) {
+					std::cout << "Iterator on : " << it->second->peer_key << std::endl;
+					if (it->second->peer_key == message->from()) {
 						readers_.erase(it);
 						break;
 					}
