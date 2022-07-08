@@ -46,6 +46,7 @@ public:
 		CryptoPP::AutoSeededRandomPool prng;
 		public_identifier_ = prng.GenerateByte();
 		networking_->set_peer_public_id(public_identifier_);
+		networking_->set_user_map(&user_map);
 		//public_identifier_ = (std::uint64_t)prng.GenerateWord32() << 32 | (std::uint64_t)prng.GenerateWord32();
 		std::cout << "Public ID: " << public_identifier_ << std::endl;
 

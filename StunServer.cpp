@@ -259,7 +259,9 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
 
             networking_->ip_map_.set_tcp_socket(public_identifier, socket);
             std::cout << "Allocated: " << public_identifier << ", IP: " << ipm.get_ip4(public_identifier).toString().toStdString() << ", port: " << ipm.get_port(public_identifier) << std::endl;
+            networking_->user_map->emplace(public_identifier, PeerInfo(public_identifier, 127));
         }
+
 
         create_response_success_allocate(message_orig, message_new, lifetime, socket);
 }

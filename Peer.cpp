@@ -312,7 +312,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 
 		final_level = req_level < found_level ? req_level : found_level;
 
-		if (user_not_found) {
+		if (false && user_not_found) {
 			/* if no user was found in database, we need to check with authority, what his level is */
 			std::cout << "ARTICLE_ALL User not found in database\n";
 
@@ -347,6 +347,11 @@ void Peer::handle_requests(unique_ptr_message message) {
 					article.value(), 
 					std::move(article_whole)
 				);
+
+				auto readers_it = readers_.find(message->article_all().article_hash());
+				if (readers_it == readers_.end()) {
+					readers_.emplace(message->article_all().article_hash(), &user_map[message->from()]);
+				}
 
 				//send message
 				networking_->enroll_message_to_be_sent(article_msg);

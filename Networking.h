@@ -237,6 +237,10 @@ public:
 		return receiver_.get();
 	}
 
+	void set_user_map(user_level_map* map) {
+		user_map = map;
+	}
+
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	void set_peer_public_id(pk_t pid);
@@ -245,6 +249,7 @@ public:
 	IpMap ip_map_;
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles;
 	std::unordered_multimap<pk_t, unique_ptr_message> waiting_symmetrich_exchange;
+	user_level_map* user_map;
 
 public slots:
 	void send_message(unique_ptr_message);
