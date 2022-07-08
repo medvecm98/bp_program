@@ -429,10 +429,11 @@ PeerSender::PeerSender(networking_ptr net) {
 }
 
 void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
-	std::shared_ptr<QTcpSocket> socket_ = std::make_shared<QTcpSocket>();
+	QTcpSocket* socket_ = new QTcpSocket(this);
 
-	QObject::connect(socket_.get(), &QTcpSocket::connected, this, &PeerSender::host_connected);
-	QObject::connect(socket_.get(), &QTcpSocket::errorOccurred, this, &PeerSender::handle_connection_error);
+	QObject::connect(socket_, &QAbstractSocket::connected, this, &PeerSender::host_connected);
+	QObject::connect(socket_, &QAbstractSocket::errorOccurred, this, &PeerSender::handle_connection_error);
+	QObject::connect(socket_, &QAbstractSocket::disconnected, this, &QObject::deleteLater);
 
 	connection_map.emplace(std::make_pair(ipw.ipv4.toIPv4Address(), ipw.port), std::make_pair(msg, ipw));
 	std::cout << "PeerSender::try_connect Connecting to host: " << ipw.ipv4.toString().toStdString() << " and port " << ipw.port << std::endl; 
