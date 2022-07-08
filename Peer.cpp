@@ -792,9 +792,11 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 				new CryptoPP::StringSink(key_decrypted_str)
 			)
 		);
+		std::cout << "SYMMETRIC_KEY H" << std::endl;
 
 		CryptoPP::SecByteBlock key_decrypted(reinterpret_cast<const CryptoPP::byte*>(&key_decrypted_str[0]), key_decrypted_str.size());
 
+		std::cout << "SYMMETRIC_KEY I" << std::endl;
 		bool verification_result = verifier.VerifyMessage(
 			key_decrypted.data(),
 			key_decrypted.SizeInBytes(),
@@ -802,6 +804,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 			signature.size()
 		);
 
+		std::cout << "SYMMETRIC_KEY J" << std::endl;
 		if (!verification_result) {
 			std::cout << "Verification FAILED" << std::endl;
 			//TODO: throw error
@@ -811,6 +814,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 			networking_->ip_map_.get_wrapper_for_pk(msg->from())->second.add_eax_key(std::move(key_decrypted));
 		}
 
+		std::cout << "SYMMETRIC_KEY K" << std::endl;
 		unique_ptr_message _msg = std::make_shared<proto_message>();
 		_msg->set_from(public_identifier_);
 		_msg->set_to(msg->from());
@@ -819,6 +823,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		networking_->enroll_message_to_be_sent(
 			std::move(_msg)
 		);
+		std::cout << "SYMMETRIC_KEY L" << std::endl;
 	}
 	else if (type == np2ps::PUBLIC_KEY) {
 		std::cout << "got one-way public key" << std::endl;
