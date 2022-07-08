@@ -250,7 +250,7 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
  * @param article_hash Shared pointer to message which needs to be handled.
  */
 void Peer::handle_message(unique_ptr_message message) {
-	std::cout << "message handling" << std::endl;
+	std::cout << "message handling for pid: " << message->from() << std::endl;
 	if (message->msg_ctx() == np2ps::REQUEST) {
 		std::cout << "message request" << std::endl;
 		handle_requests( std::move( message));
