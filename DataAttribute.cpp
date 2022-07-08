@@ -6,13 +6,14 @@ DataAttribute::DataAttribute() : StunMessageAttribute::StunMessageAttribute()  {
 }
 
 void DataAttribute::initialize(std::string& d, StunMessageHeader* h) {
-    data = QString::fromStdString(d);
+    data = QByteArray(d.data(), d.size());
 
     StunMessageAttribute::initialize(data.size(), h);
 }
 
 std::uint16_t DataAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {
     StunMessageAttribute::read_stun_attribute(input, length, type);
+    data.resize(length);
     input >> data;
     return length;
 }

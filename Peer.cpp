@@ -764,15 +764,22 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 	else if (type == np2ps::SYMMETRIC_KEY) {
 		std::cout << "handling and saving a symmetric key" << std::endl;
 		CryptoPP::AutoSeededRandomPool rng;
+		std::cout << "SYMMETRIC_KEY A" << std::endl;
 		std::string key_str = msg->symmetric_key().key();
+		std::cout << "SYMMETRIC_KEY B" << std::endl;
 		std::string signature_str = msg->symmetric_key().signature();
+		std::cout << "SYMMETRIC_KEY C" << std::endl;
 
 		CryptoPP::SecByteBlock key_encrypted(reinterpret_cast<const CryptoPP::byte*>(&key_str[0]), key_str.size());
+		std::cout << "SYMMETRIC_KEY D" << std::endl;
 		CryptoPP::SecByteBlock signature(reinterpret_cast<const CryptoPP::byte*>(&signature_str[0]), signature_str.size());
 
+		std::cout << "SYMMETRIC_KEY E" << std::endl;
 		signer_verifier::Verifier verifier(networking_->ip_map_.get_rsa_public(msg->from())->value());
+		std::cout << "SYMMETRIC_KEY F" << std::endl;
 		rsa_encryptor_decryptor::Decryptor rsa_decryptor(networking_->ip_map_.private_rsa.value());
 
+		std::cout << "SYMMETRIC_KEY G" << std::endl;
 		std::string key_decrypted_str;
 
 		CryptoPP::StringSource ss1(

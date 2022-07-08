@@ -16,7 +16,7 @@ public:
 
     std::string get_np2ps_messsage();
 
-    QString data;
+    QByteArray data;
 
 };
 
