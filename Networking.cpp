@@ -433,10 +433,10 @@ PeerSender::PeerSender(networking_ptr net) {
 }
 
 void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
-	if (ipw.np2ps_tcp_socket_->isValid()) {
+	if (ipw.np2ps_tcp_socket_ && ipw.np2ps_tcp_socket_->isValid()) {
 		message_send(ipw.np2ps_tcp_socket_, msg, ipw, false);
 	}
-	
+
 	QTcpSocket* socket_ = new QTcpSocket(this);
 
 	QObject::connect(socket_, &QAbstractSocket::connected, this, &PeerSender::host_connected);
