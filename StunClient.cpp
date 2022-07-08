@@ -287,6 +287,10 @@ void StunClient::create_request_allocate(stun_header_ptr stun_message, std::uint
     pia->initialize(public_id, stun_message.get());
     stun_message->append_attribute(pia);
 
+    auto pka = std::make_shared<PublicKeyAttribute>();
+    pka->initialize(networking_->ip_map_.my_ip.key_pair.first.value(), stun_message.get());
+    stun_message->append_attribute(pka);
+
     if (lifetime != 600) {
         std::shared_ptr<LifetimeAttribute> la = std::make_shared<LifetimeAttribute>();
         la->initialize(lifetime, stun_message.get());
