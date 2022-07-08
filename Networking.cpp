@@ -433,6 +433,8 @@ PeerSender::PeerSender(networking_ptr net) {
 }
 
 void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
+	std::cout << "ipw.np2ps_tcp_socket_: " << &ipw.np2ps_tcp_socket_ << std::endl;
+	std::cout << "ipw.np2ps_tcp_socket_->isValid(): " << ipw.np2ps_tcp_socket_->isValid() << std::endl;
 	if (ipw.np2ps_tcp_socket_ && ipw.np2ps_tcp_socket_->isValid()) {
 		message_send(ipw.np2ps_tcp_socket_, msg, ipw, false);
 	}
