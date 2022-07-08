@@ -9,7 +9,7 @@ void IpMap::remove_from_map(pk_t pk) {
 }
 
 void IpMap::enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket) {
-	if (socket) {
+	if (socket /*&& socket->peerPort() != PORT*/) {
 		auto w = get_wrapper_for_pk(id);
 		if (!w->second.np2ps_tcp_socket_) {
 			std::cout << "Enrolling np2ps socket " << id << std::endl;

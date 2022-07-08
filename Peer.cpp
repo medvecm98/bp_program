@@ -623,22 +623,29 @@ void Peer::handle_responses(unique_ptr_message message) {
 		}
 	}
 	else if (type == np2ps::ARTICLE_LIST) {
-		std::cout << message->article_list().response_size() << '\n';
-		pk_t list_news_id = message->article_list().response().begin()->news_id();
-		auto& article_list = news_[list_news_id].get_list_of_articles();
-		
-		for (auto it = message->article_list().response().begin(); it != message->article_list().response().end(); it++) {
-			auto a = Article(*it);
-			auto [cit, cite] = a.categories();
-			for (; cit != cite; cit++) {
-				if (article_list.categories.find(*cit) == article_list.categories.end()) {
-					article_list.categories.insert(*cit);
-				}
-			}
-			article_list.article_headers.insert({a.main_hash(), std::move(a)});
-		}
+		auto list_size = message->article_list().response_size();
+		std::cout << "Article List response size: " << list_size << '\n';
+		if (list_size != 0) {
+			pk_t list_news_id = message->article_list().response().begin()->news_id();
+			auto& article_list = news_[list_news_id].get_list_of_articles();
 
-		emit new_article_list(list_news_id);
+			for (auto it = message->article_list().response().begin(); it != message->article_list().response().end(); it++) {
+				auto a = Article(*it);
+				auto [cit, cite] = a.categories();
+				for (; cit != cite; cit++) {
+					if (article_list.categories.find(*cit) == article_list.categories.end()) {
+						article_list.categories.insert(*cit);
+					}
+				}
+				article_list.article_headers.insert({a.main_hash(), std::move(a)});
+			}
+
+			std::cout << "Emit new article list" << std::endl;
+			emit new_article_list(list_news_id);
+		}
+		else {
+			std::cout << "Article List response; empty list" << std::endl;
+		}
 	}
 	else if (type == np2ps::USER_IS_MEMBER) {
 		if (message->user_is_member().is_member() && (message->user_is_member().level() > 127)) {
@@ -815,14 +822,18 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		}
 
 		std::cout << "SYMMETRIC_KEY K" << std::endl;
+
+		//send response that symmetric key was received and processed
 		unique_ptr_message _msg = std::make_shared<proto_message>();
 		_msg->set_from(public_identifier_);
 		_msg->set_to(msg->from());
 		_msg->set_msg_ctx(np2ps::RESPONSE);
 		_msg->set_msg_type(np2ps::SYMMETRIC_KEY);
+
 		networking_->enroll_message_to_be_sent(
 			std::move(_msg)
 		);
+
 		std::cout << "SYMMETRIC_KEY L" << std::endl;
 	}
 	else if (type == np2ps::PUBLIC_KEY) {

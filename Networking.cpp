@@ -154,7 +154,7 @@ void Networking::send_message(unique_ptr_message msg) {
 	}
 	else {
 		//request IP and public key from authority
-		std::cout << "requesting IP and public key" << std::endl;
+		std::cout << "requesting IP and public key for pid: " << msg->to() << std::endl;
 		/*auto news_end = news_db->cend();
 		for (auto news_iter = news_db->cbegin(); news_iter != news_end; news_iter++) {
 			std::shared_ptr<std::string> request_string = std::make_shared<std::string>();
@@ -299,7 +299,7 @@ void PeerReceiver::restart_server(bool restart = true) {
 	}
 }
 
-void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlock iv, IpWrapper& ipw, networking_ptr networking) {
+void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlock iv, IpWrapper& ipw, networking_ptr networking, QTcpSocket* socket) {
 	symmetric_cipher::Decryption dec;
 
 	//symmetric key present
@@ -327,6 +327,9 @@ void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlo
 		return;
 	}
 	else {
+		/*if (m->msg_type() != np2ps::SYMMETRIC_KEY && m->msg_type() != np2ps::PUBLIC_KEY && m->msg_ctx() == np2ps::RESPONSE && socket) {
+			socket->disconnectFromHost();
+		}*/
 		networking->add_to_received(std::move(m));
 		return;
 	}
@@ -390,11 +393,12 @@ void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QHostAddress 
 		//decrypt
 		auto& [ipw_pk, ipw] = *(networking_->ip_map_.get_wrapper_for_pk(pk_str));
 		if (ipw.key_pair.second.has_value()) {
-			decrypt_message_using_symmetric_key(e_msg, iv, ipw, networking_);
+			decrypt_message_using_symmetric_key(e_msg, iv, ipw, networking_, np2ps_socket);
 		}
 		else {
 			//common symmetric key for given sender isn't stored locally yet
 			
+			std::cout << "Symmetric key NOT found locally" << std::endl;
 
 			auto cred_req = MFW::ReqCredentialsFactory(
 				MFW::CredentialsFactory(
@@ -509,8 +513,13 @@ void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrap
 		if (!ipw.key_pair.second.has_value()) {
 			//...no, and so symmetric key needs to be yet generated
 			CryptoPP::SecByteBlock aes_key(CryptoPP::AES::DEFAULT_KEYLENGTH);
-			prng.GenerateBlock(aes_key, aes_key.size());
-			ipw.add_eax_key(std::move(aes_key));
+			prng.GenerateBlock(aes_key, aes_key.size()); //generation
+			std::cout << "Writing into ipmap of " << msg->to() << std::endl;
+			auto wrapper = networking_->ip_map_.get_wrapper_for_pk(msg->to());
+			if (wrapper != networking_->ip_map_.get_map_end()) {
+				wrapper->second.add_eax_key(std::move(aes_key));
+			}
+			//ipw.add_eax_key(std::move(aes_key)); //adding to ip map
 
 			std::stringstream key_exchange_msg;
 			networking_->sign_and_encrypt_key(key_exchange_msg, aes_key, msg->from(), msg->to());
@@ -575,7 +584,7 @@ void Networking::decrypt_encrypted_messages(pk_t original_sender) {
 	auto [emb, eme] = waiting_decrypt.equal_range(original_sender);
 	auto& [ipw_pk, ipw] = *(ip_map_.get_wrapper_for_pk(original_sender));
 	for (; emb != eme; emb++) {
-		decrypt_message_using_symmetric_key(emb->second.encrypted_message_or_symmetric_key, emb->second.initialization_vector_or_signature, ipw, shared_from_this());
+		decrypt_message_using_symmetric_key(emb->second.encrypted_message_or_symmetric_key, emb->second.initialization_vector_or_signature, ipw, shared_from_this(), NULL);
 	}
 }
 
