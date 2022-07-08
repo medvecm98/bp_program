@@ -232,6 +232,10 @@ public:
 		receiver_->process_received_np2ps_message(msg, ip, port, NULL);
 	}
 
+	PeerReceiver* get_peer_receiver() {
+		return receiver_.get();
+	}
+
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	void set_peer_public_id(pk_t pid);

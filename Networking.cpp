@@ -30,8 +30,7 @@ void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg, bool d
 	if (tcp_socket->state() != QAbstractSocket::ConnectedState) {
 		std::cout << tcp_socket->state() << std::endl;
 	}
-	if (false)
-		tcp_socket->disconnectFromHost();
+	
 }
 
 void send_message_using_socket(QTcpSocket* tcp_socket, unique_ptr_message msg) {
@@ -408,7 +407,7 @@ void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QHostAddress 
 			msg_key_sstream << cred_req->SerializeAsString();
 			send_message_using_socket(tcp_socket_, msg_key_sstream.str());
 
-			tcp_socket_->disconnectFromHost();
+			//tcp_socket_->disconnectFromHost();
 			return;
 		}
 	}
@@ -421,7 +420,7 @@ void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QHostAddress 
 		networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket);
 		networking_->add_to_received(std::move(m));
 
-		tcp_socket_->disconnectFromHost();
+		//tcp_socket_->disconnectFromHost();
 		return; 
 	}
 }
@@ -445,6 +444,7 @@ void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
 		QObject::connect(socket_, &QAbstractSocket::connected, this, &PeerSender::host_connected);
 		QObject::connect(socket_, &QAbstractSocket::errorOccurred, this, &PeerSender::handle_connection_error);
 		QObject::connect(socket_, &QAbstractSocket::disconnected, this, &QObject::deleteLater);
+		QObject::connect(socket_, &QAbstractSocket::readyRead, networking_->get_peer_receiver(), &PeerReceiver::message_receive);
 
 		connection_map.emplace(std::make_pair(ipw.ipv4.toIPv4Address(), ipw.port), std::make_pair(msg, ipw));
 		std::cout << "PeerSender::try_connect Connecting to host: " << ipw.ipv4.toString().toStdString() << " and port " << ipw.port << std::endl; 
