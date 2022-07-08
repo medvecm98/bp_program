@@ -360,10 +360,10 @@ void PeerReceiver::message_receive() {
 		return;
 	}
 
-	process_received_np2ps_message(msg, tcp_socket_->peerAddress(), tcp_socket_->peerPort());
+	process_received_np2ps_message(msg, tcp_socket_->peerAddress(), tcp_socket_->peerPort(), tcp_socket_);
 }
 
-void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QHostAddress ip, std::uint16_t port) {
+void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QHostAddress ip, std::uint16_t port, QTcpSocket* np2ps_socket) {
 	std::cout << "Message read and received" << std::endl;
 	char msg_class = read_class_and_length(msg);
 
@@ -371,6 +371,9 @@ void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QHostAddress 
 	if (msg_class == NORMAL_MESSAGE) {
 		std::cout << "Normal message read and received" << std::endl;
 		auto pk_str = extract_public_identifier(msg); //public identifier
+
+		networking_->ip_map_.enroll_new_np2ps_tcp_socket(pk_str, np2ps_socket);
+
 		std::cout << pk_str << std::endl;
 		auto iv = extract_init_vector(msg); //init. vector
 		auto e_msg = extract_encrypted_message(msg); //encrypted message
@@ -415,6 +418,7 @@ void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QHostAddress 
 		std::cout << "[DEBUG][PeerReceiver::message_receive()] size: " << msg.toStdString().size() << std::endl;
 		m->ParseFromString(msg.toStdString());
 		check_ip(tcp_socket_, m->from(), networking_->ip_map_);
+		networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket);
 		networking_->add_to_received(std::move(m));
 
 		tcp_socket_->disconnectFromHost();
@@ -429,6 +433,10 @@ PeerSender::PeerSender(networking_ptr net) {
 }
 
 void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
+	if (ipw.np2ps_tcp_socket_->isValid()) {
+		message_send(ipw.np2ps_tcp_socket_, msg, ipw, false);
+	}
+	
 	QTcpSocket* socket_ = new QTcpSocket(this);
 
 	QObject::connect(socket_, &QAbstractSocket::connected, this, &PeerSender::host_connected);

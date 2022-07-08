@@ -82,7 +82,7 @@ public:
 
 public slots:
 	void message_receive();
-	void process_received_np2ps_message(QByteArray& msg, QHostAddress ip, std::uint16_t port);
+	void process_received_np2ps_message(QByteArray& msg, QHostAddress ip, std::uint16_t port, QTcpSocket*);
 	void prepare_for_message_receive();
 	void display_error(QAbstractSocket::SocketError e) {
 		QTextStream(stderr) << "Code " << e << "\n";
@@ -229,7 +229,7 @@ public:
 	}
 
 	void pass_message_to_receiver(QByteArray& msg, QHostAddress ip, std::uint16_t port) {
-		receiver_->process_received_np2ps_message(msg, ip, port);
+		receiver_->process_received_np2ps_message(msg, ip, port, NULL);
 	}
 
 	BOOST_SERIALIZATION_SPLIT_MEMBER()

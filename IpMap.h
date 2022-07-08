@@ -30,6 +30,7 @@ public:
 	ip_map::iterator get_map_end() {
 		return map_.end();
 	}
+	void enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket);
 
 	/**
 	 * Serialize using boost archive.

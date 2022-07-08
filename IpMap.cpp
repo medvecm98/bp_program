@@ -8,6 +8,14 @@ void IpMap::remove_from_map(pk_t pk) {
 	map_.erase(pk);
 }
 
+void IpMap::enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket) {
+	if (socket) {
+		auto w = get_wrapper_for_pk(id);
+		w->second.np2ps_tcp_socket_ = socket;
+		w->second.np2ps_tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+	}
+}
+
 /**
  * @brief Update given IP.
  * 
