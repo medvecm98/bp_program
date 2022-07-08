@@ -344,6 +344,13 @@ void PeerReceiver::prepare_for_message_receive() {
 	QObject::connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &PeerReceiver::display_error);
 }
 
+void PeerReceiver::message_receive_connected() {
+	tcp_socket_ = (QTcpSocket*)QObject::sender();
+	in_.setDevice(tcp_socket_);
+	in_.setVersion(QDataStream::Qt_5_0);
+	message_receive();
+}
+
 void PeerReceiver::message_receive() {
 	std::cout << "Receiving message" << std::endl;
 	in_.startTransaction();
@@ -444,7 +451,7 @@ void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
 		QObject::connect(socket_, &QAbstractSocket::connected, this, &PeerSender::host_connected);
 		QObject::connect(socket_, &QAbstractSocket::errorOccurred, this, &PeerSender::handle_connection_error);
 		QObject::connect(socket_, &QAbstractSocket::disconnected, this, &QObject::deleteLater);
-		QObject::connect(socket_, &QAbstractSocket::readyRead, networking_->get_peer_receiver(), &PeerReceiver::message_receive);
+		QObject::connect(socket_, &QAbstractSocket::readyRead, networking_->get_peer_receiver(), &PeerReceiver::message_receive_connected);
 
 		connection_map.emplace(std::make_pair(ipw.ipv4.toIPv4Address(), ipw.port), std::make_pair(msg, ipw));
 		std::cout << "PeerSender::try_connect Connecting to host: " << ipw.ipv4.toString().toStdString() << " and port " << ipw.port << std::endl; 

@@ -84,6 +84,7 @@ public slots:
 	void message_receive();
 	void process_received_np2ps_message(QByteArray& msg, QHostAddress ip, std::uint16_t port, QTcpSocket*);
 	void prepare_for_message_receive();
+	void message_receive_connected();
 	void display_error(QAbstractSocket::SocketError e) {
 		QTextStream(stderr) << "Code " << e << "\n";
 		return;
