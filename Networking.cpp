@@ -285,7 +285,7 @@ PeerReceiver::PeerReceiver(networking_ptr net) {
 void PeerReceiver::restart_server(bool restart = true) {
 	tcp_server_->close();
 	if (restart) {
-		if (!tcp_server_->listen(networking_->ip_map_.my_ip.ipv4, 14128)) {
+		if (!tcp_server_->listen(networking_->ip_map_.my_ip.ipv4, PORT)) {
 			QTextStream(stdout)
 				<< "Failed to start the server "
 				<< tcp_server_->errorString()

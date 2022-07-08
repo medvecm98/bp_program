@@ -23,28 +23,28 @@ using pk_t_keys_map = std::unordered_map< pk_t, rsa_eax_pair>;
 struct IpWrapper {
 	IpWrapper() = default;
 
-	explicit IpWrapper(const QHostAddress& ip4, std::uint16_t port = 14128) {
+	explicit IpWrapper(const QHostAddress& ip4, std::uint16_t port = PORT) {
 		ipv4 = ip4;
 		this->port = port;
 	}
 
-	IpWrapper (const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port = 14128) {
+	IpWrapper (const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port = PORT) {
 		ipv4 = ip4;
 		ipv6 = ip6;
 		this->port = port;
 	}
 
-	explicit IpWrapper(const std::string& ip4, std::uint16_t port = 14128) {
+	explicit IpWrapper(const std::string& ip4, std::uint16_t port = PORT) {
 		ipv4 = QHostAddress(QString(ip4.c_str()));
 		this->port = port;
 	}
 
-	explicit IpWrapper(const QString& ip4, std::uint16_t port = 14128) {
+	explicit IpWrapper(const QString& ip4, std::uint16_t port = PORT) {
 		ipv4 = QHostAddress(ip4);
 		this->port = port;
 	}
 
-	IpWrapper(const QString& ip4, const QString& ip6, std::uint16_t port = 14128) {
+	IpWrapper(const QString& ip4, const QString& ip6, std::uint16_t port = PORT) {
 		ipv4 = QHostAddress(ip4);
 		ipv6 = QHostAddress(ip6);
 		this->port = port;

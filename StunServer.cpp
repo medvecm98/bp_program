@@ -146,7 +146,7 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
 
     if (pia->get_public_identifier() == networking_->get_peer_public_id()) {
         address = networking_->ip_map_.my_ip.ipv4;
-        port = 14128;
+        port = PORT;
         rsa_public = &networking_->ip_map_.my_ip.key_pair.first;
     }
     else {

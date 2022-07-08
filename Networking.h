@@ -41,7 +41,6 @@ using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
 class StunClient;
 class StunServer;
 
-#define PORT 14128
 static constexpr char NORMAL_MESSAGE = 'A';
 static constexpr char KEY_MESSAGE = 'B';
 

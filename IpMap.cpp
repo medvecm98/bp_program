@@ -15,7 +15,7 @@ void IpMap::remove_from_map(pk_t pk) {
  * @param ip IP to use.
  * @return True, if update took place.
  */
-bool IpMap::update_ip(pk_t pk, const QHostAddress& ip, std::uint16_t port /*= 14128*/) {
+bool IpMap::update_ip(pk_t pk, const QHostAddress& ip, std::uint16_t port /*= PORT*/) {
 	if (map_.find(pk) == map_.end()) {
 		return map_.emplace(pk, IpWrapper(ip, port)).second;
 	}
@@ -34,7 +34,7 @@ bool IpMap::update_ip(pk_t pk, const QHostAddress& ip, std::uint16_t port /*= 14
  * @param ip6 IPv6 to use.
  * @return True, if update took place.
  */
-bool IpMap::update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port /*= 14128*/) {
+bool IpMap::update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port /*= PORT*/) {
 	if (map_.find(pk) == map_.end()) {
 		return map_.insert({pk, IpWrapper(ip4, ip6, port)}).second;
 	}
