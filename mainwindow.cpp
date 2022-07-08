@@ -389,12 +389,30 @@ void MainWindow::on_pushButton_3_clicked()
 
 void MainWindow::on_pushButton_delete_article_clicked()
 {
-	hash_t h = ui->listWidget_articles->selectedItems().begin().i->t()->text().split(':').last().toULongLong();
-	if (ctx->p.remove_article(h)) {
-		qDeleteAll(ui->listWidget_articles->selectedItems());
+	if (ui->listWidget_articles->selectedItems().size() > 0) {
+		hash_t h = ui->listWidget_articles->selectedItems().begin().i->t()->text().split(':').last().toULongLong();
+		if (ctx->p.remove_article(h)) {
+			qDeleteAll(ui->listWidget_articles->selectedItems());
+		}
+		else {
+			ui->textEdit_article->setText("Invalid article hash or article was not found in database.");
+		}
+	}
+	else if (ui->treeWidget_newspaper->selectedItems().size() > 0 && 
+			 !(ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr ||
+			   ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr)) {
+		auto h = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
+		pk_t news_id;
+		if (ctx->p.remove_article(h, news_id)) {
+			qDeleteAll(ui->treeWidget_newspaper->selectedItems());
+			ctx->p.removed_external_article(h, news_id);
+		}
+		else {
+			ui->textEdit_article->setText("Invalid article hash or article was not found in database.");
+		}
 	}
 	else {
-		ui->textEdit_article->setText("Invalid article hash or article was not found in database.");
+		ui->textEdit_article->setText("Please, select an article.");
 	}
 }
 

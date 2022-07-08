@@ -116,6 +116,7 @@ public:
 	void generate_article_all_message(pk_t destination, hash_t article_hash);
 	void generate_article_header_message(pk_t destination, hash_t article_hash);
 	void send_stun_binding_request();
+	void removed_external_article(hash_t article, pk_t to);
 
 	/**
 	 * @brief Set the name of the peer.
@@ -425,6 +426,7 @@ public:
 	}
 
 	bool remove_article(hash_t hash);
+	bool remove_article(hash_t hash, pk_t& newspaper_id);
 
 public slots:
 	void handle_message(unique_ptr_message message);

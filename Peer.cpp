@@ -491,7 +491,13 @@ void Peer::handle_requests(unique_ptr_message message) {
 				}
 			}
 			else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
-				readers_.erase(message->from());
+				auto [bit, eit] = readers_.equal_range(message->article_data_update().article_pk());
+				for (auto it = bit; it != eit; it++) {
+					if (it->first == message->from()) {
+						readers_.erase(it);
+						break;
+					}
+				}
 			}
 		}
 		//authority part
@@ -891,4 +897,26 @@ bool Peer::remove_article(hash_t hash) {
 			return true;
 	}
 	return false;
+}
+
+bool Peer::remove_article(hash_t hash, pk_t& newspaper_id) {
+	for (auto&& news : news_) {
+		if (news.second.remove_article(hash)) {
+			newspaper_id = news.second.get_id();
+			return true;
+		}
+	}
+	return false;
+}
+
+void Peer::removed_external_article(hash_t article, pk_t to) {
+	networking_->enroll_message_to_be_sent(
+		MFW::SetMessageContextRequest(
+			MFW::ArticleDataChangeFactory(
+				public_identifier_,
+				to,
+				article,
+				false
+			)
+	));
 }
