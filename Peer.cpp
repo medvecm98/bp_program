@@ -478,6 +478,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 		);
 	}
 	else if (type == np2ps::ARTICLE_DATA_UPDATE) {
+		std::cout << "Article data update" << std::endl;
 		//reporter part
 		if (find_article(message->article_data_update().article_pk()).has_value()) {
 			if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
@@ -491,8 +492,10 @@ void Peer::handle_requests(unique_ptr_message message) {
 				}
 			}
 			else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
+				std::cout << "Article data update removal" << std::endl;
 				auto [bit, eit] = readers_.equal_range(message->article_data_update().article_pk());
 				for (auto it = bit; it != eit; it++) {
+					std::cout << "Iterator on : " << it->first << std::endl;
 					if (it->first == message->from()) {
 						readers_.erase(it);
 						break;
