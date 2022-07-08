@@ -10,6 +10,7 @@ void IpMap::remove_from_map(pk_t pk) {
 
 void IpMap::enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket) {
 	if (socket) {
+		std::cout << "Enrolling np2ps socket" << std::endl;
 		auto w = get_wrapper_for_pk(id);
 		w->second.np2ps_tcp_socket_ = socket;
 		w->second.np2ps_tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);

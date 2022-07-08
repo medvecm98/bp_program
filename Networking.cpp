@@ -30,7 +30,7 @@ void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg, bool d
 	if (tcp_socket->state() != QAbstractSocket::ConnectedState) {
 		std::cout << tcp_socket->state() << std::endl;
 	}
-	if (disconnect)
+	if (false)
 		tcp_socket->disconnectFromHost();
 }
 
