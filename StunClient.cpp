@@ -139,10 +139,9 @@ void StunClient::handle_received_message(stun_header_ptr stun_message_header) {
     else if (stun_message_header->stun_class == StunClassEnum::indication) {
         if (stun_message_header->stun_method == StunMethodEnum::send) {
             std::string np2ps_message;
-            MPProcess<CIndicationTag, MSendTag> mpp(stun_message_header);
-            MessageProcessor<CIndicationTag, MSendTag>::process(mpp);
+            process_indication_send(stun_message_header, np2ps_message);
             QByteArray msg(np2ps_message.c_str(), np2ps_message.length());
-            networking_->pass_message_to_receiver(msg, QHostAddress(mpp.from_address), mpp.from_port);
+            networking_->pass_message_to_receiver(msg);
         }
     }
     else {
@@ -275,6 +274,7 @@ void StunClient::process_response_error_identify(stun_header_ptr stun_message) {
 }
 
 void StunClient::create_request_send(stun_header_ptr stun_message, std::string msg, pk_t where) {
+    std::cout << "creating request send" << std::endl;
     stun_message->stun_class = StunClassEnum::request;
     stun_message->stun_method = StunMethodEnum::send;
 
@@ -392,4 +392,27 @@ void StunClient::add_stun_server(QTcpSocket* tcp_socket_, pk_t pid) {
     tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
     networking_->ip_map_.set_tcp_socket(pid, tcp_socket_);
     stun_servers.push_back(pid);
+}
+
+void StunClient::process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message) {
+    std::cout << "processing send indication" << std::endl;
+    PublicIdentifierAttribute* pia;
+    RelayedPublicIdentifierAttribute* ria;
+    DataAttribute* data;
+
+    for (auto&& attr : stun_message->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::public_identifier) {
+            pia = (PublicIdentifierAttribute*) attr.get();
+        }
+        if (attr->attribute_type == StunAttributeEnum::relayed_publid_identifier) { //server
+            ria = (RelayedPublicIdentifierAttribute*) attr.get();
+        }
+        if (attr->attribute_type == StunAttributeEnum::data) {
+            data = (DataAttribute*) attr.get();
+        }
+    }
+
+    np2ps_message = data->get_np2ps_messsage();
+
+    networking_->ip_map_.update_preferred_stun_server(pia->get_public_identifier(), ria->get_public_identifier());
 }

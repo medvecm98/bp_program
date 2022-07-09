@@ -88,11 +88,9 @@ void StunServer::reply() {
             }
             else if (stun_message->stun_method == StunMethodEnum::send) {
                 pk_t to;
-                process_request_send(stun_message, to);
+                process_request_send(stun_message, stun_new, to);
                 std::cout << "Relaying SEND STUN message to " << to << " peer.\n";
                 socket = networking_->ip_map_.get_wrapper_for_pk(to)->second.tcp_socket_;
-                send_stun_message(socket, stun_message);
-                return;
             }
         }
         else if (stun_message->stun_class == StunClassEnum::indication) {
@@ -298,15 +296,44 @@ void StunServer::create_response_success_allocate(stun_header_ptr message_orig, 
     
 }
 
-void StunServer::process_request_send(stun_header_ptr message_orig, pk_t& to) {
+void StunServer::process_request_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t& to) {
+    std::cout << "processing request send" << std::endl;
     RelayedPublicIdentifierAttribute* ria;
+    PublicIdentifierAttribute* pia;
+    DataAttribute* data;
 
     for (auto&& attr : message_orig->attributes) {
         if (attr->attribute_type == StunAttributeEnum::relayed_publid_identifier) {
             ria = (RelayedPublicIdentifierAttribute*) attr.get();
         }
+        if (attr->attribute_type == StunAttributeEnum::public_identifier) {
+            pia = (PublicIdentifierAttribute*) attr.get();
+        }
+        if (attr->attribute_type == StunAttributeEnum::data) {
+            data = (DataAttribute*) attr.get();
+        }
     }
 
     to = ria->get_public_identifier();
-    message_orig->stun_class = StunClassEnum::indication;
+    create_indication_send(message_orig, message_new, pia->get_public_identifier(), std::move(data->get_np2ps_messsage()));
+}
+
+void StunServer::create_indication_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t source_pk, std::string&& np2ps_message) {
+    std::cout << "creating indication send" << std::endl;
+    message_new->stun_class = StunClassEnum::indication;
+    message_new->stun_method = StunMethodEnum::send;
+
+    auto pia = std::make_shared<PublicIdentifierAttribute>();
+    pia->initialize(source_pk, message_new.get());
+    message_new->append_attribute(pia);
+
+    auto ria = std::make_shared<RelayedPublicIdentifierAttribute>();
+    ria->initialize(networking_->get_peer_public_id(), message_new.get());
+    message_new->append_attribute(ria);
+
+    auto data = std::make_shared<DataAttribute>();
+    data->initialize(np2ps_message, message_new.get());
+    message_new->append_attribute(data);
+
+    message_new->copy_tid(message_orig);
 }

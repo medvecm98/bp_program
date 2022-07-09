@@ -82,7 +82,7 @@ public:
 
 public slots:
 	void message_receive();
-	void process_received_np2ps_message(QByteArray& msg, QHostAddress ip, std::uint16_t port, QTcpSocket*);
+	void process_received_np2ps_message(QByteArray& msg, QTcpSocket*);
 	void prepare_for_message_receive();
 	void message_receive_connected();
 	void display_error(QAbstractSocket::SocketError e) {
@@ -231,8 +231,8 @@ public:
 		return prng_;
 	}
 
-	void pass_message_to_receiver(QByteArray& msg, QHostAddress ip, std::uint16_t port) {
-		receiver_->process_received_np2ps_message(msg, ip, port, NULL);
+	void pass_message_to_receiver(QByteArray& msg) {
+		receiver_->process_received_np2ps_message(msg, NULL);
 	}
 
 	PeerReceiver* get_peer_receiver() {

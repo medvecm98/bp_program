@@ -370,10 +370,10 @@ void PeerReceiver::message_receive() {
 		return;
 	}
 
-	process_received_np2ps_message(msg, tcp_socket_->peerAddress(), tcp_socket_->peerPort(), tcp_socket_);
+	process_received_np2ps_message(msg, tcp_socket_);
 }
 
-void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QHostAddress ip, std::uint16_t port, QTcpSocket* np2ps_socket) {
+void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QTcpSocket* np2ps_socket) {
 	std::cout << "Message read and received" << std::endl;
 	char msg_class = read_class_and_length(msg);
 

@@ -19,6 +19,7 @@ std::uint16_t DataAttribute::read_stun_attribute(QDataStream& input, std::uint16
 }
 
 void DataAttribute::write_stun_attribute(QDataStream& output) {
+    StunMessageAttribute::write_stun_attribute(output);
     output << data;
 }
 

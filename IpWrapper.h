@@ -178,6 +178,18 @@ struct IpWrapper {
 		return stun_port;
 	}
 
+	void set_relay_flag() {
+		relay_flag = true;
+	}
+
+	bool get_relay_flag() {
+		return relay_flag;
+	}
+
+	void reset_relay_flag() {
+		relay_flag = false;
+	}
+
 	//for normal traversal
 	QHostAddress ipv4;
 	QHostAddress ipv6;
@@ -194,7 +206,7 @@ struct IpWrapper {
 
 	rsa_eax_pair key_pair;
 	
-
+	bool relay_flag;
 };
 
 using ip_map = std::unordered_map<pk_t, IpWrapper>;

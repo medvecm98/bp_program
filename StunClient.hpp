@@ -59,7 +59,7 @@ private:
     void process_response_success_identify(stun_header_ptr stun_message);
     void process_response_error_identify(stun_header_ptr stun_message);
     void process_response_success_binding(stun_header_ptr stun_message, QTcpSocket* socket_);
-
+    void process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message);
 
     pk_t get_stun_server_any();
 
