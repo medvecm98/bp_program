@@ -364,7 +364,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 
 				std::vector<pk_t> article_peers;
 				auto [readers_begin, readers_end] = readers_.equal_range(message->article_all().article_hash());
-				if (readers_begin != readers_end) {
+				if (readers_begin != readers_end) { //at least one reader exists
 					for (; readers_begin != readers_end; readers_begin++) {
 						article_peers.push_back(readers_begin->second->peer_key);
 					}
@@ -380,7 +380,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 						)
 					);
 				}
-				else if (!journalists_.empty()) {
+				else if (!journalists_.empty()) { //there are some journalists present
 					//TODO: redo if ArtileReaders and such are properly implemented
 
 					for (auto&& journalist : journalists_) {
@@ -886,6 +886,9 @@ void Peer::handle_error(unique_ptr_message msg) {
 			auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back();
 			networking_->soliciting_articles[msg->article_sol().article_hash()].pop_back();
 			generate_article_all_message(destination, msg->article_sol().article_hash());
+		}
+		else {
+			std::cout << "Requested article with hash " << msg->article_sol().article_hash() << " was not found inside the network." << std::endl;
 		}
 	}
 }
