@@ -129,6 +129,8 @@ private:
 	CryptoPP::AutoSeededRandomPool prng_;
 	networking_ptr networking_;
 	ConnectionMap connection_map;
+	unique_ptr_message message_waiting_for_connection;
+	IpWrapper ipw_waiting_for_connection;
 };
 
 

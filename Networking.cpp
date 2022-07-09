@@ -459,7 +459,9 @@ void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
 		QObject::connect(socket_, &QAbstractSocket::disconnected, this, &QObject::deleteLater);
 		QObject::connect(socket_, &QAbstractSocket::readyRead, networking_->get_peer_receiver(), &PeerReceiver::message_receive_connected);
 
-		connection_map.emplace(std::make_pair(ipw.ipv4.toIPv4Address(), ipw.port), std::make_pair(msg, ipw));
+		message_waiting_for_connection = msg;
+		ipw_waiting_for_connection = ipw;
+
 		std::cout << "PeerSender::try_connect Connecting to host: " << ipw.ipv4.toString().toStdString() << " and port " << ipw.port << std::endl; 
 		socket_->connectToHost(ipw.ipv4, ipw.port);
 	}
@@ -471,12 +473,13 @@ void PeerSender::host_connected() {
 	QTcpSocket* socket_ = (QTcpSocket*)QObject::sender();
 	std::cout << socket_->peerAddress().toString().toStdString() << ' ' << socket_->peerPort() << std::endl;
 
-	auto it = connection_map.find({socket_->peerAddress().toIPv4Address(), socket_->peerPort()});
-	auto& [msg, ipw] = it->second;
+	auto mtemp = message_waiting_for_connection;
+	auto itemp = ipw_waiting_for_connection;
 
-	message_send(socket_, msg, ipw, false);
+	message_waiting_for_connection.reset();
+	ipw_waiting_for_connection = IpWrapper();
 
-	connection_map.erase(it);
+	message_send(socket_, mtemp, itemp, false);
 }
 
 void PeerSender::handle_connection_error() {
@@ -488,14 +491,14 @@ void PeerSender::handle_connection_error() {
 
 	if (socket_->error() == QAbstractSocket::SocketError::ConnectionRefusedError || 
 		socket_->error() == QAbstractSocket::SocketError::SocketTimeoutError) {
-			std::cout << "Error socket address: " << socket_->peerAddress().toString().toStdString() << ", port: " << socket_->peerPort() << std::endl;
-		auto it = connection_map.find({socket_->peerAddress().toIPv4Address(), socket_->peerPort()});
-		auto& [msg, ipw] = it->second;
-		//socket_->abort();
+		std::cout << "Error socket address: " << socket_->peerAddress().toString().toStdString() << ", port: " << socket_->peerPort() << std::endl;
+		auto mtemp = message_waiting_for_connection;
+		auto itemp = ipw_waiting_for_connection;
 
-		message_send(socket_, msg, ipw, true);
+		message_waiting_for_connection.reset();
+		ipw_waiting_for_connection = IpWrapper();
 
-		connection_map.erase(it);
+		message_send(socket_, mtemp, itemp, true);
 	}
 }
 
