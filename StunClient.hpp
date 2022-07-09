@@ -35,6 +35,8 @@ public:
     void stun_server_connected();
     void stun_server_connection_error();
     void process_response_success_allocate(QTcpSocket* tcp_socket, stun_header_ptr message_orig);
+    
+    void create_request_send(stun_header_ptr stun_message, std::string msg, pk_t where);
 
 signals:
     void confirmed_newspaper(pk_t pid);
@@ -57,6 +59,7 @@ private:
     void process_response_success_identify(stun_header_ptr stun_message);
     void process_response_error_identify(stun_header_ptr stun_message);
     void process_response_success_binding(stun_header_ptr stun_message, QTcpSocket* socket_);
+
 
     pk_t get_stun_server_any();
 

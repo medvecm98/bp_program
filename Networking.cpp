@@ -15,9 +15,8 @@ void send_message_using_socket(QTcpSocket* tcp_socket, const std::string& msg) {
 void send_message_using_turn(QTcpSocket* tcp_socket, networking_ptr networking_, std::string&& msg, pk_t to, IpWrapper& ipw) {
 	std::cout << "Relaying message using Send method" << std::endl;
 	stun_header_ptr m = std::make_shared<StunMessageHeader>();
-	MPCreate<CRequestTag, MSendTag> mpc(m, msg, tcp_socket, networking_->get_prng(), networking_->ip_map_, ipw);
-	MessageProcessor<CRequestTag, MSendTag>::create(mpc);
-	networking_->get_stun_client()->send_stun_message(mpc.message_to, networking_->ip_map_.get_wrapper_for_pk(to)->second.preferred_stun_server);
+	networking_->get_stun_client()->create_request_send(m, msg, to);
+	networking_->get_stun_client()->send_stun_message(m, networking_->ip_map_.get_wrapper_for_pk(to)->second.preferred_stun_server);
 }
 
 void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg, bool disconnect = true) {
@@ -502,7 +501,7 @@ void PeerSender::handle_connection_error() {
 	}
 }
 
-void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrapper& ipw, bool relay = false) {
+void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrapper ipw, bool relay = false) {
 	//serialize message
 	std::cout << (pk_t)msg->from() << std::endl;
 	std::cout << (pk_t)msg->to()   << std::endl;

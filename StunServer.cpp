@@ -86,6 +86,14 @@ void StunServer::reply() {
             else if (stun_message->stun_method == StunMethodEnum::identify) {
                 process_request_identify(stun_message, stun_new);
             }
+            else if (stun_message->stun_method == StunMethodEnum::send) {
+                pk_t to;
+                process_request_send(stun_message, to);
+                std::cout << "Relaying SEND STUN message to " << to << " peer.\n";
+                socket = networking_->ip_map_.get_wrapper_for_pk(to)->second.tcp_socket_;
+                send_stun_message(socket, stun_message);
+                return;
+            }
         }
         else if (stun_message->stun_class == StunClassEnum::indication) {
             if (stun_message->stun_method == StunMethodEnum::binding) {
@@ -288,4 +296,17 @@ void StunServer::create_response_success_allocate(stun_header_ptr message_orig, 
     message_new->append_attribute(pia);
 
     
+}
+
+void StunServer::process_request_send(stun_header_ptr message_orig, pk_t& to) {
+    RelayedPublicIdentifierAttribute* ria;
+
+    for (auto&& attr : message_orig->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::relayed_publid_identifier) {
+            ria = (RelayedPublicIdentifierAttribute*) attr.get();
+        }
+    }
+
+    to = ria->get_public_identifier();
+    message_orig->stun_class = StunClassEnum::indication;
 }

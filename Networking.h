@@ -112,7 +112,7 @@ class PeerSender : public QObject {
 public:
 	PeerSender(networking_ptr net);
 	void message_send(unique_ptr_message msg, IpWrapper& ipw);
-	void message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrapper& ipw, bool);
+	void message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrapper ipw, bool);
 	void try_connect(unique_ptr_message msg, IpWrapper& ipw);
 
 public slots:

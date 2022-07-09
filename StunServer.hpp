@@ -44,6 +44,7 @@ private:
     void create_response_success_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id, QHostAddress client_ipv4, std::uint16_t port, CryptoPP::RSA::PublicKey& key);
     void send_stun_message(QTcpSocket* socket , stun_header_ptr stun_message);
     void create_response_error_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id);
+    void process_request_send(stun_header_ptr message_orig, pk_t& to);
     std::shared_ptr<QTcpServer> tcp_server_;
     QTcpSocket* tcp_socket_;
     QDataStream in_stream;

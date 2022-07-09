@@ -274,6 +274,25 @@ void StunClient::process_response_error_identify(stun_header_ptr stun_message) {
     std::cout << "Identifier: " << pia->get_public_identifier() << " was not found." << std::endl;
 }
 
+void StunClient::create_request_send(stun_header_ptr stun_message, std::string msg, pk_t where) {
+    stun_message->stun_class = StunClassEnum::request;
+    stun_message->stun_method = StunMethodEnum::send;
+
+    auto pia = std::make_shared<PublicIdentifierAttribute>(); //me
+    pia->initialize(networking_->get_peer_public_id(), stun_message.get());
+    stun_message->append_attribute(pia);
+
+    auto ria = std::make_shared<RelayedPublicIdentifierAttribute>();//other side
+    ria->initialize(where, stun_message.get());
+    stun_message->append_attribute(ria);
+
+    auto data = std::make_shared<DataAttribute>();
+    data->initialize(msg, stun_message.get());
+    stun_message->append_attribute(data);
+    
+    stun_message->generate_tid(rng);
+}
+
 void StunClient::create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id) {
     std::cout << "StunClient::create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id)\n";
     stun_message->stun_class = StunClassEnum::request;
