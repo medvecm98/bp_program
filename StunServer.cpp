@@ -256,7 +256,7 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
             //TODO: send back error 437 (Allocation Mismatch)
         }
         else {
-            networking_->ip_map_.update_ip(public_identifier, socket->peerAddress(), socket->peerPort());
+            //networking_->ip_map_.update_ip(public_identifier, socket->peerAddress(), socket->peerPort());
             networking_->ip_map_.update_rsa_public(public_identifier, pk);
 
             networking_->ip_map_.set_tcp_socket(public_identifier, socket);
