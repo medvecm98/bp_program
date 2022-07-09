@@ -787,7 +787,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		}
 		auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back();
 		networking_->soliciting_articles[msg->article_sol().article_hash()].pop_back();
-		//networking_->ip_map_.
+		networking_->ip_map_.update_preferred_stun_server(destination, msg->from());
 		generate_article_all_message(destination, msg->article_sol().article_hash());
 	}
 	else if (type == np2ps::SYMMETRIC_KEY) {

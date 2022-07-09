@@ -232,3 +232,13 @@ QTcpSocket* IpMap::get_tcp_socket(pk_t pk) {
 		return map_.at(pk).get_tcp_socket();
 	}	
 }
+
+void IpMap::update_preferred_stun_server(pk_t who, pk_t server) {
+	auto map_it = map_.find(who);
+	if (map_it == map_.end()) {
+		map_.emplace(who, IpWrapper(server));
+	}
+	else {
+		map_it->second.preferred_stun_server = server;
+	}
+}

@@ -11,6 +11,7 @@ class IpMap {
 public:
 	bool add_to_map(pk_t, IpWrapper&& ip);
 	void remove_from_map(pk_t);
+	void update_preferred_stun_server(pk_t who, pk_t server);
 	bool update_ip(pk_t, const QHostAddress& ip, std::uint16_t port = PORT);
 	bool update_ip(pk_t, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port = PORT);
 	bool update_rsa_public(pk_t, const std::string& rsa);

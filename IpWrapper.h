@@ -50,6 +50,13 @@ struct IpWrapper {
 		this->port = port;
 	}
 
+	explicit IpWrapper(pk_t server) {
+		ipv4 = QHostAddress();
+		ipv6 = QHostAddress();
+		this->port = 0;
+		preferred_stun_server = server;
+	}
+
 	void add_rsa_key(const std::string& pkey_str) {
 		CryptoPP::RSA::PublicKey pub_key;
 		CryptoPP::StringSource s(pkey_str, true);
