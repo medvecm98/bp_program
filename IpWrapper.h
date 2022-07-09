@@ -57,6 +57,10 @@ struct IpWrapper {
 		preferred_stun_server = server;
 	}
 
+	explicit IpWrapper(const CryptoPP::RSA::PublicKey& pk) {
+		key_pair.first = {pk};
+	}
+
 	void add_rsa_key(const std::string& pkey_str) {
 		CryptoPP::RSA::PublicKey pub_key;
 		CryptoPP::StringSource s(pkey_str, true);

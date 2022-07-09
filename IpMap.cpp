@@ -72,7 +72,8 @@ bool IpMap::update_rsa_public(pk_t pk, const std::string& rsa) {
 
 bool IpMap::update_rsa_public(pk_t pk, const CryptoPP::RSA::PublicKey& rsa) {
 	if (map_.find(pk) == map_.end()) {
-		return false;
+		std::cout << "emplacing ip wrapper with rsa only" << std::endl;
+		map_.emplace(pk, IpWrapper(rsa));
 	}
 	else {
 		map_.at(pk).add_rsa_key(rsa);
