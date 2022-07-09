@@ -1,7 +1,7 @@
 #include "StunServer.hpp"
 
 StunServer::StunServer(Networking* n) : networking_(n) {
-    init_server(QHostAddress(QString("10.19.0.1")), STUN_PORT);
+    init_server(QHostAddress(QString("10.19.160.208")), STUN_PORT);
 
     connect(tcp_server_.get(), &QTcpServer::newConnection, 
             this, &StunServer::new_connection);
@@ -142,30 +142,29 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
     }
 
     std::cout << "Request for pid: " << pia->get_public_identifier() << std::endl;
+    auto my_public_id = networking_->get_peer_public_id();
+    auto pia_public_id = pia->get_public_identifier();
 
-    QHostAddress address;
-    std::uint16_t port;
-    rsa_public_optional* rsa_public;
-
-    if (pia->get_public_identifier() == networking_->get_peer_public_id()) {
-        address = networking_->ip_map_.my_ip.ipv4;
-        port = PORT;
-        rsa_public = &networking_->ip_map_.my_ip.key_pair.first;
+    if (pia_public_id == my_public_id) {
+        if (networking_->ip_map_.my_ip.key_pair.first.has_value()) 
+        {
+            create_response_success_identify(message_orig, message_new, pia_public_id, networking_->ip_map_.my_ip.ipv4, PORT, networking_->ip_map_.my_ip.key_pair.first.value());
+        }
+        else {
+            create_response_error_identify(message_orig, message_new, pia_public_id);
+        }
     }
     else {
-        std::cout << "Have IP for " << pia->get_public_identifier() << "? " << networking_->ip_map_.have_ip4(pia->get_public_identifier()) << std::endl;
-        std::cout << "Have port for " << pia->get_public_identifier() << "? " << networking_->ip_map_.have_port(pia->get_public_identifier()) << std::endl;
-        std::cout << "Have RSA public for " << pia->get_public_identifier() << "? " << networking_->ip_map_.have_rsa_public(pia->get_public_identifier()) << std::endl;
-        address = networking_->ip_map_.get_ip4(pia->get_public_identifier());
-        port = networking_->ip_map_.get_port(pia->get_public_identifier());
-        rsa_public = networking_->ip_map_.get_rsa_public(pia->get_public_identifier()).get();
-    }
-
-    if (!rsa_public->has_value()) {
-        create_response_error_identify(message_orig, message_new, pia->get_public_identifier());
-    }
-    else {
-        create_response_success_identify(message_orig, message_new, pia->get_public_identifier(), address, port, rsa_public->value());
+        if (networking_->ip_map_.have_ip4(pia_public_id) &&
+            networking_->ip_map_.have_port(pia_public_id) &&
+            networking_->ip_map_.have_rsa_public(pia_public_id) && 
+            networking_->ip_map_.get_rsa_public(pia_public_id)->has_value()) 
+        {
+            create_response_success_identify(message_orig, message_new, pia_public_id, networking_->ip_map_.get_ip4(pia_public_id), networking_->ip_map_.get_port(pia_public_id), networking_->ip_map_.get_rsa_public(pia_public_id)->value());
+        }
+        else {
+            create_response_error_identify(message_orig, message_new, pia_public_id);
+        }
     }
 }
 
