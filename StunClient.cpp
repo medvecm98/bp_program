@@ -369,7 +369,7 @@ void StunClient::stun_server_connection_error() {
 }
 
 void StunClient::add_stun_server(QTcpSocket* tcp_socket_, pk_t pid) {
-    networking_->ip_map_.update_ip(pid, tcp_socket_->peerAddress(), tcp_socket_->peerPort());
+    networking_->ip_map_.update_stun_ip(pid, tcp_socket_->peerAddress(), tcp_socket_->peerPort());
     tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
     networking_->ip_map_.set_tcp_socket(pid, tcp_socket_);
     stun_servers.push_back(pid);

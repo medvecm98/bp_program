@@ -251,3 +251,15 @@ bool IpMap::have_port(pk_t pk) {
 
 	return false;
 }
+
+bool IpMap::update_stun_ip(pk_t pid, const QHostAddress& ip, std::uint16_t port) {
+	auto map_it = map_.find(pid);
+	if (map_it == map_.end()) {
+		return false;
+	}
+	else {
+		map_it->second.stun_address = ip;
+		map_it->second.stun_port = port;
+	}
+	return true;
+}

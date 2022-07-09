@@ -163,10 +163,22 @@ struct IpWrapper {
 
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
-	//for normal or STUN traversal
+	QHostAddress get_stun_address() {
+		return stun_address;
+	}
+
+	std::uint16_t get_stun_port() {
+		return stun_port;
+	}
+
+	//for normal traversal
 	QHostAddress ipv4;
 	QHostAddress ipv6;
 	std::uint16_t port;
+
+	//for STUN traversal
+	QHostAddress stun_address;
+	std::uint16_t stun_port;
 
 	//for TURN traversal
 	QTcpSocket* tcp_socket_ = NULL; //for STUN servers.

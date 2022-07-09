@@ -185,6 +185,7 @@ void Networking::send_message(unique_ptr_message msg) {
  */
 void check_ip(QTcpSocket* tcp_socket, pk_t pk_id, IpMap& ip_map_) {
 	if (!ip_map_.have_ip4(pk_id)) {
+		std::cout << "Updating NP2PS IP: " << tcp_socket->peerAddress().toString().toStdString() << ", port: " << tcp_socket->peerPort() << std::endl;
 		ip_map_.update_ip(pk_id, tcp_socket->peerAddress(), tcp_socket->peerPort());
 	}
 }
