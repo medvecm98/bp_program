@@ -26,6 +26,7 @@ public:
 	std::shared_ptr<eax_optional> get_eax(pk_t);
 	bool have_ip4(pk_t);
 	bool have_ip6(pk_t);
+	bool have_port(pk_t);
 	bool have_rsa_public(pk_t);
 	bool have_eax(pk_t);
 	ip_map::iterator get_map_end() {

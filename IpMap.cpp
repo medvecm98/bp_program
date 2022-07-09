@@ -242,3 +242,12 @@ void IpMap::update_preferred_stun_server(pk_t who, pk_t server) {
 		map_it->second.preferred_stun_server = server;
 	}
 }
+
+bool IpMap::have_port(pk_t pk) {
+	auto it = map_.find(pk);
+
+	if (it != map_.end())
+		return it->second.port != 0;
+
+	return false;
+}

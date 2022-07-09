@@ -153,6 +153,9 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
         rsa_public = &networking_->ip_map_.my_ip.key_pair.first;
     }
     else {
+        std::cout << "Have IP for " << pia->get_public_identifier() << "? " << networking_->ip_map_.have_ip4(pia->get_public_identifier()) << std::endl;
+        std::cout << "Have port for " << pia->get_public_identifier() << "? " << networking_->ip_map_.have_port(pia->get_public_identifier()) << std::endl;
+        std::cout << "Have RSA public for " << pia->get_public_identifier() << "? " << networking_->ip_map_.have_rsa_public(pia->get_public_identifier()) << std::endl;
         address = networking_->ip_map_.get_ip4(pia->get_public_identifier());
         port = networking_->ip_map_.get_port(pia->get_public_identifier());
         rsa_public = networking_->ip_map_.get_rsa_public(pia->get_public_identifier()).get();
