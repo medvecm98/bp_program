@@ -488,9 +488,10 @@ void PeerSender::handle_connection_error() {
 
 	if (socket_->error() == QAbstractSocket::SocketError::ConnectionRefusedError || 
 		socket_->error() == QAbstractSocket::SocketError::SocketTimeoutError) {
-		socket_->abort();
+			std::cout << "Error socket address: " << socket_->peerAddress().toString().toStdString() << ", port: " << socket_->peerPort() << std::endl;
 		auto it = connection_map.find({socket_->peerAddress().toIPv4Address(), socket_->peerPort()});
 		auto& [msg, ipw] = it->second;
+		//socket_->abort();
 
 		message_send(socket_, msg, ipw, true);
 
