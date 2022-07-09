@@ -13,6 +13,7 @@ void send_message_using_socket(QTcpSocket* tcp_socket, const std::string& msg) {
 }
 
 void send_message_using_turn(QTcpSocket* tcp_socket, networking_ptr networking_, std::string&& msg, pk_t to, bool disconnect = true) {
+	std::cout << "Relaying message using Send method" << std::endl;
 	stun_header_ptr m = std::make_shared<StunMessageHeader>();
 	MPCreate<CRequestTag, MSendTag> mpc(m, msg, tcp_socket, networking_->get_prng(), networking_->ip_map_);
 	MessageProcessor<CRequestTag, MSendTag>::create(mpc);
@@ -483,7 +484,10 @@ void PeerSender::handle_connection_error() {
 
 	QTcpSocket* socket_ = (QTcpSocket*)QObject::sender();
 
-	if (socket_->error() == QAbstractSocket::SocketError::ConnectionRefusedError) {
+	std::cout << "Error no. " << socket_->error() << std::endl;
+
+	if (socket_->error() == QAbstractSocket::SocketError::ConnectionRefusedError || 
+		socket_->error() == QAbstractSocket::SocketError::SocketTimeoutError) {
 		socket_->abort();
 		auto it = connection_map.find({socket_->peerAddress().toIPv4Address(), socket_->peerPort()});
 		auto& [msg, ipw] = it->second;

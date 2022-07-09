@@ -58,6 +58,9 @@ struct IpWrapper {
 	}
 
 	explicit IpWrapper(const CryptoPP::RSA::PublicKey& pk) {
+		ipv4 = QHostAddress();
+		ipv6 = QHostAddress();
+		this->port = 0;
 		key_pair.first = {pk};
 	}
 
