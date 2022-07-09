@@ -348,12 +348,12 @@ struct MessageProcessor<CRequestTag, MSendTag> {
 
         pk_t to = mp.ip_map_.my_public_id;
 
-        auto xmaa = std::make_shared<XorMappedAddressAttribute>();
-        xmaa->initialize(mp.message_to.get(), 0x0001, mp.socket);
+        auto xmaa = std::make_shared<XorMappedAddressAttribute>(); //me
+        xmaa->initialize(mp.message_to.get(), 0x0001, mp.ip_map_.my_ip.ipv4, mp.ip_map_.my_ip.port);
         mp.message_to->append_attribute(xmaa);
 
-        auto xraa = std::make_shared<XorRelayedAddressAttribute>();
-        xraa->initialize(mp.message_to.get(), 0x0001, mp.ip_map_.get_ip4(to), mp.ip_map_.get_port(to));
+        auto xraa = std::make_shared<XorRelayedAddressAttribute>(); //where am i sending this
+        xraa->initialize(mp.message_to.get(), 0x0001, mp.ipw.ipv4, mp.ipw.port);
         mp.message_to->append_attribute(xraa);
 
         auto data = std::make_shared<DataAttribute>();

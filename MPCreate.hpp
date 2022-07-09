@@ -140,12 +140,13 @@ struct MPCreate<CResponseSuccessTag, MIdentifyTag> {
 template<>
 struct MPCreate<CRequestTag, MSendTag> {
     MPCreate() = default;
-    MPCreate(stun_header_ptr message_to_, std::string np2ps_message_, QTcpSocket* socket_, CryptoPP::AutoSeededRandomPool& rng_, IpMap& ip_map__) : 
-        message_to(message_to_), np2ps_message(np2ps_message_), rng(rng_), ip_map_(ip_map__), socket(socket_) {}
+    MPCreate(stun_header_ptr message_to_, std::string np2ps_message_, QTcpSocket* socket_, CryptoPP::AutoSeededRandomPool& rng_, IpMap& ip_map__, IpWrapper& ipw_) : 
+        message_to(message_to_), np2ps_message(np2ps_message_), rng(rng_), ip_map_(ip_map__), socket(socket_), ipw(ipw_) {}
     stun_header_ptr message_to;
     std::string np2ps_message;
     CryptoPP::AutoSeededRandomPool& rng;
     IpMap& ip_map_;
+    IpWrapper& ipw;
     QTcpSocket* socket;
 };
 

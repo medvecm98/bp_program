@@ -16,6 +16,8 @@ public:
 
     std::uint16_t initialize(StunMessageHeader* header, std::uint16_t family, QTcpSocket* socket);
 
+    std::uint16_t initialize(StunMessageHeader* header, std::uint16_t family, QHostAddress& address, std::uint16_t port);
+
     void set_address(std::uint32_t ipv4);
 
     void set_address(Q_IPV6ADDR ipv6);

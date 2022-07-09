@@ -43,6 +43,40 @@ std::uint16_t XorMappedAddressAttribute::initialize(StunMessageHeader* header, s
     return length;
 }
 
+std::uint16_t XorMappedAddressAttribute::initialize(StunMessageHeader* header, std::uint16_t family, QHostAddress& address_, std::uint16_t port) {
+    std::uint16_t type = 0x0020; //STUN: XOR-MAPPED-ADDRESS
+    std::uint16_t length = 0;
+
+    std::uint32_t address;
+    Q_IPV6ADDR address_6;
+
+    address_family = family;
+
+    FAMILY_SELECT(
+        family,
+        address = address_.toIPv4Address();,
+        address_6 = address_.toIPv6Address();
+    );
+
+    FAMILY_SELECT(
+        family,
+        length += 4 + 4;,
+        length += 4 * 4 + 4;
+    );
+
+    FAMILY_SELECT(
+        family,
+        set_address(address);,
+        set_address(address_6);
+    );
+    
+    set_port(port);
+
+    StunMessageAttribute::initialize(length, header);
+
+    return length;
+}
+
 /**
  * @brief For reading XorMappedAddressAttribute from network stream.
  * 
