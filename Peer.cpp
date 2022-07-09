@@ -8,7 +8,7 @@
 void Peer::enroll_new_article(Article a) {
 	news_[a.news_id()].add_article(a.main_hash(),std::move(a));
 	PeerInfo* peer_info = &user_map[public_identifier_];
-	readers_.emplace(public_identifier_, peer_info);
+	readers_.emplace(a.main_hash(), peer_info);
 }
 
 /**
@@ -349,9 +349,16 @@ void Peer::handle_requests(unique_ptr_message message) {
 					article.value(), 
 					std::move(article_whole)
 				);
-
-				auto readers_it = readers_.find(message->article_all().article_hash());
-				if (readers_it == readers_.end()) {
+				
+				bool found_in_readers = false;
+				auto [bit, eit] = readers_.equal_range(message->article_all().article_hash());
+				for (; bit != eit; bit++) {
+					if (bit->second->peer_key == message->from()) {
+						found_in_readers = true;
+						break;
+					}
+				}
+				if (!found_in_readers) {
 					readers_.emplace(message->article_all().article_hash(), &user_map[message->from()]);
 				}
 
@@ -492,7 +499,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 				}
 			}
 			else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
-				std::cout << "Article data update removal" << std::endl;
+				std::cout << "Article data update removal from " << message->from() << std::endl;
 				auto [bit, eit] = readers_.equal_range(message->article_data_update().article_pk());
 				for (auto it = bit; it != eit; it++) {
 					std::cout << "Iterator on : " << it->second->peer_key << std::endl;
