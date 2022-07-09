@@ -776,6 +776,7 @@ void Peer::generate_article_header_message(pk_t destination, hash_t article_hash
 void Peer::handle_one_way(unique_ptr_message msg) {
 	auto type = msg->msg_type();
 	if (type == np2ps::ARTICLE_SOLICITATION) {
+		std::cout << "Got article solicitation one-way" << std::endl;
 		auto check_for_existence = networking_->soliciting_articles.find(msg->article_sol().article_hash());
 		if (check_for_existence == networking_->soliciting_articles.end()) {
 			std::vector<pk_t> potential_owners;
@@ -786,6 +787,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		}
 		auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back();
 		networking_->soliciting_articles[msg->article_sol().article_hash()].pop_back();
+		//networking_->ip_map_.
 		generate_article_all_message(destination, msg->article_sol().article_hash());
 	}
 	else if (type == np2ps::SYMMETRIC_KEY) {
