@@ -179,6 +179,7 @@ struct IpWrapper {
 	}
 
 	void set_relay_flag() {
+		std::cout << "SETTING RELAY FLAG" << std::endl;
 		relay_flag = true;
 	}
 
@@ -206,7 +207,7 @@ struct IpWrapper {
 
 	rsa_eax_pair key_pair;
 	
-	bool relay_flag;
+	bool relay_flag = false;
 };
 
 using ip_map = std::unordered_map<pk_t, IpWrapper>;

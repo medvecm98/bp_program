@@ -461,6 +461,7 @@ void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
 		message_send(ipw.np2ps_tcp_socket_, msg, ipw, false);
 	}
 	else if (ipw.get_relay_flag()) {
+		std::cout << "relay flag was found set" << std::endl;
 		message_send(NULL, msg, ipw, true);
 	}
 	else {
