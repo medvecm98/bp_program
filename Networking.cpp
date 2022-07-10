@@ -434,6 +434,7 @@ void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QTcpSocket* n
 			networking_->add_to_received(std::move(m));
 		}
 		else {
+			std::cout << "No public key and or ipv4 found for " << m->from() << "; needs to be identified" << std::endl;
 			networking_->waiting_symmetric_key_messages.emplace(m->from(), std::move(m));
 			networking_->get_stun_client()->identify(m->from());
 		}
