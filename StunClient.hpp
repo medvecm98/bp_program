@@ -53,7 +53,7 @@ private:
     void init_client(QHostAddress address, std::uint16_t port = 3478);
     void handle_received_message(stun_header_ptr stun_message_header);
 
-    void create_request_identify(stun_header_ptr stun_message, pk_t who);
+    void create_request_identify(stun_header_ptr& stun_message, pk_t who);
     void create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id);
 
     void process_response_success_identify(stun_header_ptr stun_message);

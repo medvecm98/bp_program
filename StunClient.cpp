@@ -219,7 +219,7 @@ void StunClient::init_client(QHostAddress address, std::uint16_t port) {
 
 }
 
-void StunClient::create_request_identify(stun_header_ptr stun_message, pk_t who) {
+void StunClient::create_request_identify(stun_header_ptr& stun_message, pk_t who) {
     stun_message->stun_class = StunClassEnum::request;
     stun_message->stun_method = StunMethodEnum::identify;
 
