@@ -50,7 +50,6 @@ void StunServer::new_connection() {
 
     //std::cout << "SS: tcp_socket_ pointer: " << tcp_socket_ << std::endl;
 
-    in_stream.setDevice(tcp_socket_);
     in_stream.setVersion(QDataStream::Qt_5_0);
     QObject::connect(tcp_socket_, &QIODevice::readyRead, this, &StunServer::reply);
     QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, tcp_socket_, &QObject::deleteLater);
@@ -68,6 +67,7 @@ void StunServer::reply() {
     //std::cout << "SS: socket state: " << tcp_socket_->state() << std::endl;
 
     stun_attr_type_vec unknown_cr_attributes;
+    in_stream.setDevice(socket);
     in_stream.startTransaction();
 
     try {
