@@ -639,6 +639,21 @@ void Peer::handle_responses(unique_ptr_message message) {
 			}
 			auto& news_entry = news_[recv_article.news_id()];
 			news_entry.add_article(recv_article_hash, std::move(recv_article));
+
+			if (message->from() != message->article_all().header().news_id()) {
+				std::cout << "Sending article data change download" << std::endl;
+				networking_->enroll_message_to_be_sent(
+					MFW::SetMessageContextRequest(
+						MFW::ArticleDataChangeFactory(
+							public_identifier_,
+							message->article_all().header().news_id(),
+							message->article_all().article_hash(),
+							true
+						)
+					)
+				);
+			}
+
 		}
 		else {
 			//TODO: log error
