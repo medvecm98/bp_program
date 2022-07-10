@@ -428,14 +428,15 @@ void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QTcpSocket* n
 		std::cout << "[DEBUG][PeerReceiver::message_receive()] messsage: " << msg.toStdString() << std::endl;
 		std::cout << "[DEBUG][PeerReceiver::message_receive()] size: " << msg.toStdString().size() << std::endl;
 		m->ParseFromString(msg.toStdString());
-		if (np2ps_socket && networking_->ip_map_.have_ip4(m->from()) && networking_->ip_map_.have_rsa_public(m->from())) {
+		if (/*np2ps_socket && networking_->ip_map_.have_ip4(m->from()) && */networking_->ip_map_.have_rsa_public(m->from())) {
+			std::cout << "RSA public found for " << m->from() << std::endl;
 			check_ip(np2ps_socket, m->from(), networking_->ip_map_);
 			networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket);
 			networking_->add_to_received(std::move(m));
 		}
 		else {
 			std::cout << "No public key and or ipv4 found for " << m->from() << "; needs to be identified" << std::endl;
-			networking_->waiting_symmetric_key_messages.emplace(m->from(), std::move(m));
+			networking_->waiting_symmetric_key_messages.emplace(m->from(), m);
 			networking_->get_stun_client()->identify(m->from());
 		}
 
