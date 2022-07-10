@@ -260,6 +260,7 @@ public:
 	std::unordered_multimap<pk_t, unique_ptr_message> waiting_symmetrich_exchange;
 	user_level_map* user_map;
 	std::map<pk_t, unique_ptr_message> waiting_symmetric_key_messages;
+	std::map<quint32, std::string> newspapers_awaiting_identification;
 
 public slots:
 	void send_message(unique_ptr_message);
@@ -272,6 +273,7 @@ public slots:
 signals:
 	void new_message_enrolled(unique_ptr_message);
 	void new_message_received(unique_ptr_message);
+	void newspaper_identified(pk_t, my_string newspaper_name, std::string newspaper_ip_domain);
 
 private:
 	const int port_ = PORT;

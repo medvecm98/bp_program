@@ -95,7 +95,7 @@ public:
 		QObject::connect(networking_->get_stun_client().get(), &StunClient::confirmed_newspaper,
 							this, &Peer::newspaper_confirm);
 
-
+		QObject::connect(networking_.get(), &Networking::newspaper_identified, this, &Peer::newspaper_identified);
 		
 	}
 
@@ -427,6 +427,7 @@ public:
 
 	bool remove_article(hash_t hash);
 	bool remove_article(hash_t hash, pk_t& newspaper_id);
+	void identify_newspaper(QHostAddress address, const std::string& newspaper_name);
 
 public slots:
 	void handle_message(unique_ptr_message message);
@@ -435,7 +436,7 @@ public slots:
 
 	void newspaper_confirm(pk_t pid);
 
-	
+	void newspaper_identified(pk_t newspaper_key, my_string newspaper_name, std::string newspaper_ip_domain);
 
 
 signals:
@@ -494,6 +495,7 @@ private:
 	std::unordered_multimap<hash_t, Margin> margins_added_; //multimap of Article -> Margins, that this peer added, or requested to add
 	std::unordered_map<pk_t, Article> article_headers_only; //only for article headers, so it won't interfere with regular ones
 	std::unordered_map<pk_t, NewspaperEntry> newspapers_awaiting_confirmation; //newspaper that we want to add, but that haven't yet confirmed their existence
+	
 
 	//journalist part
 	reader_database readers_; //list of article readers

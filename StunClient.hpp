@@ -29,6 +29,7 @@ public:
     void binding_request();
     void allocate_request(pk_t where);
     void identify(pk_t who);
+    void identify(QHostAddress& address);
     void send_stun_message(stun_header_ptr stun_message, pk_t public_id);
     void send_stun_message_transport_address(stun_header_ptr stun_message, QHostAddress address, std::uint16_t port);
     void add_stun_server(QTcpSocket* tcp_socket_, pk_t pid);
@@ -52,9 +53,10 @@ private:
 
     void create_binding_request(stun_header_ptr stun_message);
     void init_client(QHostAddress address, std::uint16_t port = 3478);
-    void handle_received_message(stun_header_ptr stun_message_header);
+    void handle_received_message(stun_header_ptr stun_message_header, QTcpSocket* socket);
 
     void create_request_identify(stun_header_ptr& stun_message, pk_t who);
+    void create_request_identify_empty(stun_header_ptr& stun_message);
     void create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id);
 
     void process_response_success_identify(stun_header_ptr stun_message);
@@ -64,7 +66,7 @@ private:
 
     pk_t get_stun_server_any();
 
-    QTcpSocket* tcp_socket_;
+    //QTcpSocket* tcp_socket_;
     QDataStream in;
     CryptoPP::AutoSeededRandomPool rng;
     stun_server_pair stun_server;

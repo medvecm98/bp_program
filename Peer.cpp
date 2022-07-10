@@ -11,6 +11,15 @@ void Peer::enroll_new_article(Article a) {
 	readers_.emplace(a.main_hash(), peer_info);
 }
 
+void Peer::identify_newspaper(QHostAddress address, const std::string& newspaper_name) {
+	networking_->newspapers_awaiting_identification.emplace(address.toIPv4Address(), newspaper_name);
+	networking_->get_stun_client()->identify(address);
+}
+
+void Peer::newspaper_identified(pk_t newspaper_key, my_string newspaper_name, std::string newspaper_ip_domain) {
+	add_new_newspaper(newspaper_key, newspaper_name, newspaper_ip_domain);
+}
+
 /**
  * Adds new newspaper to the collection.
  * @param newspaper_key Public key of newspaper.

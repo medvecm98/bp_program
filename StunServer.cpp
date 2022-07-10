@@ -140,37 +140,44 @@ void StunServer::send_stun_message(QTcpSocket* socket , stun_header_ptr stun_mes
 }
 
 void StunServer::process_request_identify(stun_header_ptr message_orig, stun_header_ptr message_new) {
-    PublicIdentifierAttribute* pia;
+    PublicIdentifierAttribute* pia = NULL;
     for (auto&& attr : message_orig->attributes) {
         if (attr->attribute_type == StunAttributeEnum::public_identifier) {
             pia = (PublicIdentifierAttribute*)attr.get();
         }
     }
 
-    std::cout << "Request for pid: " << pia->get_public_identifier() << std::endl;
-    auto my_public_id = networking_->get_peer_public_id();
-    auto pia_public_id = pia->get_public_identifier();
+    if (pia) {
 
-    if (pia_public_id == my_public_id) {
-        if (networking_->ip_map_.my_ip.key_pair.first.has_value()) 
-        {
-            create_response_success_identify(message_orig, message_new, pia_public_id, networking_->ip_map_.my_ip.ipv4, PORT, networking_->ip_map_.my_ip.key_pair.first.value());
+        std::cout << "Request for pid: " << pia->get_public_identifier() << std::endl;
+        auto my_public_id = networking_->get_peer_public_id();
+        auto pia_public_id = pia->get_public_identifier();
+    
+        if (pia_public_id == my_public_id) {
+            if (networking_->ip_map_.my_ip.key_pair.first.has_value()) 
+            {
+                create_response_success_identify(message_orig, message_new, pia_public_id, networking_->ip_map_.my_ip.ipv4, PORT, networking_->ip_map_.my_ip.key_pair.first.value());
+            }
+            else {
+                create_response_error_identify(message_orig, message_new, pia_public_id);
+            }
         }
         else {
-            create_response_error_identify(message_orig, message_new, pia_public_id);
+            if (networking_->ip_map_.have_ip4(pia_public_id) &&
+                networking_->ip_map_.have_port(pia_public_id) &&
+                networking_->ip_map_.have_rsa_public(pia_public_id) && 
+                networking_->ip_map_.get_rsa_public(pia_public_id)->has_value()) 
+            {
+                create_response_success_identify(message_orig, message_new, pia_public_id, networking_->ip_map_.get_ip4(pia_public_id), networking_->ip_map_.get_port(pia_public_id), networking_->ip_map_.get_rsa_public(pia_public_id)->value());
+            }
+            else {
+                create_response_error_identify(message_orig, message_new, pia_public_id);
+            }
         }
     }
     else {
-        if (networking_->ip_map_.have_ip4(pia_public_id) &&
-            networking_->ip_map_.have_port(pia_public_id) &&
-            networking_->ip_map_.have_rsa_public(pia_public_id) && 
-            networking_->ip_map_.get_rsa_public(pia_public_id)->has_value()) 
-        {
-            create_response_success_identify(message_orig, message_new, pia_public_id, networking_->ip_map_.get_ip4(pia_public_id), networking_->ip_map_.get_port(pia_public_id), networking_->ip_map_.get_rsa_public(pia_public_id)->value());
-        }
-        else {
-            create_response_error_identify(message_orig, message_new, pia_public_id);
-        }
+        std::cout << "Request for my pid" << std::endl;
+        create_response_success_identify(message_orig, message_new, networking_->get_peer_public_id(), networking_->ip_map_.my_ip.ipv4, PORT, networking_->ip_map_.my_ip.key_pair.first.value());
     }
 }
 
