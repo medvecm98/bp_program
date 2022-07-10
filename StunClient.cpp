@@ -409,7 +409,7 @@ void StunClient::identify(pk_t who) {
 void StunClient::identify(QHostAddress& address) {
     auto msg = std::make_shared<StunMessageHeader>();
     create_request_identify_empty(msg);
-    send_stun_message_transport_address(msg, address, PORT);
+    send_stun_message_transport_address(msg, address, STUN_PORT);
 }
 
 pk_t StunClient::get_stun_server_any() {
