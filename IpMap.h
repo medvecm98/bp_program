@@ -78,6 +78,8 @@ public:
 	
 
 	ip_map::iterator get_wrapper_for_pk(pk_t);
+	void remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove);
+
 	IpWrapper my_ip;
 	pk_t my_public_id;
 	rsa_private_optional private_rsa;

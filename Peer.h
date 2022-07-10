@@ -12,7 +12,6 @@
 
 
 using MFW = MessageFactoryWrapper;
-using reader_database = std::unordered_multimap<hash_t, PeerInfo*>;
 
 
 /**
@@ -46,7 +45,7 @@ public:
 		CryptoPP::AutoSeededRandomPool prng;
 		public_identifier_ = prng.GenerateByte();
 		networking_->set_peer_public_id(public_identifier_);
-		networking_->set_user_map(&user_map);
+		networking_->set_maps(&user_map, &news_, &readers_, &journalists_);
 		//public_identifier_ = (std::uint64_t)prng.GenerateWord32() << 32 | (std::uint64_t)prng.GenerateWord32();
 		std::cout << "Public ID: " << public_identifier_ << std::endl;
 
@@ -95,6 +94,7 @@ public:
 
 		QObject::connect(networking_->get_stun_client().get(), &StunClient::confirmed_newspaper,
 							this, &Peer::newspaper_confirm);
+
 
 		
 	}
@@ -435,6 +435,8 @@ public slots:
 
 	void newspaper_confirm(pk_t pid);
 
+	
+
 
 signals:
 	/**
@@ -500,7 +502,7 @@ private:
 	user_level_map user_map; //users and their levels, contains `PeerInfo`
 
 	//chief editor
-	user_multimap_container newspaper_all_readers; //list of all readers of all articles
+	user_multimap_container newspaper_all_readers; //TODO: delete //list of all readers of all articles
 	category_multimap_container articles_categories_; //articles mapped by categories, maps to `newspaper_all_readers`
 	my_string newspaper_name_; //my newspaper name
 	pk_t newspaper_id_; //public identifier of my newspaper

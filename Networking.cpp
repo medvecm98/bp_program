@@ -504,14 +504,19 @@ void PeerSender::handle_connection_error() {
 
 	if (socket_->error() == QAbstractSocket::SocketError::ConnectionRefusedError || 
 		socket_->error() == QAbstractSocket::SocketError::SocketTimeoutError) {
-		std::cout << "Error socket address: " << socket_->peerAddress().toString().toStdString() << ", port: " << socket_->peerPort() << std::endl;
 		auto mtemp = message_waiting_for_connection;
 		auto itemp = ipw_waiting_for_connection;
+		std::cout << "Error socket address: " << socket_->peerAddress().toString().toStdString() << ", port: " << socket_->peerPort() << std::endl;
 
 		message_waiting_for_connection.reset();
 		ipw_waiting_for_connection = IpWrapper();
 
-		message_send(socket_, mtemp, itemp, true);
+		if (itemp.port != 14128) {
+			message_send(socket_, mtemp, itemp, true);
+		}
+		else {
+			std::cout << "Connection to NP2PS server failed for id " << mtemp->to() << std::endl;
+		}
 	}
 }
 
@@ -637,4 +642,29 @@ void Networking::set_peer_public_id(pk_t pid) {
 
 pk_t Networking::get_peer_public_id() {
 	return peer_public_id;
+}
+
+void Networking::peer_process_disconnected_users() {
+	std::vector<pk_t> to_remove;
+	ip_map_.remove_disconnected_users(to_remove);
+
+	for (auto it = readers_->begin(); it != readers_->end(); it++) {
+		for (auto&& user : to_remove) {
+			if (user == it->second->peer_key) {
+				readers_->erase(it);
+			}
+		}
+	}
+	for (auto it = user_map->begin(); it != user_map->end(); it++) {
+		for (auto&& user : to_remove) {
+			if (user == it->second.peer_key) {
+				user_map->erase(it);
+			}
+		}
+	}
+	for (auto&& user : to_remove) {
+		ip_map_.remove_from_map(user);
+		journalists_->erase(user);
+	}
+	
 }

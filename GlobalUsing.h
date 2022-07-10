@@ -12,6 +12,7 @@
 #include <utility>
 #include <iostream>
 #include <functional>
+#include <chrono>
 
 #include "cryptopp/rsa.h"
 #include "cryptopp/rijndael.h"
@@ -43,6 +44,7 @@
 
 #define PORT 14128
 
+using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
 
 using pk_t = std::size_t;
 using level_t = std::uint32_t;

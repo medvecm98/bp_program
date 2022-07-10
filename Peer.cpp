@@ -950,3 +950,4 @@ void Peer::removed_external_article(hash_t article, pk_t to) {
 			)
 	));
 }
+

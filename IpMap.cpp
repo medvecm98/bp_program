@@ -264,3 +264,25 @@ bool IpMap::update_stun_ip(pk_t pid, const QHostAddress& ip, std::uint16_t port)
 	}
 	return true;
 }
+
+void IpMap::remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove) {
+	for (auto&& item : map_) {
+		if (item.second.tcp_socket_) {
+			if (item.second.tcp_socket_->state() == QAbstractSocket::UnconnectedState ||
+				item.second.tcp_socket_->error() == QAbstractSocket::RemoteHostClosedError) 
+			{
+				item.second.tcp_socket_ = NULL;
+			}
+		}
+		if (item.second.np2ps_tcp_socket_) {
+			if (item.second.np2ps_tcp_socket_->state() == QAbstractSocket::UnconnectedState ||
+				item.second.np2ps_tcp_socket_->error() == QAbstractSocket::RemoteHostClosedError) 
+			{
+				item.second.np2ps_tcp_socket_ = NULL;
+			}
+		}
+		if (!item.second.tcp_socket_ && !item.second.np2ps_tcp_socket_) {
+			public_ids_to_remove.push_back(item.first);
+		}
+	}
+}

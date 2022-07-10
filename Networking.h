@@ -32,7 +32,7 @@ class Peer;
 #include <QtCore>
 
 using tcp = boost::asio::ip::tcp;
-
+using reader_database = std::unordered_multimap<hash_t, PeerInfo*>;
 using MFW = MessageFactoryWrapper;
 using msg_queue = std::queue< unique_ptr_message>;
 using msg_queue_ptr = std::shared_ptr< msg_queue>;
@@ -239,14 +239,21 @@ public:
 		return receiver_.get();
 	}
 
-	void set_user_map(user_level_map* map) {
-		user_map = map;
+	void set_maps(user_level_map* m, news_database* n, reader_database* r, user_container* j) {
+		user_map = m;
+		news_db = n;
+		readers_ = r;
+		journalists_ = j;
 	}
 
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	void set_peer_public_id(pk_t pid);
 	pk_t get_peer_public_id();
+
+	void set_process_disconnect_pointer() {
+		
+	}
 
 	IpMap ip_map_;
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles;
@@ -260,6 +267,7 @@ public slots:
 	void decrypt_encrypted_messages(pk_t symmetric_key_sender);
 	void user_member_results(seq_t msg_seq, bool is_member);
 	void symmetric_exchanged(pk_t other_peer);
+	void peer_process_disconnected_users();
 
 signals:
 	void new_message_enrolled(unique_ptr_message);
@@ -269,6 +277,9 @@ private:
 	const int port_ = PORT;
 
 	news_database* news_db;
+	reader_database* readers_;
+	user_container* journalists_;
+
 	msg_map waiting_level; //<seq number of message, message>
 	encrypted_message_map waiting_decrypt; //<pk_t of other holder of symmetric key, message>
 	std::unordered_multimap<pk_t, unique_ptr_message> waiting_ip; //<pk_t of receiver, message to send to receiver>

@@ -8,7 +8,7 @@ StunClient::StunClient(Networking* networking) {
 
     connect(tcp_socket_, &QIODevice::readyRead, this, &StunClient::receive_msg);
     connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &StunClient::error);
-    connect(tcp_socket_, &QAbstractSocket::disconnected, this, &QObject::deleteLater);
+    //connect(tcp_socket_, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
 
     /* ATTRIBUTE FACTORIES ARE INITIALIZED HERE */
     stun_attribute_factories.emplace(STUN_ATTR_XOR_MAPPED_ADDRESS, std::make_shared<XorMappedAddressAttributeFactory>());
@@ -212,7 +212,8 @@ void StunClient::accept() {
 }
 
 void StunClient::error(QAbstractSocket::SocketError socketError) {
-
+    QTcpSocket* socket = (QTcpSocket*)QObject::sender();
+    std::cout << "Damn bro, thats crazy, is socket still valid? " << socket->isValid() << std::endl;
 }
 
 void StunClient::init_client(QHostAddress address, std::uint16_t port) {
@@ -427,4 +428,8 @@ void StunClient::process_indication_send(stun_header_ptr stun_message, std::stri
 
     networking_->ip_map_.update_preferred_stun_server(pia->get_public_identifier(), ria->get_public_identifier());
     networking_->ip_map_.get_wrapper_for_pk(pia->get_public_identifier())->second.set_relay_flag();
+}
+
+void StunClient::delete_disconnected_users() {
+    
 }

@@ -45,6 +45,7 @@ private slots:
     void accept();
     void error(QAbstractSocket::SocketError socketError);
     void receive_msg();
+    void delete_disconnected_users();
 
 private:
     void check_for_nat();

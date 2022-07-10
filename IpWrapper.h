@@ -204,6 +204,7 @@ struct IpWrapper {
 	QTcpSocket* tcp_socket_ = NULL; //for STUN servers.
 	QTcpSocket* np2ps_tcp_socket_ = NULL;
 	pk_t preferred_stun_server = 0;
+	TimePoint time_since_last_disconnect; 
 
 	rsa_eax_pair key_pair;
 	
