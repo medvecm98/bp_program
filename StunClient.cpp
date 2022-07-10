@@ -261,6 +261,17 @@ void StunClient::process_response_success_identify(stun_header_ptr stun_message)
         networking_->waiting_ip.erase(find_it_waiting_ip);
         networking_->send_message(msg);
     }
+
+    auto find_it_waiting_sym_key = networking_->waiting_symmetric_key_messages.find(pia->get_public_identifier());
+
+    if (find_it_waiting_sym_key != networking_->waiting_symmetric_key_messages.end()) {
+        networking_->ip_map_.update_ip(pia->get_public_identifier(), QHostAddress(xraa->get_address()), xraa->get_port());
+        networking_->ip_map_.update_rsa_public(pia->get_public_identifier(), pka->get_value());
+        auto msg  =find_it_waiting_sym_key->second;
+        networking_->waiting_symmetric_key_messages.erase(find_it_waiting_sym_key);
+        networking_->new_message_received(msg);
+    }
+
 }
 
 void StunClient::process_response_error_identify(stun_header_ptr stun_message) {
@@ -415,4 +426,5 @@ void StunClient::process_indication_send(stun_header_ptr stun_message, std::stri
     np2ps_message = data->get_np2ps_messsage();
 
     networking_->ip_map_.update_preferred_stun_server(pia->get_public_identifier(), ria->get_public_identifier());
+    networking_->ip_map_.get_wrapper_for_pk(pia->get_public_identifier())->second.set_relay_flag();
 }

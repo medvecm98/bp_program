@@ -428,9 +428,15 @@ void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QTcpSocket* n
 		std::cout << "[DEBUG][PeerReceiver::message_receive()] messsage: " << msg.toStdString() << std::endl;
 		std::cout << "[DEBUG][PeerReceiver::message_receive()] size: " << msg.toStdString().size() << std::endl;
 		m->ParseFromString(msg.toStdString());
-		check_ip(tcp_socket_, m->from(), networking_->ip_map_);
-		networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket);
-		networking_->add_to_received(std::move(m));
+		if (np2ps_socket && networking_->ip_map_.have_ip4(m->from()) && networking_->ip_map_.have_rsa_public(m->from())) {
+			check_ip(np2ps_socket, m->from(), networking_->ip_map_);
+			networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket);
+			networking_->add_to_received(std::move(m));
+		}
+		else {
+			networking_->waiting_symmetric_key_messages.emplace(m->from(), std::move(m));
+			networking_->get_stun_client()->identify(m->from());
+		}
 
 		//tcp_socket_->disconnectFromHost();
 		return; 
@@ -445,10 +451,15 @@ PeerSender::PeerSender(networking_ptr net) {
 
 void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
 	std::cout << "ipw.np2ps_tcp_socket_: " << &ipw.np2ps_tcp_socket_ << std::endl;
+
 	if (ipw.np2ps_tcp_socket_)
 		std::cout << "ipw.np2ps_tcp_socket_->isValid(): " << ipw.np2ps_tcp_socket_->isValid() << std::endl;
+
 	if (ipw.np2ps_tcp_socket_ && ipw.np2ps_tcp_socket_->isValid()) {
 		message_send(ipw.np2ps_tcp_socket_, msg, ipw, false);
+	}
+	else if (ipw.get_relay_flag()) {
+		message_send(NULL, msg, ipw, true);
 	}
 	else {
 		QTcpSocket* socket_ = new QTcpSocket(this);

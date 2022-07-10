@@ -252,6 +252,7 @@ public:
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles;
 	std::unordered_multimap<pk_t, unique_ptr_message> waiting_symmetrich_exchange;
 	user_level_map* user_map;
+	std::map<pk_t, unique_ptr_message> waiting_symmetric_key_messages;
 
 public slots:
 	void send_message(unique_ptr_message);
