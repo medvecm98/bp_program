@@ -268,6 +268,8 @@ bool IpMap::update_stun_ip(pk_t pid, const QHostAddress& ip, std::uint16_t port)
 void IpMap::remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove) {
 	for (auto&& item : map_) {
 		if (item.second.tcp_socket_) {
+			std::cout << "STUN Socket state: " << item.second.tcp_socket_->state() << std::endl;
+			std::cout << "STUN Socket error: " << item.second.tcp_socket_->error() << std::endl;
 			if (item.second.tcp_socket_->state() == QAbstractSocket::UnconnectedState ||
 				item.second.tcp_socket_->error() == QAbstractSocket::RemoteHostClosedError) 
 			{
@@ -275,6 +277,8 @@ void IpMap::remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove) {
 			}
 		}
 		if (item.second.np2ps_tcp_socket_) {
+			std::cout << "NP2PS Socket state: " << item.second.tcp_socket_->state() << std::endl;
+			std::cout << "NP2PS Socket error: " << item.second.tcp_socket_->error() << std::endl;
 			if (item.second.np2ps_tcp_socket_->state() == QAbstractSocket::UnconnectedState ||
 				item.second.np2ps_tcp_socket_->error() == QAbstractSocket::RemoteHostClosedError) 
 			{

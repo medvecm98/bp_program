@@ -652,6 +652,8 @@ void Networking::peer_process_disconnected_users() {
 	std::vector<pk_t> to_remove;
 	ip_map_.remove_disconnected_users(to_remove);
 
+	if (!to_remove.empty()) {
+
 	for (auto it = readers_->begin(); it != readers_->end(); it++) {
 		for (auto&& user : to_remove) {
 			if (user == it->second->peer_key) {
@@ -669,6 +671,7 @@ void Networking::peer_process_disconnected_users() {
 	for (auto&& user : to_remove) {
 		ip_map_.remove_from_map(user);
 		journalists_->erase(user);
+	}
 	}
 	
 }
