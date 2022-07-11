@@ -53,6 +53,7 @@ void StunServer::new_connection() {
     in_stream.setVersion(QDataStream::Qt_5_0);
     QObject::connect(tcp_socket_, &QIODevice::readyRead, this, &StunServer::reply);
     QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, tcp_socket_, &QObject::deleteLater);
+    QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
 	QObject::connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &StunServer::display_error);
 }
 

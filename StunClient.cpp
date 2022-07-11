@@ -59,6 +59,7 @@ void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id)
 
         connect(socket, &QIODevice::readyRead, this, &StunClient::receive_msg);
         connect(socket, &QAbstractSocket::errorOccurred, this, &StunClient::error);
+        QObject::connect(socket, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
         //connect(tcp_socket_, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
 
         socket->connectToHost(addr, port);
@@ -91,6 +92,7 @@ void StunClient::send_stun_message_transport_address(stun_header_ptr stun_messag
     QTcpSocket* socket = new QTcpSocket(this);
     connect(socket, &QAbstractSocket::errorOccurred, this, &StunClient::error);
     connect(socket, &QIODevice::readyRead, this, &StunClient::receive_msg);
+    QObject::connect(socket, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
 
     socket->connectToHost(address, port);
 
