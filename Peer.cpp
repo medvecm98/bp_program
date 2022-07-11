@@ -919,6 +919,9 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 				//news_entry.add_article(recv_article_hash, std::move(recv_article));
 				emit new_article_list(recv_article.news_id());
 			}
+			else {
+				std::cout << "invalid journalist" << std::endl;
+			}
 		}
 	}
 }
