@@ -104,7 +104,7 @@ void MainWindow::on_pushButton_add_article_released()
 		a.initialize_article(std::vector<my_string>(), ui->lineEdit_article_path->text().trimmed().toStdString(), ctx->p, ctx->p.get_news_db().at(news_id));
 		if (news_id == ctx->p.get_public_key()) {
 			ui->listWidget_articles->addItem(QString(a.heading().c_str()).append(':').append(QString::number(a.main_hash())));
-			ctx->p.enroll_new_article(std::move(a));
+			ctx->p.enroll_new_article(std::move(a), false);
 		}
 		else {
 			ctx->p.upload_external_article(a);
@@ -170,6 +170,10 @@ void MainWindow::on_pushButton_article_list_released()
 	if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() != nullptr) {
 		std::cout << "Non-newspaper item selected. Please select only top-level newspaper item from tree." << std::endl;
 		qem.showMessage("Non-newspaper item selected. Please select only top-level newspaper item from tree.");
+		return;
+	}
+
+	if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong() == ctx->p.get_public_key()) {
 		return;
 	}
 

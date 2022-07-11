@@ -100,7 +100,7 @@ public:
 	}
 
 	void load_ip_authorities(pk_t newspaper_key); //to load the IPs of authorities
-	void enroll_new_article(Article article); //add new article to list of category -> article
+	void enroll_new_article(Article article, bool header_only); //add new article to list of category -> article
 	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string& newspaper_ip);
 	size_t list_all_articles_from_news(article_container& articles, const std::set<category_t>& categories);
 	size_t list_all_articles_from_news(article_container& articles);

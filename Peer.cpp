@@ -5,10 +5,18 @@
  * 
  * @param a Article to add.
  */
-void Peer::enroll_new_article(Article a) {
-	news_[a.news_id()].add_article(a.main_hash(),std::move(a));
-	PeerInfo* peer_info = &user_map[public_identifier_];
-	readers_.emplace(a.main_hash(), peer_info);
+void Peer::enroll_new_article(Article a, bool header_only) {
+	news_[a.news_id()].get_list_of_articles().article_headers.emplace(a.main_hash(), a);
+	auto [bit, eit] = a.categories();
+	for (; bit != eit; bit++) {
+		news_[a.news_id()].get_list_of_articles().categories.insert(*bit);
+	}
+	if (!header_only) {
+		news_[a.news_id()].add_article(a.main_hash(),std::move(a));
+		PeerInfo* peer_info = &user_map[public_identifier_];
+		readers_.emplace(a.main_hash(), peer_info);
+	}
+	emit new_article_list(a.news_id());
 }
 
 void Peer::identify_newspaper(QHostAddress address, const std::string& newspaper_name) {
@@ -644,11 +652,12 @@ void Peer::handle_responses(unique_ptr_message message) {
 		if (message->has_article_all() && message->article_all().has_header() && message->article_all().has_article_actual()) {
 			hash_t recv_article_hash = message->article_all().article_hash();
 			Article recv_article(message->article_all().header(), message->article_all().article_actual());
-			if (news_.find(recv_article.news_id()) == news_.end()) {
+			enroll_new_article(recv_article, false);
+			/*if (news_.find(recv_article.news_id()) == news_.end()) {
 				//TODO: log error
 			}
 			auto& news_entry = news_[recv_article.news_id()];
-			news_entry.add_article(recv_article_hash, std::move(recv_article));
+			news_entry.add_article(recv_article_hash, std::move(recv_article));*/
 
 			if (message->from() != message->article_all().header().news_id()) {
 				std::cout << "Sending article data change download" << std::endl;
@@ -910,14 +919,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 			if (journalists_.find(msg->article_header().article().author_id()) != journalists_.end()) {
 				hash_t recv_article_hash = msg->article_header().article_hash();
 				Article recv_article(msg->article_header().article());
-				if (news_.find(recv_article.news_id()) == news_.end()) {
-					//TODO: log error
-				}
-				
-				auto& news_entry = news_[recv_article.news_id()];
-				news_entry.get_list_of_articles().article_headers.emplace(recv_article_hash, std::move(recv_article));
-				//news_entry.add_article(recv_article_hash, std::move(recv_article));
-				emit new_article_list(recv_article.news_id());
+				enroll_new_article(recv_article, true);
 			}
 			else {
 				std::cout << "invalid journalist" << std::endl;
