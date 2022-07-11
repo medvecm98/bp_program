@@ -915,7 +915,9 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 				}
 				
 				auto& news_entry = news_[recv_article.news_id()];
-				news_entry.add_article(recv_article_hash, std::move(recv_article));
+				news_entry.get_list_of_articles().article_headers.emplace(recv_article_hash, std::move(recv_article));
+				//news_entry.add_article(recv_article_hash, std::move(recv_article));
+				emit new_article_list(recv_article.news_id());
 			}
 		}
 	}
