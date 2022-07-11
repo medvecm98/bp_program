@@ -428,4 +428,12 @@ void MainWindow::newspaper_identified(pk_t id, my_string newspaper_name, std::st
 void MainWindow::newspaper_created() {
 	ui->comboBox_newspapers->addItem(QString::fromStdString(ctx->p.get_my_news_name()).append(':').append(QString::number(ctx->p.get_my_news_id())));
 	ui->comboBox_newspapers->setEnabled(true);
+
+	ui->treeWidget_newspaper->addTopLevelItem(
+				new QTreeWidgetItem(QStringList({
+								QString::fromStdString(ctx->p.get_my_news_name()),
+								"Newspaper",
+								QString::number(ctx->p.get_my_news_id())
+							}))
+	);
 }
