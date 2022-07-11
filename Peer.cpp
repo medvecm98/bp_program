@@ -971,6 +971,7 @@ void Peer::removed_external_article(hash_t article, pk_t to) {
 }
 
 void Peer::upload_external_article(Article a) {
+	enroll_new_article(a, false);
 	networking_->enroll_message_to_be_sent(
 		MFW::OneWayArticleHeaderFactory (
 			MFW::ArticleHeaderFactory(

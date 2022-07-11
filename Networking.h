@@ -81,6 +81,7 @@ public:
 	void restart_server(bool);
 
 public slots:
+	void start_server(QHostAddress address);
 	void message_receive();
 	void process_received_np2ps_message(QByteArray& msg, QTcpSocket*);
 	void prepare_for_message_receive();
@@ -160,6 +161,8 @@ public:
 
 		QObject::connect(this, &Networking::new_message_enrolled,
 						 this, &Networking::send_message);
+		
+		//get_network_interfaces();
 	}
 
 	bool enroll_message_to_be_sent(unique_ptr_message message);
@@ -255,6 +258,12 @@ public:
 		
 	}
 
+	void get_network_interfaces();
+
+	StunServer* get_stun_server() {
+		return stun_server.get();
+	}
+
 	IpMap ip_map_;
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles;
 	std::unordered_multimap<pk_t, unique_ptr_message> waiting_symmetrich_exchange;
@@ -274,6 +283,7 @@ signals:
 	void new_message_enrolled(unique_ptr_message);
 	void new_message_received(unique_ptr_message);
 	void newspaper_identified(pk_t, my_string newspaper_name, std::string newspaper_ip_domain);
+	void got_network_interfaces(address_vec_ptr addresses_and_interfaces);
 
 private:
 	const int port_ = PORT;

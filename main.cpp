@@ -15,6 +15,7 @@
 #include "programcontext.h"
 #include "form.h"
 #include "add_newspaper.h"
+#include "categoriesform.h"
 
 
 #define ARTICLE_DIR "./articles"
@@ -61,6 +62,8 @@ int main(int argc, char *argv[]) {
 	MainWindow w;
 	Form* f = new Form();
 	add_newspaper* w_add_newspaper = new add_newspaper();
+	CategoriesForm* cf = new CategoriesForm();
+	
 
 	ProgramContext ctx;
 	w.setProgramContext(&ctx);
@@ -70,6 +73,9 @@ int main(int argc, char *argv[]) {
 
 	QObject::connect(&ctx.p, &Peer::new_article_list, &w, &MainWindow::article_list_received);
 	QObject::connect(ctx.p.get_networking(), &Networking::newspaper_identified, &w, &MainWindow::newspaper_identified);
+	QObject::connect(ctx.p.get_networking(), &Networking::got_network_interfaces, &w, &MainWindow::got_network_interfaces);
+	QObject::connect(&w, &MainWindow::start_server, ctx.p.get_networking()->get_peer_receiver(), &PeerReceiver::start_server);
+	QObject::connect(&w, &MainWindow::start_server, ctx.p.get_networking()->get_stun_server(), &StunServer::start_server);
 
 	QObject::connect(f, &Form::enable_print_peer, &w, &MainWindow::enable_print_peer);
 	QObject::connect(f, &Form::enable_add_article, &w, &MainWindow::enable_add_article);
@@ -78,10 +84,18 @@ int main(int argc, char *argv[]) {
 	QObject::connect(f, &Form::created_newspaper, &w, &MainWindow::newspaper_created);
 
 
+	QObject::connect(&w, &MainWindow::add_new_article, cf, &CategoriesForm::add_new_article);
+
 	f->setProgramContext(&ctx);
 	w.addForm("new_peer", f);
+
 	w_add_newspaper->setProgramContext(&ctx);
 	w.addForm("add_news", w_add_newspaper);
+
+	cf->set_program_context(&ctx);
+	w.addForm("categories", cf);
+
+	ctx.p.get_networking()->get_network_interfaces();
 
 	w.show();
 

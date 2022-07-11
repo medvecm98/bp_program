@@ -25,7 +25,9 @@ class StunServer : public QObject {
     Q_OBJECT
 public:
     StunServer(Networking* networking_);
-    StunServer(Networking* networking_, QHostAddress address, std::uint16_t port = 3478);
+
+public slots:
+    void start_server(QHostAddress address);
 
 private slots:
     void reply();
@@ -35,7 +37,7 @@ private slots:
     void handle_binding_request() {}
 
 private:
-    void init_server(QHostAddress address, std::uint16_t port = 3478);
+    void init_server();
     bool check_attribute(quint16 attr);
     bool check_validity_all_attributes(stun_header_ptr stun_message, stun_attr_type_vec& output);
     void process_request_identify(stun_header_ptr message_orig, stun_header_ptr message_new);
@@ -46,7 +48,9 @@ private:
     void create_response_error_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id);
     void process_request_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t& to);
     
-    void create_indication_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t source_pk, std::string&& np2ps_message);    std::shared_ptr<QTcpServer> tcp_server_;
+    void create_indication_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t source_pk, std::string&& np2ps_message);    
+    
+    QTcpServer* tcp_server_;
     QTcpSocket* tcp_socket_;
     QDataStream in_stream;
     stun_attr_type_vec unknown_cr_attributes;

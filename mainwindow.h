@@ -39,6 +39,7 @@ public slots:
 	void disable_new_peer();
 	void newspaper_identified(pk_t id, my_string newspaper_name, std::string newspaper_ip_domain);
 	void newspaper_created();
+	void got_network_interfaces(address_vec_ptr addresses_and_interfaces);
 
 private slots:
 	void on_pushButton_new_peer_released();
@@ -89,6 +90,11 @@ private slots:
 	void on_pushButton_delete_article_clicked();
 
 	void on_pushButton_addJournalist_clicked();
+
+signals:
+	void add_new_article(QString path);
+
+	void start_server(QHostAddress address);
 
 private:
 	Ui::MainWindow *ui;

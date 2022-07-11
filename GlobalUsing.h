@@ -13,6 +13,10 @@
 #include <iostream>
 #include <functional>
 #include <chrono>
+#include <memory>
+
+#include <QHostAddress>
+#include <QString>
 
 #include "cryptopp/rsa.h"
 #include "cryptopp/rijndael.h"
@@ -43,6 +47,9 @@
 #include <cstdlib>
 
 #define PORT 14128
+
+using address_vec = std::vector<std::pair<QString, QHostAddress>>;
+using address_vec_ptr = std::shared_ptr<address_vec>;
 
 using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
 

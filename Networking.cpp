@@ -265,22 +265,7 @@ void Networking::init_sender_receiver(news_database* nd) {
 	}
 }
 
-PeerReceiver::PeerReceiver(networking_ptr net) {
-	tcp_server_ = new QTcpServer();
-	networking_ = net;
-	if (!tcp_server_->listen(networking_->ip_map_.my_ip.ipv4, (qint16)networking_->ip_map_.my_ip.port)) {
-		QTextStream(stdout)
-			<< "Failed to start the server "
-			<< tcp_server_->errorString()
-			<< '\n';
-		tcp_server_->close();
-		return;
-	}
-	
-	QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &PeerReceiver::prepare_for_message_receive);
-	
-	
-}
+PeerReceiver::PeerReceiver(networking_ptr net) : networking_(net) {}
 
 void PeerReceiver::restart_server(bool restart = true) {
 	tcp_server_->close();
@@ -298,6 +283,22 @@ void PeerReceiver::restart_server(bool restart = true) {
 			QTextStream(stdout) << "Listening on: " << networking_->ip_map_.my_ip.ipv4.toString() << '\n';
 		}
 	}
+}
+
+void PeerReceiver::start_server(QHostAddress address) {
+	tcp_server_ = new QTcpServer(this);
+	if (!tcp_server_->listen(address, PORT)) {
+		QTextStream(stdout)
+				<< "Failed to start the server "
+				<< tcp_server_->errorString()
+				<< '\n';
+			tcp_server_->close();
+			return;
+	}
+	else {
+		QTextStream(stdout) << "NP2PS server listening on: " << address.toString() << " and port: " << PORT << '\n';
+	}
+	QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &PeerReceiver::prepare_for_message_receive);
 }
 
 void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlock iv, IpWrapper& ipw, networking_ptr networking, QTcpSocket* socket) {
@@ -674,4 +675,19 @@ void Networking::peer_process_disconnected_users() {
 	}
 	}
 	
+}
+
+void Networking::get_network_interfaces() {
+	auto interfaces = QNetworkInterface::allInterfaces();
+	address_vec_ptr addresses_and_interfaces = std::make_shared<address_vec>();
+	for (auto&& interface : interfaces) {
+		auto addresses = interface.allAddresses();
+		for (auto&& address : addresses) {
+			if (address.protocol() == QAbstractSocket::NetworkLayerProtocol::IPv4Protocol) {
+				addresses_and_interfaces->emplace_back(interface.humanReadableName(), address);
+			}
+		}
+	}
+	std::cout << "Why wont you emit???" << std::endl;
+	emit got_network_interfaces(addresses_and_interfaces);
 }

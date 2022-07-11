@@ -1,30 +1,11 @@
 #include "StunServer.hpp"
 
 StunServer::StunServer(Networking* n) : networking_(n) {
-    init_server(QHostAddress(QString("10.19.160.208")), STUN_PORT);
-
-    connect(tcp_server_.get(), &QTcpServer::newConnection, 
-            this, &StunServer::new_connection);
+    init_server();
 }
 
-StunServer::StunServer(Networking* n, QHostAddress address, std::uint16_t port) : networking_(n) {
-    init_server(address, port);
-
-    connect(tcp_server_.get(), &QTcpServer::newConnection, 
-            this, &StunServer::new_connection);
-}
-
-void StunServer::init_server(QHostAddress address, std::uint16_t port) {
-    tcp_server_ = std::make_shared<QTcpServer>(this);
-
-    if (!tcp_server_->listen(address, (quint16) port)) {
-        std::cout << "STUN Server failed to start" << std::endl;
-        return;
-    }
-
-    std::cout << "STUN Server is running on IP: " 
-        << address.toString().toStdString() 
-        << " and port: " << port << std::endl;
+void StunServer::init_server() {
+   
 
     /* ATTRIBUTE FACTORIES ARE INITIALIZED HERE */
     stun_attribute_factories.emplace(STUN_ATTR_XOR_MAPPED_ADDRESS, std::make_shared<XorMappedAddressAttributeFactory>());
@@ -344,4 +325,20 @@ void StunServer::create_indication_send(stun_header_ptr message_orig, stun_heade
     message_new->append_attribute(data);
 
     message_new->copy_tid(message_orig);
+}
+
+void StunServer::start_server(QHostAddress address) {
+    tcp_server_ = new QTcpServer(this);
+
+    if (!tcp_server_->listen(address, (quint16) STUN_PORT)) {
+        std::cout << "STUN Server failed to start" << std::endl;
+        return;
+    }
+    else {
+        std::cout << "STUN Server is running on IP: " 
+            << address.toString().toStdString() 
+            << " and port: " << STUN_PORT << std::endl;
+    }
+
+    QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &StunServer::new_connection);
 }

@@ -110,11 +110,17 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 		}
 	}
 }
+
 void MainWindow::on_pushButton_add_article_released()
 {
-	Article a;
-	if (std::filesystem::is_regular_file(ui->lineEdit_article_path->text().trimmed().toStdString())) {
-		pk_t news_id = ui->comboBox_newspapers->currentText().split(QLatin1Char(':')).last().toULongLong();
+	const char* env_p = std::getenv("HOME");
+	auto fileName = QFileDialog::getOpenFileName(this, "Select files", env_p, "Text Files (*.txt);;Markdown (*.md)");
+	if (!fileName.isNull()) {
+		if (std::filesystem::is_regular_file(fileName.toStdString())) {
+			emit add_new_article(fileName);
+		}
+	}
+	/*Article a;
 		a.initialize_article(std::vector<my_string>(), ui->lineEdit_article_path->text().trimmed().toStdString(), ctx->p, ctx->p.get_news_db().at(news_id));
 		if (news_id == ctx->p.get_public_key()) {
 			ui->listWidget_articles->addItem(QString(a.heading().c_str()).append(':').append(QString::number(a.main_hash())));
@@ -126,44 +132,18 @@ void MainWindow::on_pushButton_add_article_released()
 	}
 	else {
 		ui->textEdit_article->setText(QString("Invalid article path"));
-	}
+	}*/
 }
 
 void MainWindow::on_lineEdit_article_path_textEdited(const QString &arg1)
 {
-	if (ui->comboBox_newspapers->count() == 0) {
-		auto news_db = ctx->p.get_news_db();
-		for (auto&& news : news_db) {
-			ui->comboBox_newspapers->addItem(QString(news.second.get_name().c_str()).append(':').append(QString::number(news.second.get_id())));
-		}
-		ui->comboBox_newspapers->setEnabled(true);
-		ui->pushButton_add_article->setEnabled(true);
-	}
+
 }
 
 
 void MainWindow::on_pushButton_preview_article_released()
 {
-	hash_t h = ui->listWidget_articles->selectedItems().begin().i->t()->text().split(':').last().toULongLong();
-	auto a = ctx->p.find_article(h);
-	if (a.has_value()) {
-		auto article = a.value();
-		QString path(article->get_path_to_file().c_str());
-		QFile file;
-		file.setFileName(path);
-		file.open(QIODevice::ReadOnly);
-		QTextStream text_stream(&file);
-		QString line;
-		ui->textEdit_article->clear();
-		while (!text_stream.atEnd()) {
-			line = text_stream.readLine();
-			ui->textEdit_article->append(line);
-		}
-		file.close();
-	}
-	else {
-		ui->textEdit_article->setText("Invalid article hash");
-	}
+
 }
 
 
@@ -197,8 +177,8 @@ void MainWindow::on_pushButton_article_list_released()
 
 void MainWindow::on_pushButton_set_ip_released()
 {
-	ctx->p.set_my_ip(ui->lineEdit_set_ip->text());
-	ctx->p.restart_server();
+	QHostAddress address(ui->comboBox_interfacs->currentText().split(':').last().trimmed());
+	emit start_server(address);
 }
 
 
@@ -260,8 +240,6 @@ void MainWindow::enable_add_news(){
 
 void MainWindow::enable_add_article() {
 	ui->pushButton_add_article->setEnabled(true);
-	ui->lineEdit_article_path->setEnabled(true);
-	ui->pushButton_select_files->setEnabled(true);
 }
 
 void MainWindow::enable_print_peer() {
@@ -287,8 +265,6 @@ void MainWindow::on_pushButton_select_files_released()
 	const char* env_p = std::getenv("HOME");
 	auto fileName = QFileDialog::getOpenFileName(this, "Select files", env_p, "Text Files (*.txt);;Markdown (*.md)");
 	if (!fileName.isNull()) {
-		ui->lineEdit_article_path->clear();
-		ui->lineEdit_article_path->setText(fileName);
 		//on_pushButton_add_article_released();
 	}
 }
@@ -305,7 +281,7 @@ void MainWindow::on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int 
 
 void MainWindow::on_listWidget_articles_itemClicked(QListWidgetItem *item)
 {
-	ui->pushButton_preview_article->setEnabled(true);
+
 }
 
 void MainWindow::on_pushButton_save_released()
@@ -317,64 +293,7 @@ void MainWindow::on_pushButton_save_released()
 
 void MainWindow::on_pushButton_load_released()
 {
-	//enable/disable buttons
-	std::ifstream ifs(GU::get_program_home().append("/settings.txt"));
-	boost::archive::text_iarchive ia(ifs);
-	ctx->p.restart_server(false);
-	ia >> (*ctx);
-	ctx->p.networking_init_sender_receiver();
-	if (!ctx->p.get_name().empty()) {
-		if (!ctx->p.get_my_news_name().empty()) {
-			ui->pushButton_new_peer->setEnabled(false);
-			ui->pushButton_add_article->setEnabled(true);
-			ui->pushButton_select_files->setEnabled(true);
-			ui->lineEdit_article_path->setEnabled(true);
-		}
-		ui->pushButton_add_news->setEnabled(true);
-		ui->pushButton_print_peer->setEnabled(true);
-	}
 
-	//tree
-	ui->treeWidget_newspaper->clear();
-	for (auto&& news : ctx->p.get_news_db()) {
-		if (news.second.get_id() != ctx->p.get_my_news_id()) {
-			QTreeWidgetItem* new_item = new QTreeWidgetItem(QStringList({QString::fromStdString(news.second.get_name()), "Newspaper", QString::number(news.second.get_id())}));
-			ui->treeWidget_newspaper->addTopLevelItem(new_item);
-			for (auto&& category : news.second.get_list_of_articles().categories) {
-				QTreeWidgetItem* new_category = new QTreeWidgetItem(
-					QStringList(
-						{
-							QString::fromStdString(category), "Category", QString::fromStdString(category)
-						}
-					)
-				);
-				new_item->addChild(new_category);
-				for (auto&& article : news.second.get_list_of_articles().article_headers) {
-					if (article.second.is_in_category(category)) {
-						new_category->addChild(new QTreeWidgetItem(
-							QStringList(
-								{
-									QString::fromStdString(article.second.heading()), "Article", QString::number(article.second.main_hash()) 
-								}
-							)
-						));
-					}
-				}
-			}
-		}
-	}
-
-	//list of my articles
-	if (!ctx->p.get_my_news_name().empty()) {
-		auto& news_mine = ctx->p.get_news_db().at(ctx->p.get_my_news_id());
-		for (auto ab = news_mine.get_const_iterator_database(); ab != news_mine.get_const_iterator_database_end(); ab++) {
-			ui->listWidget_articles->addItem(
-				new QListWidgetItem(
-					QString::fromStdString(ab->second.heading()).append(':').append(QString::number(ab->second.main_hash()))
-				)
-			);
-		}
-	}
 
 
 }
@@ -382,7 +301,7 @@ void MainWindow::on_pushButton_load_released()
 
 void MainWindow::on_pushButton_2_released()
 {
-	std::cout << ui->textEdit_article->toMarkdown().toStdString() << std::endl;
+
 }
 
 
@@ -409,23 +328,16 @@ void MainWindow::on_pushButton_3_clicked()
 
 void MainWindow::on_pushButton_delete_article_clicked()
 {
-	if (ui->listWidget_articles->selectedItems().size() > 0) {
-		hash_t h = ui->listWidget_articles->selectedItems().begin().i->t()->text().split(':').last().toULongLong();
-		if (ctx->p.remove_article(h)) {
-			qDeleteAll(ui->listWidget_articles->selectedItems());
-		}
-		else {
-			ui->textEdit_article->setText("Invalid article hash or article was not found in database.");
-		}
-	}
-	else if (ui->treeWidget_newspaper->selectedItems().size() > 0 && 
+	if (ui->treeWidget_newspaper->selectedItems().size() > 0 && 
 			 !(ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr ||
 			   ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr)) {
 		auto h = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
 		pk_t news_id;
 		if (ctx->p.remove_article(h, news_id)) {
 			qDeleteAll(ui->treeWidget_newspaper->selectedItems());
-			ctx->p.removed_external_article(h, news_id);
+			if (ctx->p.get_public_key() != news_id) {
+				ctx->p.removed_external_article(h, news_id);
+			}
 		}
 		else {
 			ui->textEdit_article->setText("Invalid article hash or article was not found in database.");
@@ -444,13 +356,13 @@ void MainWindow::on_pushButton_addJournalist_clicked()
 }
 
 void MainWindow::newspaper_identified(pk_t id, my_string newspaper_name, std::string newspaper_ip_domain) {
-	ui->comboBox_newspapers->addItem(QString::fromStdString(newspaper_name).append(':').append(QString::number(id)));
-	ui->comboBox_newspapers->setEnabled(true);
+	//ui->comboBox_newspapers->addItem(QString::fromStdString(newspaper_name).append(':').append(QString::number(id)));
+	//ui->comboBox_newspapers->setEnabled(true);
 }
 
 void MainWindow::newspaper_created() {
-	ui->comboBox_newspapers->addItem(QString::fromStdString(ctx->p.get_my_news_name()).append(':').append(QString::number(ctx->p.get_my_news_id())));
-	ui->comboBox_newspapers->setEnabled(true);
+	//ui->comboBox_newspapers->addItem(QString::fromStdString(ctx->p.get_my_news_name()).append(':').append(QString::number(ctx->p.get_my_news_id())));
+	//ui->comboBox_newspapers->setEnabled(true);
 
 	ui->treeWidget_newspaper->addTopLevelItem(
 				new QTreeWidgetItem(QStringList({
@@ -459,4 +371,11 @@ void MainWindow::newspaper_created() {
 								QString::number(ctx->p.get_my_news_id())
 							}))
 	);
+}
+
+void MainWindow::got_network_interfaces(address_vec_ptr addresses_and_interfaces) {
+	std::cout << "AAAAAAAAAAAAAAAAA" << std::endl;
+	for (auto&& ai : *addresses_and_interfaces) {
+		ui->comboBox_interfacs->addItem(QString("Interface: ").append(ai.first).append(", address: ").append(ai.second.toString()));
+	}
 }
