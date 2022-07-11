@@ -6,13 +6,8 @@
  * @param a Article to add.
  */
 void Peer::enroll_new_article(Article a, bool header_only) {
-	news_[a.news_id()].get_list_of_articles().article_headers.emplace(a.main_hash(), a);
-	auto [bit, eit] = a.categories();
-	for (; bit != eit; bit++) {
-		news_[a.news_id()].get_list_of_articles().categories.insert(*bit);
-	}
+	news_[a.news_id()].add_article(a.main_hash(),std::move(a));
 	if (!header_only) {
-		news_[a.news_id()].add_article(a.main_hash(),std::move(a));
 		PeerInfo* peer_info = &user_map[public_identifier_];
 		readers_.emplace(a.main_hash(), peer_info);
 	}
@@ -688,17 +683,10 @@ void Peer::handle_responses(unique_ptr_message message) {
 		std::cout << "Article List response size: " << list_size << '\n';
 		if (list_size != 0) {
 			pk_t list_news_id = message->article_list().response().begin()->news_id();
-			auto& article_list = news_[list_news_id].get_list_of_articles();
 
 			for (auto it = message->article_list().response().begin(); it != message->article_list().response().end(); it++) {
 				auto a = Article(*it);
-				auto [cit, cite] = a.categories();
-				for (; cit != cite; cit++) {
-					if (article_list.categories.find(*cit) == article_list.categories.end()) {
-						article_list.categories.insert(*cit);
-					}
-				}
-				article_list.article_headers.insert({a.main_hash(), std::move(a)});
+				news_[list_news_id].add_article(a.main_hash(), std::move(a));
 			}
 
 			std::cout << "Emit new article list" << std::endl;

@@ -201,6 +201,8 @@ public:
 			}
 		}
 
+		article_present_ = true;
+
 
 	}
 

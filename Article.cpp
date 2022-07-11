@@ -79,7 +79,10 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 		qts << QString::fromStdString(article_actual);
 		file.close();
 		_path_to_article_file = file_name.toStdString();
-	} 
+	}
+	else {
+		article_present_ = false;
+	}
 
 }
 

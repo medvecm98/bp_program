@@ -52,7 +52,19 @@ void MainWindow::on_pushButton_add_news_released()
 void MainWindow::article_list_received(pk_t newspaper_id) {
 	std::cout << "about to print article_list" << std::endl;
 	auto news_the_one  = ctx->p.get_news_db().at(newspaper_id);
-	auto& articles = news_the_one.get_list_of_articles();
+
+	auto news_articles_it = news_the_one.get_const_iterator_database();
+	auto news_atricles_it_end = news_the_one.get_const_iterator_database_end();
+	
+	std::set<my_string> categories;
+
+	for (database_iterator_t it = news_articles_it; it != news_atricles_it_end; it++) {
+		auto[cit, cite] = it->second.categories();
+		for (; cit != cite; cit++) {
+			categories.insert(*cit);
+		}
+	}
+
 	QString news_name = QString::fromStdString(news_the_one.get_name());
 	QString id_in_string = QString::number(news_the_one.get_id());
 	
@@ -67,19 +79,20 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 
 	bool category_found = false;
 	if (requseted_newspaper) {
-		for (auto&& category : articles.categories) {
+		for (auto&& category : categories) {
 			for (int i = 0; i < requseted_newspaper->childCount(); i++) {
 				if (requseted_newspaper->child(i)->text(0) == category.c_str()) { //found category we are looking for
 					category_found = true;
-					for (auto&& article : articles.article_headers) {
+					auto article = news_articles_it;
+					for (; article != news_atricles_it_end; article++) {
 						bool article_found = false;
 						for (int j = 0; j < requseted_newspaper->child(i)->childCount(); j++) {
-							if (requseted_newspaper->child(i)->child(j)->text(2) == QString::number(article.second.main_hash())) {
+							if (requseted_newspaper->child(i)->child(j)->text(2) == QString::number(article->second.main_hash())) {
 								article_found = true;
 							}
 						}
 						if (!article_found) {
-							requseted_newspaper->child(i)->addChild( new QTreeWidgetItem(QStringList({article.second.heading().c_str(), "Article", QString::number(article.second.main_hash())})));
+							requseted_newspaper->child(i)->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())})));
 						}
 						article_found = false;
 					}
@@ -88,8 +101,9 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 			if (!category_found) {
 				auto new_cat_tree = new QTreeWidgetItem(QStringList({category.c_str(), "Category", category.c_str()}));
 				requseted_newspaper->addChild( new_cat_tree);
-				for (auto&& article : articles.article_headers) {
-					new_cat_tree->addChild( new QTreeWidgetItem(QStringList({article.second.heading().c_str(), "Article", QString::number(article.second.main_hash())})));
+				auto article = news_articles_it;
+					for (; article != news_atricles_it_end; article++) {
+					new_cat_tree->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())})));
 				}
 			}
 			category_found = false;
@@ -212,25 +226,30 @@ void MainWindow::on_pushButton_external_article_released()
 	else {
 		auto news_db_id = ctx->p.get_news_db().at(ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent()->text(2).toULongLong()).get_id();
 		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
-		article_optional present_article = ctx->p.get_news_db().at(news_db_id).find_article_header(article_selected_hash);
+		auto present_article = ctx->p.get_news_db().at(news_db_id).find_article_header(article_selected_hash);
 		if (!present_article.has_value()) {
 			ctx->p.generate_article_all_message(news_db_id, article_selected_hash);
 		}
 		else {
-			ui->textEdit_article->clear();
-
-			QString path(present_article.value()->get_path_to_file().c_str());
-			QFile file;
-			file.setFileName(path);
-			file.open(QIODevice::ReadOnly);
-			QTextStream text_stream(&file);
-			QString line;
-			ui->textEdit_article->clear();
-			while (!text_stream.atEnd()) {
-				line = text_stream.readLine();
-				ui->textEdit_article->append(line);
+			if (!present_article.value()->article_present()) {
+				ctx->p.generate_article_all_message(present_article.value()->author_id(), article_selected_hash);
 			}
-			file.close();
+			else {
+				ui->textEdit_article->clear();
+
+				QString path(present_article.value()->get_path_to_file().c_str());
+				QFile file;
+				file.setFileName(path);
+				file.open(QIODevice::ReadOnly);
+				QTextStream text_stream(&file);
+				QString line;
+				ui->textEdit_article->clear();
+				while (!text_stream.atEnd()) {
+					line = text_stream.readLine();
+					ui->textEdit_article->append(line);
+				}
+				file.close();
+			}
 		}
 	}
 }
