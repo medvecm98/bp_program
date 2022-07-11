@@ -435,6 +435,9 @@ public:
 	void remove_journalist(pk_t j) {
 		journalists_.erase(j);
 	}
+	Networking* get_networking() {
+		return networking_.get();
+	}
 
 public slots:
 	void handle_message(unique_ptr_message message);

@@ -34,6 +34,7 @@ void Form::on_buttonBox_accepted()
 			ctx->p.init_newspaper(ui->lineEdit_newspaper_name->text().toStdString());
 			emit enable_add_article();
 			emit disable_new_peer();
+			emit created_newspaper();
 		}
 		emit enable_add_newspaper();
 		emit enable_print_peer();

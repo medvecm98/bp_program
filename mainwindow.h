@@ -37,6 +37,8 @@ public slots:
 	void enable_add_news();
 	void enable_print_peer();
 	void disable_new_peer();
+	void newspaper_identified(pk_t id, my_string newspaper_name, std::string newspaper_ip_domain);
+	void newspaper_created();
 
 private slots:
 	void on_pushButton_new_peer_released();

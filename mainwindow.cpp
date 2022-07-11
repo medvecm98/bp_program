@@ -272,14 +272,7 @@ void MainWindow::on_pushButton_select_files_released()
 
 void MainWindow::on_lineEdit_article_path_textChanged(const QString &arg1)
 {
-	if (ui->comboBox_newspapers->count() == 0) {
-		auto news_db = ctx->p.get_news_db();
-		for (auto&& news : news_db) {
-			ui->comboBox_newspapers->addItem(QString(news.second.get_name().c_str()).append(':').append(QString::number(news.second.get_id())));
-		}
-		ui->comboBox_newspapers->setEnabled(true);
 		ui->pushButton_add_article->setEnabled(true);
-	}
 }
 
 void MainWindow::on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int column)
@@ -427,3 +420,12 @@ void MainWindow::on_pushButton_addJournalist_clicked()
 	ctx->p.add_journalist(pk);
 }
 
+void MainWindow::newspaper_identified(pk_t id, my_string newspaper_name, std::string newspaper_ip_domain) {
+	ui->comboBox_newspapers->addItem(QString::fromStdString(newspaper_name).append(':').append(QString::number(id)));
+	ui->comboBox_newspapers->setEnabled(true);
+}
+
+void MainWindow::newspaper_created() {
+	ui->comboBox_newspapers->addItem(QString::fromStdString(ctx->p.get_my_news_name()).append(':').append(QString::number(ctx->p.get_my_news_id())));
+	ui->comboBox_newspapers->setEnabled(true);
+}

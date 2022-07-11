@@ -341,6 +341,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 		else {
 			/* send user requested article */
 			std::cout << "ARTICLE_ALL User found in database\n";
+			std::cout << "Looking for " << message->article_all().article_hash() << std::endl;
 
 			auto article = find_article(message->article_all().article_hash());
 			if (article.has_value() && article.value()->article_present()) {
@@ -975,7 +976,7 @@ void Peer::removed_external_article(hash_t article, pk_t to) {
 }
 
 void Peer::upload_external_article(Article a) {
-
+	networking_->enroll_message_to_be_sent(
 		MFW::OneWayArticleHeaderFactory (
 			MFW::ArticleHeaderFactory(
 				public_identifier_,
@@ -983,6 +984,6 @@ void Peer::upload_external_article(Article a) {
 				a.main_hash()
 			),
 			&a
-		);
-
+		)
+	);
 }

@@ -31,6 +31,7 @@ signals:
 	void enable_add_newspaper();
 	void enable_print_peer();
 	void disable_new_peer();
+	void created_newspaper();
 
 private:
 	Ui::Form *ui;

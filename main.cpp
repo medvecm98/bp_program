@@ -69,11 +69,14 @@ int main(int argc, char *argv[]) {
 					 &w, &MainWindow::newspaper_added_to_db);
 
 	QObject::connect(&ctx.p, &Peer::new_article_list, &w, &MainWindow::article_list_received);
+	QObject::connect(ctx.p.get_networking(), &Networking::newspaper_identified, &w, &MainWindow::newspaper_identified);
 
 	QObject::connect(f, &Form::enable_print_peer, &w, &MainWindow::enable_print_peer);
 	QObject::connect(f, &Form::enable_add_article, &w, &MainWindow::enable_add_article);
 	QObject::connect(f, &Form::enable_add_newspaper, &w, &MainWindow::enable_add_news);
 	QObject::connect(f, &Form::disable_new_peer, &w, &MainWindow::disable_new_peer);
+	QObject::connect(f, &Form::created_newspaper, &w, &MainWindow::newspaper_created);
+
 
 	f->setProgramContext(&ctx);
 	w.addForm("new_peer", f);
