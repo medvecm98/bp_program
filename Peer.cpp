@@ -904,6 +904,20 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 			)
 		);
 	}
+	else if (type == np2ps::ARTICLE_HEADER) {
+		if (msg->has_article_header() && msg->article_header().has_article()) {
+			if (journalists_.find(msg->article_header().article().author_id()) != journalists_.end()) {
+				hash_t recv_article_hash = msg->article_header().article_hash();
+				Article recv_article(msg->article_header().article());
+				if (news_.find(recv_article.news_id()) == news_.end()) {
+					//TODO: log error
+				}
+				
+				auto& news_entry = news_[recv_article.news_id()];
+				news_entry.add_article(recv_article_hash, std::move(recv_article));
+			}
+		}
+	}
 }
 
 /**
@@ -960,3 +974,15 @@ void Peer::removed_external_article(hash_t article, pk_t to) {
 	));
 }
 
+void Peer::upload_external_article(Article a) {
+
+		MFW::OneWayArticleHeaderFactory (
+			MFW::ArticleHeaderFactory(
+				public_identifier_,
+				a.news_id(),
+				a.main_hash()
+			),
+			&a
+		);
+
+}

@@ -428,6 +428,13 @@ public:
 	bool remove_article(hash_t hash);
 	bool remove_article(hash_t hash, pk_t& newspaper_id);
 	void identify_newspaper(QHostAddress address, const std::string& newspaper_name);
+	void upload_external_article(Article a);
+	void add_journalist(pk_t j) {
+		journalists_.insert(j);
+	}
+	void remove_journalist(pk_t j) {
+		journalists_.erase(j);
+	}
 
 public slots:
 	void handle_message(unique_ptr_message message);

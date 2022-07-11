@@ -86,6 +86,8 @@ private slots:
 
 	void on_pushButton_delete_article_clicked();
 
+	void on_pushButton_addJournalist_clicked();
+
 private:
 	Ui::MainWindow *ui;
 	ProgramContext* ctx;

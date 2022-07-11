@@ -102,9 +102,13 @@ void MainWindow::on_pushButton_add_article_released()
 	if (std::filesystem::is_regular_file(ui->lineEdit_article_path->text().trimmed().toStdString())) {
 		pk_t news_id = ui->comboBox_newspapers->currentText().split(QLatin1Char(':')).last().toULongLong();
 		a.initialize_article(std::vector<my_string>(), ui->lineEdit_article_path->text().trimmed().toStdString(), ctx->p, ctx->p.get_news_db().at(news_id));
-
-		ui->listWidget_articles->addItem(QString(a.heading().c_str()).append(':').append(QString::number(a.main_hash())));
-		ctx->p.enroll_new_article(std::move(a));
+		if (news_id == ctx->p.get_public_key()) {
+			ui->listWidget_articles->addItem(QString(a.heading().c_str()).append(':').append(QString::number(a.main_hash())));
+			ctx->p.enroll_new_article(std::move(a));
+		}
+		else {
+			ctx->p.upload_external_article(a);
+		}
 	}
 	else {
 		ui->textEdit_article->setText(QString("Invalid article path"));
@@ -414,5 +418,12 @@ void MainWindow::on_pushButton_delete_article_clicked()
 	else {
 		ui->textEdit_article->setText("Please, select an article.");
 	}
+}
+
+
+void MainWindow::on_pushButton_addJournalist_clicked()
+{
+	std::size_t pk = ui->lineEdit_addJournalist->text().toULongLong();
+	ctx->p.add_journalist(pk);
 }
 
