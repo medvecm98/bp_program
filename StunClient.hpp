@@ -37,7 +37,7 @@ public:
     void stun_server_connection_error();
     void process_response_success_allocate(QTcpSocket* tcp_socket, stun_header_ptr message_orig);
     
-    void create_request_send(stun_header_ptr stun_message, std::string msg, pk_t where);
+    void create_request_send(stun_header_ptr stun_message, QByteArray& msg, pk_t where);
 
 signals:
     void confirmed_newspaper(pk_t pid);

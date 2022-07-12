@@ -195,7 +195,7 @@ public:
 		waiting_decrypt.emplace(pk_str, emw);
 	}
 	
-	void sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver);
+	void sign_and_encrypt_key(QDataStream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver);
 	void generate_rsa_key_pair();
 
 	void restart_server(bool restart = true) {

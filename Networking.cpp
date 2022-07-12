@@ -12,29 +12,20 @@ void send_message_using_socket(QTcpSocket* tcp_socket, const std::string& msg) {
 	tcp_socket->disconnectFromHost();
 }
 
-void send_message_using_turn(QTcpSocket* tcp_socket, networking_ptr networking_, std::string&& msg, pk_t to, IpWrapper& ipw) {
+void send_message_using_turn(QTcpSocket* tcp_socket, networking_ptr networking_, QByteArray& msg, pk_t to, IpWrapper& ipw) {
 	std::cout << "Relaying message using Send method" << std::endl;
 	stun_header_ptr m = std::make_shared<StunMessageHeader>();
 	networking_->get_stun_client()->create_request_send(m, msg, to);
 	networking_->get_stun_client()->send_stun_message(m, networking_->ip_map_.get_wrapper_for_pk(to)->second.preferred_stun_server);
 }
 
-void send_message_using_socket(QTcpSocket* tcp_socket, std::string&& msg, bool disconnect = true) {
+void send_message_using_socket(QTcpSocket* tcp_socket, QByteArray& block) {
 	std::cout << "sending" << std::endl;
-	QByteArray block;
-	QDataStream out(&block, QIODevice::WriteOnly);
-	out.setVersion(QDataStream::Qt_5_0);
-	QByteArray dd(msg.data(), msg.size());
-	out << dd;
 	tcp_socket->write(block);
 	if (tcp_socket->state() != QAbstractSocket::ConnectedState) {
 		std::cout << tcp_socket->state() << std::endl;
 	}
 	
-}
-
-void send_message_using_socket(QTcpSocket* tcp_socket, unique_ptr_message msg) {
-	send_message_using_socket(tcp_socket, msg->SerializeAsString());
 }
 
 bool Networking::enroll_message_to_be_sent(unique_ptr_message message) {
@@ -64,7 +55,7 @@ void Networking::generate_rsa_key_pair() {
  * @param sender Sender of the message, creator of the symmetric key.
  * @param receiver Receiver of the message.
  */
-void Networking::sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver) {
+void Networking::sign_and_encrypt_key(QDataStream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver) {
 	if (!ip_map_.private_rsa.has_value() || !ip_map_.my_ip.key_pair.first.has_value()) {
 		generate_rsa_key_pair();
 	}
@@ -117,7 +108,8 @@ void Networking::sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecBy
 	output << KEY_MESSAGE;
 	output << msg_size;
 	//output << std::setfill('0') << std::setw(16) << std::hex << send_msg_str.size(); //length of the message
-	output << send_msg_str;
+	QByteArray send_msg_str_arr = QByteArray::fromStdString(send_msg_str); 
+	output << send_msg_str_arr;
 }
 
 void Networking::send_message_again_ip(pk_t message_originally_to) {
@@ -431,10 +423,15 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 			//message will now wait until symmetric key is received
 			networking_->add_to_messages_to_decrypt(pk_str, EncryptedMessageWrapper(e_msg, iv, pk_str, NORMAL_MESSAGE));
 
-			std::stringstream msg_key_sstream;
+			std::string cred_req_msg = cred_req->SerializeAsString();
+
+			QByteArray msg_key_sstream_block;
+			QDataStream msg_key_sstream(&msg_key_sstream_block, QIODevice::ReadWrite);
+			msg_key_sstream.setVersion(QDataStream::Qt_5_0);
 			msg_key_sstream << KEY_MESSAGE;
-			msg_key_sstream << cred_req->SerializeAsString();
-			send_message_using_socket(tcp_socket_, msg_key_sstream.str());
+			msg_key_sstream << (quint64)cred_req_msg.size();
+			msg_key_sstream << QByteArray::fromStdString(cred_req_msg);
+			send_message_using_socket(tcp_socket_, msg_key_sstream_block);
 
 			//tcp_socket_->disconnectFromHost();
 			return;
@@ -562,7 +559,9 @@ void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrap
 	CryptoPP::SecByteBlock iv(CryptoPP::AES::BLOCKSIZE);
 	prng.GenerateBlock(iv, iv.size());
 
-	std::stringstream length_plus_msg;
+	QByteArray length_plus_msg_block;
+	QDataStream length_plus_msg(&length_plus_msg_block, QIODevice::ReadWrite);
+	length_plus_msg.setVersion(QDataStream::Qt_5_0);
 	if (msg->msg_type() != np2ps::PUBLIC_KEY) {
 		// check if symmetric key exists for given receiver:
 		if (!ipw.key_pair.second.has_value()) {
@@ -576,13 +575,16 @@ void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrap
 			}
 			//ipw.add_eax_key(std::move(aes_key)); //adding to ip map
 
-			std::stringstream key_exchange_msg;
+			QByteArray key_exchange_msg_block;
+			QDataStream key_exchange_msg(&key_exchange_msg_block, QIODevice::ReadWrite);
+			key_exchange_msg.setVersion(QDataStream::Qt_5_0);
+
 			networking_->sign_and_encrypt_key(key_exchange_msg, aes_key, msg->from(), msg->to());
 
 			if (!relay)
-				send_message_using_socket(socket, key_exchange_msg.str(), true);
+				send_message_using_socket(socket, key_exchange_msg_block);
 			else
-				send_message_using_turn(socket, networking_, key_exchange_msg.str(), msg->to(), ipw);
+				send_message_using_turn(socket, networking_, key_exchange_msg_block, msg->to(), ipw);
 
 			std::cout << "Key generated and message sent" << std::endl;
 			networking_->waiting_symmetrich_exchange.insert({msg->to(), std::move(msg)});
@@ -608,14 +610,15 @@ void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrap
 
 		length_plus_msg << NORMAL_MESSAGE;
 		length_plus_msg << (quint64)msg->from(); //public identifier won't be encrypted
-		length_plus_msg << (quint64)iv_str.size() << iv_str << (quint64)encrypted_msg.size() << encrypted_msg; //initialization vector is written after size, but before message itself
+		length_plus_msg << (quint64)iv_str.size() << QByteArray::fromStdString(iv_str);
+		length_plus_msg << (quint64)encrypted_msg.size() << QByteArray::fromStdString(encrypted_msg); //initialization vector is written after size, but before message itself
 	}
 	else {
 		length_plus_msg << KEY_MESSAGE;
-		length_plus_msg << serialized_msg.size();
-		length_plus_msg << serialized_msg;
-		std::cout << "[DEBUG][PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw)] message: " << length_plus_msg.str() << std::endl;
-		std::cout << "[DEBUG][PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw)] size: " << length_plus_msg.str().size() << std::endl;
+		length_plus_msg << (quint64)serialized_msg.size();
+		length_plus_msg << QByteArray::fromStdString(serialized_msg);
+		//std::cout << "[DEBUG][PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw)] message: " << length_plus_msg.str() << std::endl;
+		//std::cout << "[DEBUG][PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw)] size: " << length_plus_msg.str().size() << std::endl;
 		/*std::string s = length_plus_msg.str().substr(1);
 		unique_ptr_message m = std::make_shared<proto_message>();
 		m->ParseFromString(s);
@@ -627,9 +630,9 @@ void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrap
 
     //send message
 	if (!relay)
-		send_message_using_socket( socket, length_plus_msg.str());
+		send_message_using_socket( socket, length_plus_msg_block);
 	else
-		send_message_using_turn(socket, networking_, length_plus_msg.str(), msg->to(), ipw);
+		send_message_using_turn(socket, networking_, length_plus_msg_block, msg->to(), ipw);
 }
 
 void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {

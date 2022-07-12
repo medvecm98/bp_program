@@ -8,7 +8,7 @@ class DataAttribute : public StunMessageAttribute {
 public:
     DataAttribute();
 
-    virtual void initialize(std::string& msg, StunMessageHeader* h);
+    virtual void initialize(QByteArray& msg, StunMessageHeader* h);
 
     virtual std::uint16_t read_stun_attribute(QDataStream&, std::uint16_t length, std::uint16_t type) override;
 

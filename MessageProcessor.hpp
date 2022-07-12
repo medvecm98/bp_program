@@ -357,7 +357,7 @@ struct MessageProcessor<CRequestTag, MSendTag> {
         mp.message_to->append_attribute(xraa);
 
         auto data = std::make_shared<DataAttribute>();
-        data->initialize(mp.np2ps_message, mp.message_to.get());
+        //data->initialize(mp.np2ps_message, mp.message_to.get());
         mp.message_to->append_attribute(data);
 
         mp.message_to->generate_tid(mp.rng);

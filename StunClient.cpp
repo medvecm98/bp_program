@@ -308,7 +308,7 @@ void StunClient::process_response_error_identify(stun_header_ptr stun_message) {
     std::cout << "Identifier: " << pia->get_public_identifier() << " was not found." << std::endl;
 }
 
-void StunClient::create_request_send(stun_header_ptr stun_message, std::string msg, pk_t where) {
+void StunClient::create_request_send(stun_header_ptr stun_message, QByteArray& msg, pk_t where) {
     std::cout << "creating request send" << std::endl;
     stun_message->stun_class = StunClassEnum::request;
     stun_message->stun_method = StunMethodEnum::send;

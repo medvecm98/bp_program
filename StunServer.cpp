@@ -321,7 +321,8 @@ void StunServer::create_indication_send(stun_header_ptr message_orig, stun_heade
     message_new->append_attribute(ria);
 
     auto data = std::make_shared<DataAttribute>();
-    data->initialize(np2ps_message, message_new.get());
+    auto qa = QByteArray::fromStdString(np2ps_message);
+    data->initialize(qa, message_new.get());
     message_new->append_attribute(data);
 
     message_new->copy_tid(message_orig);

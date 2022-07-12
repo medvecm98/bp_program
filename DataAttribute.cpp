@@ -5,8 +5,8 @@ DataAttribute::DataAttribute() : StunMessageAttribute::StunMessageAttribute()  {
     attribute_type = StunAttributeEnum::data;
 }
 
-void DataAttribute::initialize(std::string& d, StunMessageHeader* h) {
-    data = QByteArray(d.data(), d.size());
+void DataAttribute::initialize(QByteArray& d, StunMessageHeader* h) {
+    data = d;
 
     StunMessageAttribute::initialize(data.size(), h);
 }
