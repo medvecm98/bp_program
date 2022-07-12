@@ -146,7 +146,8 @@ void StunClient::handle_received_message(stun_header_ptr stun_message_header, QT
             std::string np2ps_message;
             process_indication_send(stun_message_header, np2ps_message);
             QByteArray msg(np2ps_message.c_str(), np2ps_message.length());
-            networking_->pass_message_to_receiver(msg);
+            QDataStream stream(msg);
+            networking_->pass_message_to_receiver(stream);
         }
     }
     else {

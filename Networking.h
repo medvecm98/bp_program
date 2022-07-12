@@ -41,8 +41,8 @@ using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
 class StunClient;
 class StunServer;
 
-static constexpr char NORMAL_MESSAGE = 'A';
-static constexpr char KEY_MESSAGE = 'B';
+static constexpr quint8 NORMAL_MESSAGE = 0x00;
+static constexpr quint8 KEY_MESSAGE = 0x01;
 
 /**
  * @brief Wrapper for encrypted messages where peer don't have symmetric key stored locally, or when public key is unknown.
@@ -83,7 +83,7 @@ public:
 public slots:
 	void start_server(QHostAddress address);
 	void message_receive();
-	void process_received_np2ps_message(QByteArray& msg, QTcpSocket*);
+	void process_received_np2ps_message(QDataStream& msg, QTcpSocket*);
 	void prepare_for_message_receive();
 	void message_receive_connected();
 	void display_error(QAbstractSocket::SocketError e) {
@@ -234,7 +234,7 @@ public:
 		return prng_;
 	}
 
-	void pass_message_to_receiver(QByteArray& msg) {
+	void pass_message_to_receiver(QDataStream& msg) {
 		receiver_->process_received_np2ps_message(msg, NULL);
 	}
 

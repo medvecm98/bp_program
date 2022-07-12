@@ -113,7 +113,9 @@ void Networking::sign_and_encrypt_key(std::stringstream& output, CryptoPP::SecBy
 	send_msg.mutable_symmetric_key()->set_signature(signature_str);
 
 	std::string send_msg_str = send_msg.SerializeAsString();
-	output << (char)KEY_MESSAGE;
+	quint64 msg_size = send_msg_str.size();
+	output << KEY_MESSAGE;
+	output << msg_size;
 	//output << std::setfill('0') << std::setw(16) << std::hex << send_msg_str.size(); //length of the message
 	output << send_msg_str;
 }
@@ -221,7 +223,7 @@ QString read_meta_message(const QString& message) {
  * @return Initialization vector CryptoPP::SecByteBlock.
  */
 CryptoPP::SecByteBlock extract_init_vector(const QByteArray& s_msg) {
-	std::string iv_str = s_msg.mid(16, 16).toStdString();
+	std::string iv_str = s_msg.toStdString();
 	CryptoPP::SecByteBlock iv(reinterpret_cast<const CryptoPP::byte*>(&iv_str[0]), iv_str.size());
 	return std::move(iv);
 }
@@ -243,7 +245,7 @@ pk_t extract_public_identifier(const QByteArray& s_msg) {
  * @return std::string 
  */
 std::string extract_encrypted_message(const QByteArray& s_msg) {
-	return s_msg.mid(32).toStdString();
+	return s_msg.toStdString();
 }
 
 /**
@@ -363,9 +365,6 @@ void PeerReceiver::message_receive() {
 	in_.startTransaction();
 	std::cout << "transaction started" << std::endl;
 
-	QByteArray msg;
-	in_ >> msg;
-
 	if (!in_.commitTransaction()) {
 		//TODO: receiving failed
 		std::cout << "Message receiving failed" << std::endl;
@@ -373,23 +372,38 @@ void PeerReceiver::message_receive() {
 		return;
 	}
 
-	process_received_np2ps_message(msg, tcp_socket_);
+	process_received_np2ps_message(in_, tcp_socket_);
 }
 
-void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QTcpSocket* np2ps_socket) {
+void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* np2ps_socket) {
 	std::cout << "Message read and received" << std::endl;
-	char msg_class = read_class_and_length(msg);
-
+	quint8 msg_class;
+	msg >> msg_class;
 
 	if (msg_class == NORMAL_MESSAGE) {
 		std::cout << "Normal message read and received" << std::endl;
-		auto pk_str = extract_public_identifier(msg); //public identifier
+		quint64 pk_str;
+		msg >> pk_str; //public identifier
 
 		networking_->ip_map_.enroll_new_np2ps_tcp_socket(pk_str, np2ps_socket);
 
-		std::cout << pk_str << std::endl;
-		auto iv = extract_init_vector(msg); //init. vector
-		auto e_msg = extract_encrypted_message(msg); //encrypted message
+		quint64 iv_size;
+		msg >> iv_size;
+
+		QByteArray iv_array;
+		iv_array.resize(iv_size);
+		msg >> iv_array;
+
+		auto iv = extract_init_vector(iv_array); //init. vector
+
+		quint64 msg_size;
+		msg >> msg_size;
+		
+		QByteArray msg_array;
+		msg_array.resize(msg_size);
+		msg >> msg_array;
+
+		auto e_msg = extract_encrypted_message(msg_array); //encrypted message
 		
 		//we can check now, if the IP of sender is already in database and if not, we will add it
 		check_ip(tcp_socket_, pk_str, networking_->ip_map_);
@@ -428,9 +442,17 @@ void PeerReceiver::process_received_np2ps_message(QByteArray& msg, QTcpSocket* n
 	}
 	else if (msg_class == KEY_MESSAGE) {
 		auto m = std::make_shared<proto_message>();
-		std::cout << "[DEBUG][PeerReceiver::message_receive()] messsage: " << msg.toStdString() << std::endl;
-		std::cout << "[DEBUG][PeerReceiver::message_receive()] size: " << msg.toStdString().size() << std::endl;
-		m->ParseFromString(msg.toStdString());
+		//std::cout << "[DEBUG][PeerReceiver::message_receive()] messsage: " << msg.toStdString() << std::endl;
+		//std::cout << "[DEBUG][PeerReceiver::message_receive()] size: " << msg.toStdString().size() << std::endl;
+
+		quint64 msg_size;
+		msg >> msg_size;
+
+		QByteArray msg_array;
+		msg_array.resize(msg_size);
+		msg >> msg_array;
+
+		m->ParseFromString(msg_array.toStdString());
 		if (/*np2ps_socket && networking_->ip_map_.have_ip4(m->from()) && */networking_->ip_map_.have_rsa_public(m->from())) {
 			std::cout << "RSA public found for " << m->from() << std::endl;
 			check_ip(np2ps_socket, m->from(), networking_->ip_map_);
@@ -584,11 +606,12 @@ void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrap
 		std::string iv_str(reinterpret_cast<const char*>(&iv[0]), iv.size());
 
 		length_plus_msg << NORMAL_MESSAGE;
-		length_plus_msg << std::setfill('0') << std::setw(16) << std::hex << msg->from(); //public identifier won't be encrypted
-		length_plus_msg << iv_str << encrypted_msg; //initialization vector is written after size, but before message itself
+		length_plus_msg << (quint64)msg->from(); //public identifier won't be encrypted
+		length_plus_msg << iv_str.size() << iv_str << encrypted_msg.size() << encrypted_msg; //initialization vector is written after size, but before message itself
 	}
 	else {
 		length_plus_msg << KEY_MESSAGE;
+		length_plus_msg << serialized_msg.size();
 		length_plus_msg << serialized_msg;
 		std::cout << "[DEBUG][PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw)] message: " << length_plus_msg.str() << std::endl;
 		std::cout << "[DEBUG][PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw)] size: " << length_plus_msg.str().size() << std::endl;
