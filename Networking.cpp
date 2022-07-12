@@ -105,6 +105,8 @@ void Networking::sign_and_encrypt_key(QDataStream& output, CryptoPP::SecByteBloc
 
 	std::string send_msg_str = send_msg.SerializeAsString();
 	quint64 msg_size = send_msg_str.size();
+
+	output << VERSION;
 	output << KEY_MESSAGE;
 	output << msg_size;
 	//output << std::setfill('0') << std::setw(16) << std::hex << send_msg_str.size(); //length of the message
@@ -369,6 +371,15 @@ void PeerReceiver::message_receive() {
 
 void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* np2ps_socket) {
 	std::cout << "Message read and received" << std::endl;
+
+	quint16 msg_version;
+	msg >> msg_version;
+
+	if (msg_version != VERSION) {
+		std::cout << "Version mismatch" << std::endl;
+		return;
+	}
+
 	quint16 msg_class;
 	msg >> msg_class;
 
@@ -428,6 +439,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 			QByteArray msg_key_sstream_block;
 			QDataStream msg_key_sstream(&msg_key_sstream_block, QIODevice::ReadWrite);
 			msg_key_sstream.setVersion(QDataStream::Qt_5_0);
+			msg_key_sstream << VERSION;
 			msg_key_sstream << KEY_MESSAGE;
 			msg_key_sstream << (quint64)cred_req_msg.size();
 			msg_key_sstream << QByteArray::fromStdString(cred_req_msg);
@@ -608,12 +620,14 @@ void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrap
 		//we will create the initialization vector (iv) string
 		std::string iv_str(reinterpret_cast<const char*>(&iv[0]), iv.size());
 
+		length_plus_msg << VERSION;
 		length_plus_msg << NORMAL_MESSAGE;
 		length_plus_msg << (quint64)msg->from(); //public identifier won't be encrypted
 		length_plus_msg << (quint64)iv_str.size() << QByteArray::fromStdString(iv_str);
 		length_plus_msg << (quint64)encrypted_msg.size() << QByteArray::fromStdString(encrypted_msg); //initialization vector is written after size, but before message itself
 	}
 	else {
+		length_plus_msg << VERSION;
 		length_plus_msg << KEY_MESSAGE;
 		length_plus_msg << (quint64)serialized_msg.size();
 		length_plus_msg << QByteArray::fromStdString(serialized_msg);

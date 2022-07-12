@@ -44,6 +44,8 @@ class StunServer;
 static constexpr quint16 NORMAL_MESSAGE = 0x0000;
 static constexpr quint16 KEY_MESSAGE = 0x0001;
 
+static constexpr quint16 VERSION = 0x0001;
+
 /**
  * @brief Wrapper for encrypted messages where peer don't have symmetric key stored locally, or when public key is unknown.
  * 
