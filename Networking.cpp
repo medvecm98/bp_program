@@ -441,6 +441,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		}
 	}
 	else if (msg_class == KEY_MESSAGE) {
+		std::cout << "KEY MESSAGE RECEIVED" << std::endl;
 		auto m = std::make_shared<proto_message>();
 		//std::cout << "[DEBUG][PeerReceiver::message_receive()] messsage: " << msg.toStdString() << std::endl;
 		//std::cout << "[DEBUG][PeerReceiver::message_receive()] size: " << msg.toStdString().size() << std::endl;
@@ -607,7 +608,7 @@ void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrap
 
 		length_plus_msg << NORMAL_MESSAGE;
 		length_plus_msg << (quint64)msg->from(); //public identifier won't be encrypted
-		length_plus_msg << iv_str.size() << iv_str << encrypted_msg.size() << encrypted_msg; //initialization vector is written after size, but before message itself
+		length_plus_msg << (quint64)iv_str.size() << iv_str << (quint64)encrypted_msg.size() << encrypted_msg; //initialization vector is written after size, but before message itself
 	}
 	else {
 		length_plus_msg << KEY_MESSAGE;
