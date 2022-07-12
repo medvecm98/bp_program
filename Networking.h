@@ -41,8 +41,8 @@ using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
 class StunClient;
 class StunServer;
 
-static constexpr quint8 NORMAL_MESSAGE = 0x00;
-static constexpr quint8 KEY_MESSAGE = 0x01;
+static constexpr quint16 NORMAL_MESSAGE = 0x0000;
+static constexpr quint16 KEY_MESSAGE = 0x0001;
 
 /**
  * @brief Wrapper for encrypted messages where peer don't have symmetric key stored locally, or when public key is unknown.

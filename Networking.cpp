@@ -377,7 +377,7 @@ void PeerReceiver::message_receive() {
 
 void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* np2ps_socket) {
 	std::cout << "Message read and received" << std::endl;
-	quint8 msg_class;
+	quint16 msg_class;
 	msg >> msg_class;
 
 	if (msg_class == NORMAL_MESSAGE) {
