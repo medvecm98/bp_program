@@ -559,6 +559,8 @@ void Peer::handle_requests(unique_ptr_message message) {
 		}
 	}
 	else if (type == np2ps::UPDATE_MARGIN) {
+		std::cout << "Request for margin arrived" << std::endl;
+
 		auto article = find_article(message->update_margin().article_pk());
 
 		auto [margin_begin, margin_end] = article.value()->get_range_iterators(public_identifier_);
@@ -740,6 +742,8 @@ void Peer::handle_responses(unique_ptr_message message) {
 		emit symmetric_key_exchanged(message->from());
 	}
 	else if (type == np2ps::UPDATE_MARGIN) {
+		std::cout << "Gor margin request" << std::endl;
+
 		auto article = find_article(message->update_margin().article_pk());
 		for (int i = 0; i < message->update_margin().margin().margins_size(); i++) {
 			article.value()->add_margin(message->from(), Margin(

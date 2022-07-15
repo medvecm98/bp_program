@@ -422,7 +422,8 @@ void MainWindow::on_pushButton_clicked()
 	else {
 		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
 		std::uint64_t margin_autor = ui->lineEdit_margin->text().toULongLong();
-		std::cout << article_selected_hash << ":" << margin_autor << std::endl;
+		std::cout << "Requesting margin for article: " << article_selected_hash << " and peer " << margin_autor << std::endl;
+		ctx->p.create_margin_request(margin_autor, article_selected_hash);
 	}
 
 }
