@@ -106,7 +106,7 @@ size_t Peer::list_all_articles_from_news(article_container &articles, const std:
 	size_t article_counter = 0;
 	for (auto&& cat : articles_categories_) {
 		if (categories.empty() || (categories.find(cat.first) != categories.end())) {
-			articles.insert(std::make_shared<Article>(cat.second->article));
+			articles.insert(&cat.second->article);
 			article_counter++;
 		}
 	}
@@ -122,7 +122,7 @@ size_t Peer::list_all_articles_from_news(article_container &articles, const std:
 size_t Peer::list_all_articles_from_news(article_container &articles) {
 	size_t article_counter = 0;
 	for (auto&& cat : articles_categories_) {
-			articles.insert(std::make_shared<Article>(cat.second->article));
+			articles.insert(&cat.second->article);
 			article_counter++;
 	}
 	return article_counter;
@@ -139,35 +139,35 @@ size_t Peer::list_all_articles_from_news(article_container &articles) {
  * @param news_id ID of newspaper to use. If zero, all newspapers will be used.
  * @return Number of articles listed. 
  */
-size_t Peer::list_all_articles_by_me(article_container &articles, const std::set<category_t> &categories, pk_t news_id) {
+size_t Peer::list_all_articles_by_me(std::set<Article*> &articles, const std::set<category_t> &categories, pk_t news_id) {
 	size_t article_counter = 0;
-	std::function<news_database::const_iterator()> news_functor;
-	AllTheNews al(news_.cbegin(), news_.cend());
+	std::function<news_database::iterator()> news_functor;
+	AllTheNews al(news_.begin(), news_.end());
 	TheSameNews ts;
 
-	news_database::const_iterator news;
+	news_database::iterator news;
 	if (news_id == 0) {
 		news_functor = al;
 	}
 	else {
 		news = news_.find(news_id);
-		if (news == news_.cend()) {
+		if (news == news_.end()) {
 			return 0;
 		}
 		ts.entry = news;
-		ts.end_iterator = news_.cend();
+		ts.end_iterator = news_.end();
 		news_functor = ts;
 	}
 
-	for (auto news_iterator = news_functor(); news_iterator != news_.cend(); news_iterator = news_functor()) {
+	for (auto news_iterator = news_functor(); news_iterator != news_.end(); news_iterator = news_functor()) {
 		/* iterate through one or all news */
 
-		auto i_end = news_iterator->second.get_const_iterator_database_end();
-		for (auto i = news_iterator->second.get_const_iterator_database(); i != i_end; i++) {
+		auto i_end = news_iterator->second.get_iterator_database_end();
+		for (auto i = news_iterator->second.get_iterator_database(); i != i_end; i++) {
 			if (!categories.empty()) {
 				for (auto &&category : categories) {
 					if ((i->second.author_id() == public_identifier_) && (categories.empty() || i->second.is_in_category(category))) {
-						articles.insert(std::make_shared<Article>(i->second));
+						articles.insert(&(i->second));
 						article_counter++;
 						break;
 					}
@@ -175,7 +175,7 @@ size_t Peer::list_all_articles_by_me(article_container &articles, const std::set
 			}
 			else {
 				if (i->second.author_id() == public_identifier_) {
-					articles.insert(std::make_shared<Article>(i->second));
+					articles.insert(&(i->second));
 					article_counter++;
 					std::cout << "added article" << std::endl;
 				}

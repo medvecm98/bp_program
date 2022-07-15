@@ -224,59 +224,6 @@ void CreateArticle(np2ps::Article* art, article_ptr article) {
 	}
 }
 
-/* Responses: */
-/**
- * @brief Converts article from internal representation to protocol buffer representation.
- */
-void CreateArticle(np2ps::Article* art, Article* article) {
-	art->set_author_id(article->author_id());
-	art->set_author_name(article->author_name());
-	art->set_news_id(article->news_id());
-	art->set_news_name(article->news_name());
-	art->set_main_hash(article->main_hash());
-	art->set_heading(article->heading());
- 
-	auto [hi, hie] = article->hashes();
-	for (; hi != hie; hi++) {
-		np2ps::HashWrapper hw;
-		hw.set_hash(hi->second.hash);
-		hw.set_level(hi->second.paragraph_level);
-
-		google::protobuf::MapPair<google::protobuf::int32, np2ps::HashWrapper> vt(hi->first, hw);
-		art->mutable_paragraph_hashes()->insert(vt);
-	}
-
-	art->set_length(article->length());
-	
-	auto [ci, cie] = article->categories();
-	for (; ci != cie; ci++) {
-		art->add_categories(*ci);
-	}
- 
-	auto [mi, mie] = article->margins();
-	pk_t actual_pk = 0; //User PK currently being processed
-	np2ps::Margins margin_group;
-	for (; mi != mie; mi++) {
-		if (actual_pk == 0) {
-			actual_pk = mi->first;
-		}
-
-		if (actual_pk != 0 && actual_pk != mi->first) {
-			google::protobuf::MapPair<google::protobuf::uint64, np2ps::Margins> vt(mi->first, margin_group);
-			art->mutable_margins()->insert(vt);
-			margin_group.clear_margins();
-			actual_pk = mi->first;
-		}
-
-		if (actual_pk == mi->first) {
-			auto mga = margin_group.add_margins();
-			mga->set_type(mi->second.type);
-			mga->set_content(mi->second.content);
-			mga->set_id(mi->second.id);
-		}
-	}
-}
-
 unique_ptr_message MFW::RespArticleDownloadFactory(unique_ptr_message&& msg, article_ptr article_header, std::string&& article) { 
 	auto header_ptr = msg->mutable_article_all()->mutable_header();
 	msg->set_msg_ctx(np2ps::RESPONSE);

@@ -285,9 +285,9 @@ private:
 	bool article_present_;
 };
 
-using article_ptr = std::shared_ptr<Article>;
+using article_ptr = Article*;
 using article_optional = std::optional<article_ptr>;
-using article_container = std::unordered_set<article_ptr>;
+using article_container = std::set<article_ptr>;
 using article_database_container = std::map<hash_t, Article>;
 
 /**

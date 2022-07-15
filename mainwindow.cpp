@@ -69,8 +69,8 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 	std::cout << "about to print article_list" << std::endl;
 	auto news_the_one  = ctx->p.get_news_db().at(newspaper_id);
 
-	auto news_articles_it = news_the_one.get_const_iterator_database();
-	auto news_atricles_it_end = news_the_one.get_const_iterator_database_end();
+	auto news_articles_it = news_the_one.get_iterator_database();
+	auto news_atricles_it_end = news_the_one.get_iterator_database_end();
 	
 	std::set<my_string> categories;
 
@@ -428,3 +428,83 @@ void MainWindow::on_pushButton_clicked()
 
 }
 
+
+void MainWindow::on_pushButton_2_clicked()
+{
+
+}
+
+
+void MainWindow::on_pushButton_view_margin_clicked()
+{
+
+	if (ui->treeWidget_newspaper->selectedItems().size() == 0) {
+		std::cout << "Please, select one item, thank you." << std::endl;
+		return;
+	}
+	else if (ui->treeWidget_newspaper->selectedItems().size() > 1) {
+		std::cout << "Please, select only one item, thank you." << std::endl;
+		return;
+	}
+	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr ||
+			 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) {
+		std::cout << "Please, select an article, thank you." << std::endl;
+		return;
+	}
+	else {
+		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
+		std::cout << "Viewing margin for article: " << article_selected_hash << std::endl;
+
+		auto article = ctx->p.find_article( article_selected_hash);
+
+		auto [mb, me] = article.value()->margins();
+
+		for (; mb != me; mb++) {
+			ui->plainTextEdit_margins->appendPlainText(QString::number(mb->first).append(':'));
+			ui->plainTextEdit_margins->appendPlainText(QString::fromStdString(mb->second.type).append(':'));
+			ui->plainTextEdit_margins->appendPlainText(QString::fromStdString(mb->second.content).append('\n'));
+		}
+	}
+}
+
+
+void MainWindow::on_pushButton_remove_margin_clicked()
+{
+
+}
+
+
+void MainWindow::on_pushButton_add_margin_clicked()
+{
+
+	if (ui->treeWidget_newspaper->selectedItems().size() == 0) {
+		std::cout << "Please, select one item, thank you." << std::endl;
+		return;
+	}
+	else if (ui->treeWidget_newspaper->selectedItems().size() > 1) {
+		std::cout << "Please, select only one item, thank you." << std::endl;
+		return;
+	}
+	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr ||
+			 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) {
+		std::cout << "Please, select an article, thank you." << std::endl;
+		return;
+	}
+	else {
+		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
+		std::cout << "Adding margin for article: " << article_selected_hash << std::endl;
+		auto article = ctx->p.find_article( article_selected_hash);
+		if (article.has_value()) {
+			emit add_margin(article.value());
+		}
+	}
+}
+
+void MainWindow::new_margin(std::string type, std::string contents) {
+	auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
+	std::cout << "Adding margin for article: " << article_selected_hash << std::endl;
+	auto article = ctx->p.find_article( article_selected_hash);
+	if (article.has_value()) {
+		article.value()->add_margin(ctx->p.get_public_key(), Margin(type, contents, ctx->p.get_public_key()));
+	}
+}

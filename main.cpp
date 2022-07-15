@@ -16,6 +16,7 @@
 #include "form.h"
 #include "add_newspaper.h"
 #include "categoriesform.h"
+#include "addmargin.h"
 
 
 #define ARTICLE_DIR "./articles"
@@ -63,6 +64,7 @@ int main(int argc, char *argv[]) {
 	Form* f = new Form();
 	add_newspaper* w_add_newspaper = new add_newspaper();
 	CategoriesForm* cf = new CategoriesForm();
+	AddMargin* am = new AddMargin();
 	
 
 	ProgramContext ctx;
@@ -82,6 +84,8 @@ int main(int argc, char *argv[]) {
 	QObject::connect(f, &Form::enable_add_newspaper, &w, &MainWindow::enable_add_news);
 	QObject::connect(f, &Form::disable_new_peer, &w, &MainWindow::disable_new_peer);
 	QObject::connect(f, &Form::created_newspaper, &w, &MainWindow::newspaper_created);
+	QObject::connect(&w, &MainWindow::add_margin, am, &AddMargin::show_this);
+	QObject::connect(am, &AddMargin::new_margin, &w, &MainWindow::new_margin);
 
 
 	QObject::connect(&w, &MainWindow::add_new_article, cf, &CategoriesForm::add_new_article);
@@ -94,6 +98,8 @@ int main(int argc, char *argv[]) {
 
 	cf->set_program_context(&ctx);
 	w.addForm("categories", cf);
+
+	am->set_program_context(&ctx);
 
 	ctx.p.get_networking()->get_network_interfaces();
 

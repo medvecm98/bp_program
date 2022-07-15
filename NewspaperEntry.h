@@ -5,7 +5,7 @@
 #include "Article.h"
 #include <optional>
 
-using database_iterator_t = article_database_container::const_iterator;
+using database_iterator_t = article_database_container::iterator;
 
 struct ArticleListWrapper {
 	std::set<my_string> categories;
@@ -30,6 +30,9 @@ public:
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
 	database_iterator_t get_const_iterator_database() const;
 	database_iterator_t get_const_iterator_database_end() const;
+	database_iterator_t get_iterator_database();
+	database_iterator_t get_iterator_database_end();
+
 	user_container_citer get_first_authority() const {
 		return _authorities.cbegin();
 	}
@@ -82,12 +85,12 @@ using news_database = std::unordered_map<pk_t, NewspaperEntry>;
  */
 struct TheSameNews {
 	TheSameNews() = default;
-	TheSameNews(news_database::const_iterator the_one, news_database::const_iterator end_i) :
+	TheSameNews(news_database::iterator the_one, news_database::iterator end_i) :
 		entry(the_one), end_iterator(end_i) {}
-	news_database::const_iterator entry;
-	news_database::const_iterator end_iterator;
+	news_database::iterator entry;
+	news_database::iterator end_iterator;
 	bool used = false;
-	news_database::const_iterator operator() () {
+	news_database::iterator operator() () {
 		if (!used) {
 			used = true;
 			return entry;
@@ -102,13 +105,13 @@ struct TheSameNews {
  * Functor, that covers all the various news companies.
  */
 struct AllTheNews {
-	explicit AllTheNews(news_database::const_iterator nd, news_database::const_iterator e) {
+	explicit AllTheNews(news_database::iterator nd, news_database::iterator e) {
 		data = nd;
 		enddata = e;
 	}
-	news_database::const_iterator data;
-	news_database::const_iterator enddata;
-	news_database::const_iterator operator() () {
+	news_database::iterator data;
+	news_database::iterator enddata;
+	news_database::iterator operator() () {
 		std::cout << "AllTheNews operator()" << std::endl;
 		if (data == enddata) {
 			return enddata;

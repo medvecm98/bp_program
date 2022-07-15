@@ -40,6 +40,7 @@ public slots:
 	void newspaper_identified(pk_t id, my_string newspaper_name, std::string newspaper_ip_domain);
 	void newspaper_created();
 	void got_network_interfaces(address_vec_ptr addresses_and_interfaces);
+	void new_margin(std::string type, std::string contents);
 
 private slots:
 	void on_pushButton_new_peer_released();
@@ -93,10 +94,20 @@ private slots:
 
 	void on_pushButton_clicked();
 
+	void on_pushButton_2_clicked();
+
+	void on_pushButton_view_margin_clicked();
+
+	void on_pushButton_remove_margin_clicked();
+
+	void on_pushButton_add_margin_clicked();
+
 signals:
 	void add_new_article(QString path);
 
 	void start_server(QHostAddress address);
+
+	void add_margin(article_ptr article);
 
 private:
 	void generate_article_list();

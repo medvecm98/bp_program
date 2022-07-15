@@ -19,13 +19,14 @@ std::optional<article_ptr> NewspaperEntry::find_article_header(hash_t article_ha
 	if (find_result == _articles.end()) {
 		return article_optional ();
 	}
-	return article_optional (std::make_shared<Article>(find_result->second));
+	return article_optional (&find_result->second);
 }
 
-database_iterator_t NewspaperEntry::get_const_iterator_database() const {
-	return _articles.cbegin();
+database_iterator_t NewspaperEntry::get_iterator_database() {
+	return _articles.begin();
 }
 
-database_iterator_t NewspaperEntry::get_const_iterator_database_end() const {
-	return _articles.cend();
+database_iterator_t NewspaperEntry::get_iterator_database_end() {
+	return _articles.end();
 }
+
