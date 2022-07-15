@@ -234,7 +234,7 @@ public:
 	void select_level(my_string& rv, level_t level);
 
 	void add_margin(pk_t pk, Margin&& margin) {
-		_margins.insert({pk, std::move(margin)});
+		_margins.emplace(pk, std::move(margin));
 	}
 
 	void remove_margin(margin_container::iterator what) {

@@ -194,7 +194,7 @@ public:
 	 * @param content Content of the margin.
 	 */
 	void add_margin(hash_t article_hash, my_string type, my_string content) {
-		auto article = find_article(article_hash);
+		/*auto article = find_article(article_hash);
 		if (article.has_value()) {
 			auto author = article.value()->author_id();
 			std::vector<Margin> vm = { Margin(type, content) };
@@ -212,7 +212,10 @@ public:
 		}
 		else {
 			//TODO: log error
-		}
+		}*/
+
+		article_optional article = find_article(article_hash);
+		article.value()->add_margin(public_identifier_, Margin(type, content));
 	}
 
 	/**
@@ -327,6 +330,8 @@ public:
 			//TODO: log error
 		}
 	}
+
+	void create_margin_request(pk_t, hash_t);
 
 	/**
 	 * @brief Public identifier getter.

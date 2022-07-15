@@ -70,19 +70,27 @@ unique_ptr_message MFW::update_margin_factory(pk_t from, pk_t to, hash_t article
 
 	msg->mutable_update_margin()->set_article_pk(article_hash);
 
-	for (auto&& margin : margins) {
-		auto marg_ptr = msg->mutable_update_margin()->mutable_margin()->add_margins();
-		marg_ptr->set_type(margin.type);
-		marg_ptr->set_content(margin.content);
+	if (margins.size() > 0) {
+		for (auto&& margin : margins) {
+			auto marg_ptr = msg->mutable_update_margin()->mutable_margin()->add_margins();
+			marg_ptr->set_type(margin.type);
+			marg_ptr->set_content(margin.content);
+		}
 	}
+
+	return std::move(msg);
+}
+
+unique_ptr_message MFW::UpdateMarginFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin) {
+	auto msg = update_margin_factory(from, to, article_hash, margin);
+
+	msg->mutable_update_margin()->set_m_action(np2ps::ADD);
 
 	return std::move(msg);
 }
 
 unique_ptr_message MFW::UpdateMarginAddFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin) {
 	auto msg = update_margin_factory(from, to, article_hash, margin);
-
-	msg->mutable_update_margin()->set_m_action(np2ps::ADD);
 
 	return std::move(msg);
 }

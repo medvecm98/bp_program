@@ -91,12 +91,16 @@ private slots:
 
 	void on_pushButton_addJournalist_clicked();
 
+	void on_pushButton_clicked();
+
 signals:
 	void add_new_article(QString path);
 
 	void start_server(QHostAddress address);
 
 private:
+	void generate_article_list();
+
 	Ui::MainWindow *ui;
 	ProgramContext* ctx;
 	QMap<QString, QWidget*> subWindows;

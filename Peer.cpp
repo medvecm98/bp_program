@@ -258,6 +258,21 @@ optional_author_peers Peer::find_article_in_article_categories_db(hash_t article
 	return {};
 }
 
+void Peer::create_margin_request(pk_t to, hash_t article_hash) {
+	std::vector<Margin> vm;
+
+	networking_->enroll_message_to_be_sent(
+		MFW::SetMessageContextRequest(
+			MFW::UpdateMarginFactory(
+				public_identifier_,
+				to,
+				article_hash,
+				vm
+			)
+		)
+	);
+}
+
 /**
  * @brief Universal method to handle the message from the top of the message queue.
  * 
@@ -545,44 +560,24 @@ void Peer::handle_requests(unique_ptr_message message) {
 	}
 	else if (type == np2ps::UPDATE_MARGIN) {
 		auto article = find_article(message->update_margin().article_pk());
-		if (article.has_value() && (article.value()->author_id() == public_identifier_)) {
-			if (message->update_margin().m_action() == np2ps::ADD) {
-				for (int i = 0; i < message->update_margin().margin().margins_size(); i++) {
-					article.value()->add_margin(message->from(), Margin(
-						message->update_margin().margin().margins(i).type(),
-						message->update_margin().margin().margins(i).content(),
-						message->update_margin().margin().margins(i).id()
-					));
-				}
-			}
-			else if (message->update_margin().m_action() == np2ps::REMOVE) {
-				auto [bi, bie] = article.value()->get_range_iterators(message->from());
-				std::vector<decltype(bi)> margins_to_remove;
-				for (int j = 0; j < message->update_margin().margin().margins_size(); j++) {
-					auto proto_margin = message->update_margin().margin().margins(j);
-					for (auto i = bi; i != bie; i++) {
-						if (bi->second.id == proto_margin.id()) {
-							margins_to_remove.push_back(i);
-						}
-					}
-				}
-				for (auto&& mtr : margins_to_remove) {
-					article.value()->remove_margin(mtr);
-				}
-			}
-			else if (message->update_margin().m_action() == np2ps::UPDATE) {
-				auto [bi, bie] = article.value()->get_range_iterators(message->from());
-				for (int j = 0; j < message->update_margin().margin().margins_size(); j++) {
-					auto proto_margin = message->update_margin().margin().margins(j);
-					for (auto i = bi; i != bie; i++) {
-						if (bi->second.id == proto_margin.id()) {
-							bi->second.type += ' ' + proto_margin.type();
-							bi->second.content += ' ' + proto_margin.content();
-						}
-					}
-				}
-			}
+
+		auto [margin_begin, margin_end] = article.value()->get_range_iterators(public_identifier_);
+
+		std::vector<Margin> vm;
+		for (; margin_begin != margin_end; margin_begin++) {
+			vm.push_back(margin_begin->second);
 		}
+
+		networking_->enroll_message_to_be_sent(
+			MFW::SetMessageContextResponse(
+				MFW::UpdateMarginFactory(
+					public_identifier_,
+					message->from(),
+					message->update_margin().article_pk(),
+					vm
+				)
+			)
+		);
 	}
 	else if (type == np2ps::UPDATE_ARTICLE) {
 		//TODO: send unsupported error
@@ -743,6 +738,16 @@ void Peer::handle_responses(unique_ptr_message message) {
 	}
 	else if (type == np2ps::SYMMETRIC_KEY) {
 		emit symmetric_key_exchanged(message->from());
+	}
+	else if (type == np2ps::UPDATE_MARGIN) {
+		auto article = find_article(message->update_margin().article_pk());
+		for (int i = 0; i < message->update_margin().margin().margins_size(); i++) {
+			article.value()->add_margin(message->from(), Margin(
+				message->update_margin().margin().margins(i).type(),
+				message->update_margin().margin().margins(i).content(),
+				message->from()
+			));
+		}
 	}
 }
 

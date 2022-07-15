@@ -35,18 +35,34 @@ void MainWindow::on_pushButton_print_peer_released()
 void MainWindow::newspaper_added_to_db(pk_t news_id) {
 	auto name = ctx->p.get_news_db()[news_id].get_name().c_str();
 	auto id = ctx->p.get_news_db()[news_id].get_id();
-	ui->treeWidget_newspaper->addTopLevelItem(
+	generate_article_list();
+	/*ui->treeWidget_newspaper->addTopLevelItem(
 				new QTreeWidgetItem(QStringList({
 								QString(name),
 								"Newspaper",
 								QString::number(id)
 							}))
-	);
+	);*/
 }
 
 void MainWindow::on_pushButton_add_news_released()
 {
 	subWindows["add_news"]->show();
+}
+
+void MainWindow::generate_article_list() {
+	ui->treeWidget_newspaper->clear();
+	for (auto&& news : ctx->p.get_news_db()) {
+		ui->treeWidget_newspaper->addTopLevelItem(
+				new QTreeWidgetItem(QStringList({
+								QString::fromStdString(news.second.get_name()),
+								"Newspaper",
+								QString::number(news.second.get_id())
+							}))
+		);
+		article_list_received(news.second.get_id());
+	}
+	
 }
 
 void MainWindow::article_list_received(pk_t newspaper_id) {
@@ -77,6 +93,17 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 		}
 	}
 
+	/*for (auto&& news : ctx->p.get_news_db()) {
+		ui->treeWidget_newspaper->addTopLevelItem(
+				new QTreeWidgetItem(QStringList({
+								QString::fromStdString(news.second.get_name()),
+								"Newspaper",
+								QString::number(news.second.get_id())
+							}))
+		);
+	}*/
+
+
 	bool category_found = false;
 	if (requseted_newspaper) {
 		for (auto&& category : categories) {
@@ -91,7 +118,7 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 								article_found = true;
 							}
 						}
-						if (!article_found) {
+						if (!article_found && article->second.is_in_category(category)) {
 							requseted_newspaper->child(i)->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())})));
 						}
 						article_found = false;
@@ -103,7 +130,8 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 				requseted_newspaper->addChild( new_cat_tree);
 				auto article = news_articles_it;
 					for (; article != news_atricles_it_end; article++) {
-					new_cat_tree->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())})));
+						if (article->second.is_in_category(category))
+							new_cat_tree->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())})));
 				}
 			}
 			category_found = false;
@@ -120,19 +148,8 @@ void MainWindow::on_pushButton_add_article_released()
 			emit add_new_article(fileName);
 		}
 	}
-	/*Article a;
-		a.initialize_article(std::vector<my_string>(), ui->lineEdit_article_path->text().trimmed().toStdString(), ctx->p, ctx->p.get_news_db().at(news_id));
-		if (news_id == ctx->p.get_public_key()) {
-			ui->listWidget_articles->addItem(QString(a.heading().c_str()).append(':').append(QString::number(a.main_hash())));
-			ctx->p.enroll_new_article(std::move(a), false);
-		}
-		else {
-			ctx->p.upload_external_article(a);
-		}
-	}
-	else {
-		ui->textEdit_article->setText(QString("Invalid article path"));
-	}*/
+
+	//article_list_received(ctx->p.get_my_news_id());
 }
 
 void MainWindow::on_lineEdit_article_path_textEdited(const QString &arg1)
@@ -334,10 +351,12 @@ void MainWindow::on_pushButton_delete_article_clicked()
 		auto h = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
 		pk_t news_id;
 		if (ctx->p.remove_article(h, news_id)) {
-			qDeleteAll(ui->treeWidget_newspaper->selectedItems());
+			//qDeleteAll(ui->treeWidget_newspaper->selectedItems());
 			if (ctx->p.get_public_key() != news_id) {
 				ctx->p.removed_external_article(h, news_id);
 			}
+			ui->treeWidget_newspaper->clear();
+			generate_article_list();
 		}
 		else {
 			ui->textEdit_article->setText("Invalid article hash or article was not found in database.");
@@ -346,6 +365,8 @@ void MainWindow::on_pushButton_delete_article_clicked()
 	else {
 		ui->textEdit_article->setText("Please, select an article.");
 	}
+
+	
 }
 
 
@@ -364,13 +385,14 @@ void MainWindow::newspaper_created() {
 	//ui->comboBox_newspapers->addItem(QString::fromStdString(ctx->p.get_my_news_name()).append(':').append(QString::number(ctx->p.get_my_news_id())));
 	//ui->comboBox_newspapers->setEnabled(true);
 
-	ui->treeWidget_newspaper->addTopLevelItem(
+	/*ui->treeWidget_newspaper->addTopLevelItem(
 				new QTreeWidgetItem(QStringList({
 								QString::fromStdString(ctx->p.get_my_news_name()),
 								"Newspaper",
 								QString::number(ctx->p.get_my_news_id())
 							}))
-	);
+	);*/
+	generate_article_list();
 }
 
 void MainWindow::got_network_interfaces(address_vec_ptr addresses_and_interfaces) {
@@ -379,3 +401,29 @@ void MainWindow::got_network_interfaces(address_vec_ptr addresses_and_interfaces
 		ui->comboBox_interfacs->addItem(QString("Interface: ").append(ai.first).append(", address: ").append(ai.second.toString()));
 	}
 }
+
+void MainWindow::on_pushButton_clicked()
+{
+
+
+	if (ui->treeWidget_newspaper->selectedItems().size() == 0) {
+		std::cout << "Please, select one item, thank you." << std::endl;
+		return;
+	}
+	else if (ui->treeWidget_newspaper->selectedItems().size() > 1) {
+		std::cout << "Please, select only one item, thank you." << std::endl;
+		return;
+	}
+	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr ||
+			 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) {
+		std::cout << "Please, select an article, thank you." << std::endl;
+		return;
+	}
+	else {
+		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
+		std::uint64_t margin_autor = ui->lineEdit_margin->text().toULongLong();
+		std::cout << article_selected_hash << ":" << margin_autor << std::endl;
+	}
+
+}
+

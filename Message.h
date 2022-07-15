@@ -76,6 +76,7 @@ public:
 	static unique_ptr_message UpdateMarginAddFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin);
 	static unique_ptr_message UpdateMarginRemoveFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin);
 	static unique_ptr_message UpdateMarginUpdateFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin);
+	static unique_ptr_message UpdateMarginFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin);
 	static unique_ptr_message UpdateArticleFactory(pk_t from, pk_t to, hash_t article_hash);
 	static unique_ptr_message CredentialsFactory(pk_t from, pk_t to);
 	static unique_ptr_message PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::PublicKey& key);
