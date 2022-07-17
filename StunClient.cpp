@@ -248,6 +248,7 @@ void StunClient::create_request_identify_empty(stun_header_ptr& stun_message) {
 }
 
 void StunClient::process_response_success_identify(stun_header_ptr stun_message) {
+    std::cout << "Processing success response identify" << std::endl;
     PublicIdentifierAttribute* pia;
     XorRelayedAddressAttribute* xraa;
     RelayedPublicIdentifierAttribute* ria;

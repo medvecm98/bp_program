@@ -234,14 +234,6 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
             }
         }
 
-        if (!request_transport_found) {
-            //TODO: error 400 (bad request)
-        }
-
-        if (protocol != IANA_TCP && protocol != IANA_UDP) {
-            //TODO: error 442 (unsupported transport protocol)
-        }
-
         /*auto address = networking_->ip_map_.get_ip4(public_identifier);
         auto port = networking_->ip_map_.get_port(public_identifier);
         auto rsa_public = networking_->ip_map_.get_rsa_public(public_identifier);*/

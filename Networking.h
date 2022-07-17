@@ -1,11 +1,6 @@
 #ifndef PROGRAM_NETWORKING_H
 #define PROGRAM_NETWORKING_H
 
-/*
-class Peer;
-#include "Peer.h"
-*/
-
 #include "IpMap.h"
 #include "Message.h"
 #include <boost/asio.hpp>

@@ -44,11 +44,8 @@
 #define WHITESPACE " \t\r\n\v\f"
 
 enum article_format {
-	NoFormat = -1,
 	PlainText = 0,
 	Markdown = 1,
-	OrgMode = 2,
-	Tex = 3,
 	Html = 4
 };
 
@@ -175,6 +172,20 @@ public:
 	{
 
 		_path_to_article_file = file_path;
+
+		{
+			QString qpath = QString::fromStdString(_path_to_article_file);
+			
+			if (qpath.split('.').last().toLower() == "md") {
+				_format = article_format::Markdown;
+			}
+			else if (qpath.split('.').last().toLower() == "html") {
+				_format = article_format::Html;
+			}
+			else {
+				_format = article_format::PlainText;
+			}
+		}
 
 		bool at_least_one_category = false;
 		for (auto&& i : categories) {

@@ -84,6 +84,22 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 		article_present_ = false;
 	}
 
+	switch (protobuf_article.type())
+	{
+	case 0:
+		_format = article_format::PlainText;
+		break;
+	case 1:
+		_format = article_format::Markdown;
+		break;
+	case 4:
+		_format = article_format::Html;
+		break;
+	
+	default:
+		break;
+	}
+
 }
 
 Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_article, ""){}
@@ -94,43 +110,21 @@ Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_arti
  */
 void Article::calculate_hashes(hashes_container& hashes) {
 	std::fstream article_file(_path_to_article_file);
-	std::string first_line;
+	std::string line;
+	std::stringstream article_builder;
+
 	if (article_file.is_open())
-		std::cout << "I'm open" << std::endl;
+		std::cout << "Opened article file for " << _path_to_article_file << std::endl;
 
-	my_string line, paragraph;
-	int h_counter = 0;
-	std::regex r("[ ]*#[ ]+"); //heading (in markdown) regex
+	if (std::getline(article_file, line)) {
+		article_builder << line;
+		_heading = line;
+	}
+
 	while (std::getline(article_file, line)) {
-		if (first_line.empty() && !line.empty()) {
-			first_line = line;
-		}
-		if (_heading.empty()) {
-			std::smatch m;
-			std::regex_search(line, m, r);
-			while (!m.ready()) {}
-			if (!m.empty()) {
-				//_heading = StringHelpers::Trim(line.substr(m.position(1) + m[1].length()));
-				_heading = line;
-			}
-		}
-
-		if (line.empty() && !paragraph.empty()) {
-			auto new_hash = hashes.insert(hashes_container::value_type(h_counter++, HashWrapper(std::hash<std::string>{}(paragraph), 0)));
-			_length += paragraph.length();
-			_main_hash += new_hash.first->second.hash;
-		}
-		else if (!line.empty()) {
-			paragraph += StringHelpers::Trim(line) + ' ';
-		}
+		article_builder << line;
 	}
-	if (line.empty() && !paragraph.empty()) {
-		auto new_hash = hashes.insert(hashes_container::value_type(h_counter++, HashWrapper(std::hash<std::string>{}(paragraph), 0)));
-		_length += paragraph.length();
-		_main_hash += new_hash.first->second.hash;
-	}
-	if (_heading.empty())
-		_heading = first_line;
+	_main_hash = std::hash<std::string>{}(article_builder.str());
 }
 
 void Article::load_information() {

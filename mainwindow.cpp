@@ -239,12 +239,19 @@ void MainWindow::on_pushButton_external_article_released()
 				file.setFileName(path);
 				file.open(QIODevice::ReadOnly);
 				QTextStream text_stream(&file);
-				QString line;
+				QString line, contents;
 				ui->textEdit_article->clear();
 				while (!text_stream.atEnd()) {
 					line = text_stream.readLine();
-					ui->textEdit_article->append(line);
+					contents.append(line);
 				}
+				auto file_extension = path.split('.').last();
+				if (file_extension.toLower() == "md")
+					ui->textEdit_article->setMarkdown(contents);
+				else if (file_extension.toLower() == "html")
+					ui->textEdit_article->setHtml(contents);
+				else 
+					ui->textEdit_article->setPlainText(contents);
 				file.close();
 			}
 		}

@@ -28,8 +28,6 @@ public:
 	void add_article(hash_t article_hash, Article&& article);
 	bool remove_article(hash_t article_hash);
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
-	database_iterator_t get_const_iterator_database() const;
-	database_iterator_t get_const_iterator_database_end() const;
 	database_iterator_t get_iterator_database();
 	database_iterator_t get_iterator_database_end();
 

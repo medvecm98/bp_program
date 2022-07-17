@@ -182,6 +182,7 @@ void CreateArticle(np2ps::Article* art, article_ptr article) {
 	art->set_news_name(article->news_name());
 	art->set_main_hash(article->main_hash());
 	art->set_heading(article->heading());
+	art->set_type(article->get_format());
  
 	auto [hi, hie] = article->hashes();
 	for (; hi != hie; hi++) {
@@ -198,29 +199,6 @@ void CreateArticle(np2ps::Article* art, article_ptr article) {
 	auto [ci, cie] = article->categories();
 	for (; ci != cie; ci++) {
 		art->add_categories(*ci);
-	}
- 
-	auto [mi, mie] = article->margins();
-	pk_t actual_pk = 0; //User PK currently being processed
-	np2ps::Margins margin_group;
-	for (; mi != mie; mi++) {
-		if (actual_pk == 0) {
-			actual_pk = mi->first;
-		}
-
-		if (actual_pk != 0 && actual_pk != mi->first) {
-			google::protobuf::MapPair<google::protobuf::uint64, np2ps::Margins> vt(mi->first, margin_group);
-			art->mutable_margins()->insert(vt);
-			margin_group.clear_margins();
-			actual_pk = mi->first;
-		}
-
-		if (actual_pk == mi->first) {
-			auto mga = margin_group.add_margins();
-			mga->set_type(mi->second.type);
-			mga->set_content(mi->second.content);
-			mga->set_id(mi->second.id);
-		}
 	}
 }
 

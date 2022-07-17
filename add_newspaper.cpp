@@ -14,19 +14,13 @@ add_newspaper::~add_newspaper()
 }
 
 void add_newspaper::clear_all_lineEdit() {
-	ui->lineEdit_public_id->clear();
 	ui->lineEdit_name->clear();
 	ui->lineEdit_ip->clear();
 }
 
 void add_newspaper::on_buttonBox_accepted() {
-	if (ui->lineEdit_public_id->text().trimmed().isEmpty()) {
-		ctx->p.identify_newspaper(QHostAddress(ui->lineEdit_ip->text()), ui->lineEdit_name->text().toStdString());
-	}
-	else {
-		ctx->p.add_new_newspaper(ui->lineEdit_public_id->text().toULongLong(), ui->lineEdit_name->text().toStdString(),
-								 ui->lineEdit_ip->text().toStdString());
-	}
+	ctx->p.identify_newspaper(QHostAddress(ui->lineEdit_ip->text()), ui->lineEdit_name->text().toStdString());
+
 	clear_all_lineEdit();
 	this->hide();
 }

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Newspaper P2P sharing</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout_9">
@@ -154,13 +154,6 @@
              <widget class="QPushButton" name="pushButton_view_margin">
               <property name="text">
                <string>View Margin</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButton_remove_margin">
-              <property name="text">
-               <string>Remove margin</string>
               </property>
              </widget>
             </item>
