@@ -244,6 +244,7 @@ void MainWindow::on_pushButton_external_article_released()
 				while (!text_stream.atEnd()) {
 					line = text_stream.readLine();
 					contents.append(line);
+					contents.append('\n');
 				}
 				auto file_extension = path.split('.').last();
 				if (file_extension.toLower() == "md")
