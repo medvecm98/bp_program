@@ -305,9 +305,50 @@ void MainWindow::on_lineEdit_article_path_textChanged(const QString &arg1)
 		ui->pushButton_add_article->setEnabled(true);
 }
 
+void MainWindow::set_article_related_buttons(bool state) {
+	ui->pushButton_add_margin->setEnabled(state);
+	ui->pushButton_view_margin->setEnabled(state);
+	ui->pushButton_external_article->setEnabled(state);
+	ui->pushButton_delete_article->setEnabled(state);
+	ui->pushButton->setEnabled(state);
+}
+
+void MainWindow::set_newspaper_related_buttons(bool state) {
+	ui->pushButton_article_list->setEnabled(state);
+}
+
+void MainWindow::check_selected_item() {
+	check_item(ui->treeWidget_newspaper->selectedItems()[0]);
+}
+
+void MainWindow::check_item(QTreeWidgetItem* item) {
+	if (item->text(1) == "Article") {
+		if (ctx->p.get_downloading_articles().find(item->text(2).toULongLong()) != ctx->p.get_downloading_articles().end()) {
+			set_article_related_buttons(false);
+		}
+		else {
+			set_article_related_buttons(true);
+		}
+		set_newspaper_related_buttons(false);
+	}
+	else if (item->text(1) == "Newspaper") {
+		if (ctx->p.get_getting_article_list().find(item->text(2).toULongLong()) != ctx->p.get_getting_article_list().end()) {
+			set_newspaper_related_buttons(false);
+		}
+		else {
+			set_newspaper_related_buttons(true);
+		}
+		set_article_related_buttons(true);
+	}
+	else {
+		set_article_related_buttons(false);
+		set_newspaper_related_buttons(false);
+	}
+}
+
 void MainWindow::on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int column)
 {
-
+	check_item(item);
 }
 
 void MainWindow::on_listWidget_articles_itemClicked(QListWidgetItem *item)

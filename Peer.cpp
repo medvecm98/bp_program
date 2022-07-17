@@ -652,6 +652,8 @@ void Peer::handle_responses(unique_ptr_message message) {
 				Article recv_article(message->article_all().header(), message->article_all().article_actual());
 				enroll_new_article(recv_article, false);
 			}
+			downloading_articles.erase(recv_article_hash);
+			emit check_selected_item();
 		}
 		else {
 			//TODO: log error
@@ -674,6 +676,7 @@ void Peer::handle_responses(unique_ptr_message message) {
 			}
 
 			std::cout << "Emit new article list" << std::endl;
+			emit check_selected_item();
 			emit new_article_list(list_news_id);
 		}
 		else {
@@ -755,6 +758,8 @@ void Peer::allocate_on_stun_server(pk_t target) {
  * @param article_hash Article hash of desired article.
  */
 void Peer::generate_article_all_message(pk_t destination, hash_t article_hash) {
+	downloading_articles.insert(article_hash);
+	emit check_selected_item();
 	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextRequest(
 			MFW::ArticleDownloadFactory(

@@ -153,6 +153,8 @@ public:
 	 * @param destination ID of newspaper which article list we want.
 	 */
 	void generate_article_list(pk_t destination) {
+		getting_article_list.insert(destination);
+		emit check_selected_item();
 		networking_->enroll_message_to_be_sent(
 			MFW::ReqArticleListFactory(
 				MFW::ArticleListFactory(
@@ -444,6 +446,14 @@ public:
 		return networking_.get();
 	}
 
+	std::unordered_set<hash_t>& get_downloading_articles() {
+		return downloading_articles;
+	}
+
+	std::unordered_set<hash_t>& get_getting_article_list() {
+		return getting_article_list;
+	}
+
 public slots:
 	void handle_message(unique_ptr_message message);
 
@@ -498,7 +508,7 @@ signals:
 	 */
 	void symmetric_key_exchanged(pk_t other_peer);
 
-
+	void check_selected_item();
 
 private:
 	//reader part
@@ -525,6 +535,8 @@ private:
 	pk_t newspaper_id_; //public identifier of my newspaper
 	user_container authorities_; //list of authorities
 	user_container journalists_; //list of journalists
+	std::unordered_set<hash_t> downloading_articles;
+	std::unordered_set<pk_t> getting_article_list;
 
 	article_optional find_article_in_database(hash_t article_hash);
 };

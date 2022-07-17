@@ -41,6 +41,7 @@ public slots:
 	void newspaper_created();
 	void got_network_interfaces(address_vec_ptr addresses_and_interfaces);
 	void new_margin(std::string type, std::string contents);
+	void check_selected_item();
 
 private slots:
 	void on_pushButton_new_peer_released();
@@ -110,7 +111,10 @@ signals:
 	void add_margin(article_ptr article);
 
 private:
+	void check_item(QTreeWidgetItem* item);
 	void generate_article_list();
+	void set_article_related_buttons(bool state);
+	void set_newspaper_related_buttons(bool state);
 
 	Ui::MainWindow *ui;
 	ProgramContext* ctx;

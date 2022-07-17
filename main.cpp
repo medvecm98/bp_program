@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 	QObject::connect(ctx.p.get_networking(), &Networking::got_network_interfaces, &w, &MainWindow::got_network_interfaces);
 	QObject::connect(&w, &MainWindow::start_server, ctx.p.get_networking()->get_peer_receiver(), &PeerReceiver::start_server);
 	QObject::connect(&w, &MainWindow::start_server, ctx.p.get_networking()->get_stun_server(), &StunServer::start_server);
-
+	QObject::connect(&ctx.p, &Peer::check_selected_item, &w, &MainWindow::check_selected_item);
 	QObject::connect(f, &Form::enable_print_peer, &w, &MainWindow::enable_print_peer);
 	QObject::connect(f, &Form::enable_add_article, &w, &MainWindow::enable_add_article);
 	QObject::connect(f, &Form::enable_add_newspaper, &w, &MainWindow::enable_add_news);
