@@ -643,28 +643,15 @@ void Peer::handle_responses(unique_ptr_message message) {
 	if (type == np2ps::ARTICLE_ALL) {
 		if (message->has_article_all() && message->article_all().has_header() && message->article_all().has_article_actual()) {
 			hash_t recv_article_hash = message->article_all().article_hash();
-			Article recv_article(message->article_all().header(), message->article_all().article_actual());
-			enroll_new_article(recv_article, false);
-			/*if (news_.find(recv_article.news_id()) == news_.end()) {
-				//TODO: log error
+			auto article_opt = find_article(recv_article_hash);
+
+			if (article_opt.has_value()) {
+				article_opt.value()->set_path(message->article_all().article_actual());
 			}
-			auto& news_entry = news_[recv_article.news_id()];
-			news_entry.add_article(recv_article_hash, std::move(recv_article));*/
-
-			/*if (message->from() != message->article_all().header().news_id()) {
-				std::cout << "Sending article data change download" << std::endl;
-				networking_->enroll_message_to_be_sent(
-					MFW::SetMessageContextRequest(
-						MFW::ArticleDataChangeFactory(
-							public_identifier_,
-							message->article_all().header().news_id(),
-							message->article_all().article_hash(),
-							true
-						)
-					)
-				);
-			}*/
-
+			else {
+				Article recv_article(message->article_all().header(), message->article_all().article_actual());
+				enroll_new_article(recv_article, false);
+			}
 		}
 		else {
 			//TODO: log error

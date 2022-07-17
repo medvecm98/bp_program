@@ -55,10 +55,57 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 
 	_notes = "";
 
+	switch (protobuf_article.type())
+	{
+	case 0:
+		_format = article_format::PlainText;
+		break;
+	case 1:
+		_format = article_format::Markdown;
+		break;
+	case 4:
+		_format = article_format::Html;
+		break;
+	
+	default:
+		break;
+	}
+
 	if (!article_actual.empty()) 
 	{
-		article_present_ = true;
-		QString file_name = QString::fromStdString(_heading).replace(' ', '_').append('-').append(QString::number(_main_hash)).append(".md");
+		set_path(article_actual);
+	}
+	else {
+		article_present_ = false;
+	}
+
+	
+
+}
+
+Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_article, ""){}
+
+void Article::set_path(const std::string& article_actual) {
+	article_present_ = true;
+		QString file_name = QString::fromStdString(_heading).replace(' ', '_').append('-').append(QString::number(_main_hash));
+
+		switch (_format)
+		{
+		case article_format::PlainText:
+			file_name.append(".txt");
+			break;
+		case article_format::Markdown:
+			file_name.append(".md");
+			break;
+		case article_format::Html:
+			file_name.append(".html");
+			break;
+		
+		default:
+			file_name.append(".txt");
+			break;
+		}
+
 		QFile file;
 
 		QString dir_path, root_path;
@@ -79,30 +126,7 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 		qts << QString::fromStdString(article_actual);
 		file.close();
 		_path_to_article_file = file_name.toStdString();
-	}
-	else {
-		article_present_ = false;
-	}
-
-	switch (protobuf_article.type())
-	{
-	case 0:
-		_format = article_format::PlainText;
-		break;
-	case 1:
-		_format = article_format::Markdown;
-		break;
-	case 4:
-		_format = article_format::Html;
-		break;
-	
-	default:
-		break;
-	}
-
 }
-
-Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_article, ""){}
 
 /**
  * Calculated hashes for various paragraphs. Will also fill in heading_ member.

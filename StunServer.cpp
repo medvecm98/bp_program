@@ -123,9 +123,13 @@ void StunServer::send_stun_message(QTcpSocket* socket , stun_header_ptr stun_mes
 
 void StunServer::process_request_identify(stun_header_ptr message_orig, stun_header_ptr message_new) {
     PublicIdentifierAttribute* pia = NULL;
+    XorRelayedAddressAttribute* xraa = NULL;
     for (auto&& attr : message_orig->attributes) {
         if (attr->attribute_type == StunAttributeEnum::public_identifier) {
             pia = (PublicIdentifierAttribute*)attr.get();
+        }
+        else if (attr->attribute_type == StunAttributeEnum::xor_relayed_address) {
+            xraa = (XorRelayedAddressAttribute*)attr.get();
         }
     }
 
@@ -159,7 +163,7 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
     }
     else {
         std::cout << "Request for my pid" << std::endl;
-        create_response_success_identify(message_orig, message_new, networking_->get_peer_public_id(), networking_->ip_map_.my_ip.ipv4, PORT, networking_->ip_map_.my_ip.key_pair.first.value());
+        create_response_success_identify(message_orig, message_new, networking_->get_peer_public_id(), QHostAddress(xraa->get_address()), PORT, networking_->ip_map_.my_ip.key_pair.first.value());
     }
 }
 

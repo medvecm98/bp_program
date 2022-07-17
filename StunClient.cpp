@@ -247,6 +247,18 @@ void StunClient::create_request_identify_empty(stun_header_ptr& stun_message) {
     stun_message->generate_tid(rng);
 }
 
+void StunClient::create_request_identify_address(stun_header_ptr& stun_message, QHostAddress address) {
+    stun_message->stun_class = StunClassEnum::request;
+    stun_message->stun_method = StunMethodEnum::identify;
+
+    auto xmaa = std::make_shared<XorRelayedAddressAttribute>();
+    xmaa->initialize(stun_message.get(), STUN_IPV4, address, 14128);
+    stun_message->append_attribute(xmaa);
+
+    stun_message->generate_tid(rng);
+}
+
+
 void StunClient::process_response_success_identify(stun_header_ptr stun_message) {
     std::cout << "Processing success response identify" << std::endl;
     PublicIdentifierAttribute* pia;
@@ -412,7 +424,7 @@ void StunClient::identify(pk_t who) {
 
 void StunClient::identify(QHostAddress& address) {
     auto msg = std::make_shared<StunMessageHeader>();
-    create_request_identify_empty(msg);
+    create_request_identify_address(msg, address);
     send_stun_message_transport_address(msg, address, STUN_PORT);
 }
 

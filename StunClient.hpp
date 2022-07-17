@@ -57,6 +57,7 @@ private:
 
     void create_request_identify(stun_header_ptr& stun_message, pk_t who);
     void create_request_identify_empty(stun_header_ptr& stun_message);
+    void create_request_identify_address(stun_header_ptr& stun_message, QHostAddress address);
     void create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id);
 
     void process_response_success_identify(stun_header_ptr stun_message);

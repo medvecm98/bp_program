@@ -175,7 +175,7 @@ public:
 
 		{
 			QString qpath = QString::fromStdString(_path_to_article_file);
-			
+
 			if (qpath.split('.').last().toLower() == "md") {
 				_format = article_format::Markdown;
 			}
@@ -255,6 +255,8 @@ public:
 	std::pair<margin_container::iterator, margin_container::iterator> get_range_iterators(pk_t pk) {
 		return _margins.equal_range(pk);
 	}
+
+	void set_path(const std::string& article_actual);
 
 	/**
 	 * Serialize using boost archive.

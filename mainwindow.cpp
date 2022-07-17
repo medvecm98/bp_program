@@ -246,13 +246,19 @@ void MainWindow::on_pushButton_external_article_released()
 					contents.append(line);
 					contents.append('\n');
 				}
-				auto file_extension = path.split('.').last();
-				if (file_extension.toLower() == "md")
+				switch (present_article.value()->get_format())
+				{
+				case article_format::Markdown:
 					ui->textEdit_article->setMarkdown(contents);
-				else if (file_extension.toLower() == "html")
+					break;
+				case article_format::Html:
 					ui->textEdit_article->setHtml(contents);
-				else 
+					break;
+
+				default:
 					ui->textEdit_article->setPlainText(contents);
+					break;
+				}
 				file.close();
 			}
 		}
