@@ -3,7 +3,6 @@
 
 #include "IpMap.h"
 #include "Message.h"
-#include <boost/asio.hpp>
 #include <queue>
 #include <memory>
 #include "protobuf_source/messages.pb.h"
@@ -26,7 +25,6 @@
 #include <QtNetwork/QNetworkInterface>
 #include <QtCore>
 
-using tcp = boost::asio::ip::tcp;
 using reader_database = std::unordered_multimap<hash_t, PeerInfo*>;
 using MFW = MessageFactoryWrapper;
 using msg_queue = std::queue< unique_ptr_message>;
@@ -279,10 +277,6 @@ private:
 
 	std::shared_ptr<StunClient> stun_client;
 	std::shared_ptr<StunServer> stun_server;
-
-	//boost::asio necessities
-	boost::asio::io_context io_ctx;
-
 };
 
 #endif //PROGRAM_NETWORKING_H
