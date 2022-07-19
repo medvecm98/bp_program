@@ -209,6 +209,8 @@ unique_ptr_message MFW::RespArticleDownloadFactory(unique_ptr_message&& msg, art
 	CreateArticle(header_ptr, article_header);
 	msg->mutable_article_all()->set_article_actual(article);
 
+	std::cout << msg->article_all().article_actual() << std::endl;
+
 	return std::move(msg);
 }
 
