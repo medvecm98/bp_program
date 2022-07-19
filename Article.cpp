@@ -236,7 +236,7 @@ void Article::calculate_crypto_hash() {
 bool Article::verify(const std::string& article_to_check) {
 	bool result;
 	CryptoPP::SHA3_256 hash;
-	CryptoPP::StringSource(article_to_check + crypto_hash_, true, 
+	CryptoPP::StringSource(crypto_hash_ + article_to_check, true, 
 		new CryptoPP::HashVerificationFilter(hash, 
 			new CryptoPP::ArraySink((CryptoPP::byte*)&result, sizeof(result))));
 	return result;
