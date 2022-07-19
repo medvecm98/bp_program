@@ -36,13 +36,6 @@ void MainWindow::newspaper_added_to_db(pk_t news_id) {
 	auto name = ctx->p.get_news_db()[news_id].get_name().c_str();
 	auto id = ctx->p.get_news_db()[news_id].get_id();
 	generate_article_list();
-	/*ui->treeWidget_newspaper->addTopLevelItem(
-				new QTreeWidgetItem(QStringList({
-								QString(name),
-								"Newspaper",
-								QString::number(id)
-							}))
-	);*/
 }
 
 void MainWindow::on_pushButton_add_news_released()
@@ -52,29 +45,29 @@ void MainWindow::on_pushButton_add_news_released()
 
 void MainWindow::generate_article_list() {
 	ui->treeWidget_newspaper->clear();
-	for (auto&& news : ctx->p.get_news_db()) {
-		ui->treeWidget_newspaper->addTopLevelItem(
+	for (auto&& news : ctx->p.get_news_db()) { //for all newspapers in database
+		ui->treeWidget_newspaper->addTopLevelItem( //adds newspaper into Newspaper tree
 				new QTreeWidgetItem(QStringList({
 								QString::fromStdString(news.second.get_name()),
 								"Newspaper",
 								QString::number(news.second.get_id())
 							}))
 		);
-		article_list_received(news.second.get_id());
+		article_list_received(news.second.get_id()); //generate the article list
 	}
 	
 }
 
 void MainWindow::article_list_received(pk_t newspaper_id) {
 	std::cout << "about to print article_list" << std::endl;
-	auto news_the_one  = ctx->p.get_news_db().at(newspaper_id);
+	auto news_the_one  = ctx->p.get_news_db().at(newspaper_id); //find requested new in database
 
 	auto news_articles_it = news_the_one.get_iterator_database();
 	auto news_atricles_it_end = news_the_one.get_iterator_database_end();
 	
 	std::set<my_string> categories;
 
-	for (database_iterator_t it = news_articles_it; it != news_atricles_it_end; it++) {
+	for (database_iterator_t it = news_articles_it; it != news_atricles_it_end; it++) { //create the union of all categories using std::set
 		auto[cit, cite] = it->second.categories();
 		for (; cit != cite; cit++) {
 			categories.insert(*cit);
@@ -84,57 +77,46 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 	QString news_name = QString::fromStdString(news_the_one.get_name());
 	QString id_in_string = QString::number(news_the_one.get_id());
 	
-	//auto items = ui->treeWidget_newspaper->findItems(news_name, Qt::MatchContains);
 	QTreeWidgetItem* requseted_newspaper = nullptr;
 
-	for (int i = 0; i < ui->treeWidget_newspaper->topLevelItemCount() && !requseted_newspaper; i++) {
+	for (int i = 0; i < ui->treeWidget_newspaper->topLevelItemCount() && !requseted_newspaper; i++) { //find newspaper in the Newspaper tree
 		if (ui->treeWidget_newspaper->topLevelItem(i)->text(2) == id_in_string) {
 			requseted_newspaper = ui->treeWidget_newspaper->topLevelItem(i);
 		}
 	}
 
-	/*for (auto&& news : ctx->p.get_news_db()) {
-		ui->treeWidget_newspaper->addTopLevelItem(
-				new QTreeWidgetItem(QStringList({
-								QString::fromStdString(news.second.get_name()),
-								"Newspaper",
-								QString::number(news.second.get_id())
-							}))
-		);
-	}*/
-
-
 	bool category_found = false;
-	if (requseted_newspaper) {
-		for (auto&& category : categories) {
-			for (int i = 0; i < requseted_newspaper->childCount(); i++) {
-				if (requseted_newspaper->child(i)->text(0) == category.c_str()) { //found category we are looking for
-					category_found = true;
+	if (requseted_newspaper) { //if we found newspaper in the newspaper tree
+		for (auto&& category : categories) { //iterate thorugh all the categories
+			for (int i = 0; i < requseted_newspaper->childCount(); i++) { //traverse thorugh all the children of the newspaper (those are categories)
+				if (requseted_newspaper->child(i)->text(0) == category.c_str()) { //is the currently iterated category `category` already in the Newspaper tree?
+					category_found = true; //found category we are looking for in Newspaper tree
 					auto article = news_articles_it;
-					for (; article != news_atricles_it_end; article++) {
+					for (; article != news_atricles_it_end; article++) { //traverse thorugh all articles
 						bool article_found = false;
-						for (int j = 0; j < requseted_newspaper->child(i)->childCount(); j++) {
-							if (requseted_newspaper->child(i)->child(j)->text(2) == QString::number(article->second.main_hash())) {
-								article_found = true;
+						for (int j = 0; j < requseted_newspaper->child(i)->childCount(); j++) { //traverse thorugh all the children of given category (those are articles)
+							if (requseted_newspaper->child(i)->child(j)->text(2) == QString::number(article->second.main_hash())) { //is the currently iterated article `article` in the Newspaper tree already?
+								article_found = true; //we found the article in the Newspaper tree
 							}
 						}
-						if (!article_found && article->second.is_in_category(category)) {
+						if (!article_found && article->second.is_in_category(category)) { //article wasn't found in the Newspaper tree, but does it belong to the category?
+							//yes, and so we will add it
 							requseted_newspaper->child(i)->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())})));
 						}
-						article_found = false;
+						article_found = false; //resets the flag
 					}
 				}
 			}
-			if (!category_found) {
-				auto new_cat_tree = new QTreeWidgetItem(QStringList({category.c_str(), "Category", category.c_str()}));
+			if (!category_found) { //category wasn't found in the newspaper tree
+				auto new_cat_tree = new QTreeWidgetItem(QStringList({category.c_str(), "Category", category.c_str()})); //we will add the category to the tree
 				requseted_newspaper->addChild( new_cat_tree);
 				auto article = news_articles_it;
-					for (; article != news_atricles_it_end; article++) {
-						if (article->second.is_in_category(category))
-							new_cat_tree->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())})));
+					for (; article != news_atricles_it_end; article++) { //check all the articles...
+						if (article->second.is_in_category(category)) //...if they belong in this newly inserted category
+							new_cat_tree->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())}))); //and if yes, add them
 				}
 			}
-			category_found = false;
+			category_found = false; //resets the flag
 		}
 	}
 }
@@ -142,111 +124,93 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 void MainWindow::on_pushButton_add_article_released()
 {
 	const char* env_p = std::getenv("HOME");
-	auto fileName = QFileDialog::getOpenFileName(this, "Select files", env_p, "Text Files (*.txt);;Markdown (*.md)");
+	auto fileName = QFileDialog::getOpenFileName(this, "Select files", env_p, "Text Files (*.txt);;Markdown (*.md)"); //open file selection dialog for plain text files and markdown
 	if (!fileName.isNull()) {
 		if (std::filesystem::is_regular_file(fileName.toStdString())) {
-			emit add_new_article(fileName);
+			emit add_new_article(fileName); //we selected a regular file and new article now may be added
 		}
 	}
-
-	//article_list_received(ctx->p.get_my_news_id());
 }
-
-void MainWindow::on_lineEdit_article_path_textEdited(const QString &arg1)
-{
-
-}
-
-
-void MainWindow::on_pushButton_preview_article_released()
-{
-
-}
-
 
 void MainWindow::on_pushButton_article_list_released()
 {
 	std::cout << "Article list requested" << std::endl;
 	QErrorMessage qem(this);
-	if (ui->treeWidget_newspaper->selectedItems().size() == 0) {
+	if (ui->treeWidget_newspaper->selectedItems().size() == 0) { //no item was selected from Newspaper tree
 		std::cout << "Please, select one item, thank you." << std::endl;
 		qem.showMessage("Please, select one item, thank you.");
 		return;
 	}
-	if (ui->treeWidget_newspaper->selectedItems().size() > 1) {
+	if (ui->treeWidget_newspaper->selectedItems().size() > 1) { //more than one item was selected from Newspaper tree
 		std::cout << "Please, select only one item, thank you." << std::endl;
 		qem.showMessage("Please, select only one item, thank you.");
 		return;
 	}
-	if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() != nullptr) {
+	if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() != nullptr) { //non-newspaper item was selected from Newspaper tree
 		std::cout << "Non-newspaper item selected. Please select only top-level newspaper item from tree." << std::endl;
 		qem.showMessage("Non-newspaper item selected. Please select only top-level newspaper item from tree.");
 		return;
 	}
 
-	if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong() == ctx->p.get_public_key()) {
+	if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong() == ctx->p.get_public_key()) { //article list for our own newspaper doesn't make sense
 		return;
 	}
 
-	ctx->p.generate_article_list(ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong());
+	ctx->p.generate_article_list(ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong()); //request the article list of the newspaper
 }
 
 
 void MainWindow::on_pushButton_set_ip_released()
 {
-	QHostAddress address(ui->comboBox_interfacs->currentText().split(':').last().trimmed());
-	emit start_server(address);
+	QHostAddress address(ui->comboBox_interfacs->currentText().split(':').last().trimmed()); //sets the IP from the comboBox
+	emit start_server(address); //starts the STUN and NP2PS servers
 }
-
-
-void MainWindow::on_pushButton_released()
-{
-	ui->textEdit_article->setMarkdown("# Hello");
-}
-
 
 void MainWindow::on_pushButton_external_article_released()
 {
-	if (ui->treeWidget_newspaper->selectedItems().size() == 0) {
+	if (ui->treeWidget_newspaper->selectedItems().size() == 0) { //no item was selected from Newspaper tree
 		std::cout << "Please, select one item, thank you." << std::endl;
 		return;
 	}
-	else if (ui->treeWidget_newspaper->selectedItems().size() > 1) {
+	else if (ui->treeWidget_newspaper->selectedItems().size() > 1) { //more than one item was selected from Newspaper tree
 		std::cout << "Please, select only one item, thank you." << std::endl;
 		return;
 	}
 	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr ||
-			 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) {
+			 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) {  //non-article item was selected from Newspaper tree
 		std::cout << "Please, select an article, thank you." << std::endl;
 		return;
 	}
 	else {
+		/* gets an article from newspaper database */
 		auto news_db_id = ctx->p.get_news_db().at(ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent()->text(2).toULongLong()).get_id();
 		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
 		auto present_article = ctx->p.get_news_db().at(news_db_id).find_article_header(article_selected_hash);
-		if (!present_article.has_value()) {
-			ctx->p.generate_article_all_message(news_db_id, article_selected_hash);
+		if (!present_article.has_value()) { //if article wasn't found, not even his header
+			ctx->p.generate_article_all_message(news_db_id, article_selected_hash); //request an article
 		}
 		else {
-			if (!present_article.value()->article_present()) {
-				ctx->p.generate_article_all_message(present_article.value()->author_id(), article_selected_hash);
+			if (!present_article.value()->article_present()) { //check if article contains its contents
+				ctx->p.generate_article_all_message(present_article.value()->author_id(), article_selected_hash); //no, and so it needs to be requested
 			}
 			else {
 				ui->textEdit_article->clear();
 
+				//article content is present and we may print it
+
 				QString path(present_article.value()->get_path_to_file().c_str());
 				QFile file;
 				file.setFileName(path);
-				file.open(QIODevice::ReadOnly);
+				file.open(QIODevice::ReadOnly); //opens the file
 				QTextStream text_stream(&file);
 				QString line, contents;
 				ui->textEdit_article->clear();
-				while (!text_stream.atEnd()) {
+				while (!text_stream.atEnd()) { 
 					line = text_stream.readLine();
-					contents.append(line);
+					contents.append(line); //loads the article line by line
 					contents.append('\n');
 				}
-				switch (present_article.value()->get_format())
+				switch (present_article.value()->get_format()) //sets the correct format for Article field
 				{
 				case article_format::Markdown:
 					ui->textEdit_article->setMarkdown(contents);
@@ -281,30 +245,6 @@ void MainWindow::disable_new_peer(){
 	ui->pushButton_new_peer->setDisabled(true);
 }
 
-void MainWindow::on_treeWidget_newspaper_itemActivated(QTreeWidgetItem *item, int column)
-{
-
-}
-
-void MainWindow::on_listWidget_articles_itemActivated(QListWidgetItem *item)
-{
-
-}
-
-void MainWindow::on_pushButton_select_files_released()
-{
-	const char* env_p = std::getenv("HOME");
-	auto fileName = QFileDialog::getOpenFileName(this, "Select files", env_p, "Text Files (*.txt);;Markdown (*.md)");
-	if (!fileName.isNull()) {
-		//on_pushButton_add_article_released();
-	}
-}
-
-void MainWindow::on_lineEdit_article_path_textChanged(const QString &arg1)
-{
-		ui->pushButton_add_article->setEnabled(true);
-}
-
 void MainWindow::set_article_related_buttons(bool state) {
 	ui->pushButton_add_margin->setEnabled(state);
 	ui->pushButton_view_margin->setEnabled(state);
@@ -322,8 +262,8 @@ void MainWindow::check_selected_item() {
 }
 
 void MainWindow::check_item(QTreeWidgetItem* item) {
-	if (item->text(1) == "Article") {
-		if (ctx->p.get_downloading_articles().find(item->text(2).toULongLong()) != ctx->p.get_downloading_articles().end()) {
+	if (item->text(1) == "Article") { //is article selected?
+		if (ctx->p.get_downloading_articles().find(item->text(2).toULongLong()) != ctx->p.get_downloading_articles().end()) { //check if there isn't already an article request pending
 			set_article_related_buttons(false);
 		}
 		else {
@@ -331,16 +271,16 @@ void MainWindow::check_item(QTreeWidgetItem* item) {
 		}
 		set_newspaper_related_buttons(false);
 	}
-	else if (item->text(1) == "Newspaper") {
-		if (ctx->p.get_getting_article_list().find(item->text(2).toULongLong()) != ctx->p.get_getting_article_list().end()) {
-			set_newspaper_related_buttons(false);
+	else if (item->text(1) == "Newspaper") { //is newspaper selected?
+		if (ctx->p.get_getting_article_list().find(item->text(2).toULongLong()) != ctx->p.get_getting_article_list().end()) { //check if there isn't already an article list request pending
+			set_newspaper_related_buttons(false); //if yes, disable newspaper related buttons
 		}
 		else {
-			set_newspaper_related_buttons(true);
+			set_newspaper_related_buttons(true); //if no, enable newspaper related buttons
 		}
-		set_article_related_buttons(true);
+		set_article_related_buttons(false);
 	}
-	else {
+	else { //if neither article nor newspaper is selected, all the buttons for either articles or newspaper will be disabled
 		set_article_related_buttons(false);
 		set_newspaper_related_buttons(false);
 	}
@@ -351,53 +291,6 @@ void MainWindow::on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int 
 	check_item(item);
 }
 
-void MainWindow::on_listWidget_articles_itemClicked(QListWidgetItem *item)
-{
-
-}
-
-void MainWindow::on_pushButton_save_released()
-{
-	std::ofstream ofs(GU::get_program_home().append("/settings.txt"));
-	boost::archive::text_oarchive oa(ofs);
-	oa << (*ctx);
-}
-
-void MainWindow::on_pushButton_load_released()
-{
-
-
-
-}
-
-
-void MainWindow::on_pushButton_2_released()
-{
-
-}
-
-
-void MainWindow::on_textEdit_article_cursorPositionChanged()
-{
-	QPoint qp;
-	const QTextCursor tc = ui->textEdit_article->textCursor();
-	const QTextBlock block = tc.block();
-	std::cout << tc.blockNumber() << std::endl;
-}
-
-
-void MainWindow::on_stunButton_clicked()
-{
-	ctx->p.send_stun_binding_request();
-}
-
-
-void MainWindow::on_pushButton_3_clicked()
-{
-	ctx->p.stun_allocate();
-}
-
-
 void MainWindow::on_pushButton_delete_article_clicked()
 {
 	if (ui->treeWidget_newspaper->selectedItems().size() > 0 && 
@@ -406,12 +299,11 @@ void MainWindow::on_pushButton_delete_article_clicked()
 		auto h = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
 		pk_t news_id;
 		if (ctx->p.remove_article(h, news_id)) {
-			//qDeleteAll(ui->treeWidget_newspaper->selectedItems());
 			if (ctx->p.get_public_key() != news_id) {
 				ctx->p.removed_external_article(h, news_id);
 			}
 			ui->treeWidget_newspaper->clear();
-			generate_article_list();
+			generate_article_list(); //article is deleted from Newspaper tree when the tree is regenerated
 		}
 		else {
 			ui->textEdit_article->setText("Invalid article hash or article was not found in database.");
@@ -431,28 +323,12 @@ void MainWindow::on_pushButton_addJournalist_clicked()
 	ctx->p.add_journalist(pk);
 }
 
-void MainWindow::newspaper_identified(pk_t id, my_string newspaper_name, std::string newspaper_ip_domain) {
-	//ui->comboBox_newspapers->addItem(QString::fromStdString(newspaper_name).append(':').append(QString::number(id)));
-	//ui->comboBox_newspapers->setEnabled(true);
-}
-
 void MainWindow::newspaper_created() {
-	//ui->comboBox_newspapers->addItem(QString::fromStdString(ctx->p.get_my_news_name()).append(':').append(QString::number(ctx->p.get_my_news_id())));
-	//ui->comboBox_newspapers->setEnabled(true);
-
-	/*ui->treeWidget_newspaper->addTopLevelItem(
-				new QTreeWidgetItem(QStringList({
-								QString::fromStdString(ctx->p.get_my_news_name()),
-								"Newspaper",
-								QString::number(ctx->p.get_my_news_id())
-							}))
-	);*/
 	generate_article_list();
 }
 
 void MainWindow::got_network_interfaces(address_vec_ptr addresses_and_interfaces) {
-	std::cout << "AAAAAAAAAAAAAAAAA" << std::endl;
-	for (auto&& ai : *addresses_and_interfaces) {
+	for (auto&& ai : *addresses_and_interfaces) { //append all interfaces to the comboBox_interfaces
 		ui->comboBox_interfacs->addItem(QString("Interface: ").append(ai.first).append(", address: ").append(ai.second.toString()));
 	}
 }
@@ -476,16 +352,10 @@ void MainWindow::on_pushButton_clicked()
 	}
 	else {
 		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
-		std::uint64_t margin_autor = ui->lineEdit_margin->text().toULongLong();
+		std::uint64_t margin_autor = ui->lineEdit_margin->text().toULongLong(); //gets the author of the margin from lineEdit
 		std::cout << "Requesting margin for article: " << article_selected_hash << " and peer " << margin_autor << std::endl;
-		ctx->p.create_margin_request(margin_autor, article_selected_hash);
+		ctx->p.create_margin_request(margin_autor, article_selected_hash); //send request to the author
 	}
-
-}
-
-
-void MainWindow::on_pushButton_2_clicked()
-{
 
 }
 
@@ -493,17 +363,17 @@ void MainWindow::on_pushButton_2_clicked()
 void MainWindow::on_pushButton_view_margin_clicked()
 {
 
-	if (ui->treeWidget_newspaper->selectedItems().size() == 0) {
+	if (ui->treeWidget_newspaper->selectedItems().size() == 0) { //no item was selected
 		std::cout << "Please, select one item, thank you." << std::endl;
 		return;
 	}
-	else if (ui->treeWidget_newspaper->selectedItems().size() > 1) {
+	else if (ui->treeWidget_newspaper->selectedItems().size() > 1) { //more than one item was selected
 		std::cout << "Please, select only one item, thank you." << std::endl;
 		return;
 	}
-	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr ||
-			 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) {
-		std::cout << "Please, select an article, thank you." << std::endl;
+	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr || //its a newspaper
+			 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) { //or its a category
+		std::cout << "Please, select an article, thank you." << std::endl; //we want an article
 		return;
 	}
 	else {
@@ -514,7 +384,7 @@ void MainWindow::on_pushButton_view_margin_clicked()
 
 		auto [mb, me] = article.value()->margins();
 
-		for (; mb != me; mb++) {
+		for (; mb != me; mb++) { //iterate thorugh all the margins for found article
 			ui->plainTextEdit_margins->appendPlainText(QString::number(mb->first).append(':'));
 			ui->plainTextEdit_margins->appendPlainText(QString::fromStdString(mb->second.type).append(':'));
 			ui->plainTextEdit_margins->appendPlainText(QString::fromStdString(mb->second.content).append('\n'));
@@ -522,33 +392,26 @@ void MainWindow::on_pushButton_view_margin_clicked()
 	}
 }
 
-
-void MainWindow::on_pushButton_remove_margin_clicked()
-{
-
-}
-
-
 void MainWindow::on_pushButton_add_margin_clicked()
 {
 
-	if (ui->treeWidget_newspaper->selectedItems().size() == 0) {
+	if (ui->treeWidget_newspaper->selectedItems().size() == 0) { //no item was selected
 		std::cout << "Please, select one item, thank you." << std::endl;
 		return;
 	}
-	else if (ui->treeWidget_newspaper->selectedItems().size() > 1) {
+	else if (ui->treeWidget_newspaper->selectedItems().size() > 1) { //more than one item was selected
 		std::cout << "Please, select only one item, thank you." << std::endl;
 		return;
 	}
-	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr ||
-			 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) {
-		std::cout << "Please, select an article, thank you." << std::endl;
+	else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr || //its a newspaper
+			 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) { //or its a category
+		std::cout << "Please, select an article, thank you." << std::endl; //we want an article
 		return;
 	}
 	else {
-		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
+		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong(); //gets article hash from Newspaper tree
 		std::cout << "Adding margin for article: " << article_selected_hash << std::endl;
-		auto article = ctx->p.find_article( article_selected_hash);
+		auto article = ctx->p.find_article( article_selected_hash); //article is found in newspaper database and margin is appended
 		if (article.has_value()) {
 			emit add_margin(article.value());
 		}
@@ -556,10 +419,10 @@ void MainWindow::on_pushButton_add_margin_clicked()
 }
 
 void MainWindow::new_margin(std::string type, std::string contents) {
-	auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
+	auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong(); //gets article hash from Newspaper tree
 	std::cout << "Adding margin for article: " << article_selected_hash << std::endl;
-	auto article = ctx->p.find_article( article_selected_hash);
-	if (article.has_value()) {
-		article.value()->add_margin(ctx->p.get_public_key(), Margin(type, contents, ctx->p.get_public_key()));
+	auto article = ctx->p.find_article( article_selected_hash); //find article in newspaper database
+	if (article.has_value()) { //if article was found
+		article.value()->add_margin(ctx->p.get_public_key(), Margin(type, contents, ctx->p.get_public_key())); //add the margin with provided type and contents
 	}
 }

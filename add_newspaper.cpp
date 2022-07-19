@@ -25,7 +25,11 @@ void add_newspaper::on_buttonBox_accepted() {
 	this->hide();
 }
 
-
+/**
+ * @brief Action to carry on, when user cancels all the input he made into the window.
+ * 
+ * Function will only clear all lineEdit-s.
+ */
 void add_newspaper::on_buttonBox_rejected()
 {
     clear_all_lineEdit();

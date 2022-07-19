@@ -9,9 +9,9 @@ void IpMap::remove_from_map(pk_t pk) {
 }
 
 void IpMap::enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket) {
-	if (socket /*&& socket->peerPort() != PORT*/) {
+	if (socket) { //check if socket isn't NULL, function IS called like that
 		auto w = get_wrapper_for_pk(id);
-		if (!w->second.np2ps_tcp_socket_) {
+		if (!w->second.np2ps_tcp_socket_) { //check if given NP2PS socket isn't already enrolled
 			std::cout << "Enrolling np2ps socket " << id << std::endl;
 			w->second.np2ps_tcp_socket_ = socket;
 			w->second.np2ps_tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
@@ -22,13 +22,6 @@ void IpMap::enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket) {
 	}
 }
 
-/**
- * @brief Update given IP.
- * 
- * @param pk Which user IP to update.
- * @param ip IP to use.
- * @return True, if update took place.
- */
 bool IpMap::update_ip(pk_t pk, const QHostAddress& ip, std::uint16_t port /*= PORT*/) {
 	if (map_.find(pk) == map_.end()) {
 		return map_.emplace(pk, IpWrapper(ip, port)).second;
@@ -40,14 +33,7 @@ bool IpMap::update_ip(pk_t pk, const QHostAddress& ip, std::uint16_t port /*= PO
 	}
 }
 
-/**
- * @brief Update given IP.
- * 
- * @param pk Which user IP to update.
- * @param ip4 IPv4 to use.
- * @param ip6 IPv6 to use.
- * @return True, if update took place.
- */
+
 bool IpMap::update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port /*= PORT*/) {
 	if (map_.find(pk) == map_.end()) {
 		return map_.insert({pk, IpWrapper(ip4, ip6, port)}).second;
@@ -72,7 +58,6 @@ bool IpMap::update_rsa_public(pk_t pk, const std::string& rsa) {
 
 bool IpMap::update_rsa_public(pk_t pk, const CryptoPP::RSA::PublicKey& rsa) {
 	if (map_.find(pk) == map_.end()) {
-		std::cout << "emplacing ip wrapper with rsa only" << std::endl;
 		map_.emplace(pk, IpWrapper(rsa));
 	}
 	else {
@@ -186,36 +171,6 @@ ip_map::iterator IpMap::get_wrapper_for_pk(pk_t pk) {
 	return map_.end();
 }
 
-void IpMap::serialize_keys() {
-	if (private_rsa.has_value()) {
-		CryptoPP::ByteQueue bq;
-		private_rsa.value().Save(bq);
-
-		std::string dir = GU::get_program_home().append("/Keys");
-		std::filesystem::create_directories(dir.c_str());
-		std::fstream file;
-		file.open(dir.append("/PrivateKey.prvk"), std::ios_base::out);
-		CryptoPP::FileSink fs(file);
-
-		bq.CopyTo(fs);
-		fs.MessageEnd();
-	}
-}
-
-void IpMap::deserialize_keys() {	
-	std::string file_path = GU::get_program_home().append("/Keys").append("/PrivateKey.prvk");
-	if (std::filesystem::is_regular_file(file_path)) {
-		CryptoPP::FileSource fs(file_path.c_str(), true);
-		CryptoPP::ByteQueue bq;
-
-		fs.TransferTo(bq);
-		bq.MessageEnd();
-
-		private_rsa = {CryptoPP::RSA::PrivateKey()};
-		private_rsa.value().Load(bq);
-	}
-}	
-
 void IpMap::set_tcp_socket(pk_t pk, QTcpSocket* tcp_socket_) {
 	if (map_.find(pk) == map_.end()) {
 		return;
@@ -267,26 +222,26 @@ bool IpMap::update_stun_ip(pk_t pid, const QHostAddress& ip, std::uint16_t port)
 
 void IpMap::remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove) {
 	for (auto&& item : map_) {
-		if (item.second.tcp_socket_) {
+		if (item.second.tcp_socket_) { //check if STUN socket is connected
 			std::cout << "STUN Socket state: " << item.second.tcp_socket_->state() << std::endl;
 			std::cout << "STUN Socket error: " << item.second.tcp_socket_->error() << std::endl;
 			if (item.second.tcp_socket_->state() == QAbstractSocket::UnconnectedState ||
 				item.second.tcp_socket_->error() == QAbstractSocket::RemoteHostClosedError) 
 			{
-				item.second.tcp_socket_ = NULL;
+				item.second.tcp_socket_ = NULL; //NULLify the STUN socket
 			}
 		}
-		if (item.second.np2ps_tcp_socket_) {
+		if (item.second.np2ps_tcp_socket_) { //check if NP2PS socket is connected
 			std::cout << "NP2PS Socket state: " << item.second.tcp_socket_->state() << std::endl;
 			std::cout << "NP2PS Socket error: " << item.second.tcp_socket_->error() << std::endl;
 			if (item.second.np2ps_tcp_socket_->state() == QAbstractSocket::UnconnectedState ||
 				item.second.np2ps_tcp_socket_->error() == QAbstractSocket::RemoteHostClosedError) 
 			{
-				item.second.np2ps_tcp_socket_ = NULL;
+				item.second.np2ps_tcp_socket_ = NULL; //NULLify the NP2PS socket
 			}
 		}
-		if (!item.second.tcp_socket_ && !item.second.np2ps_tcp_socket_) {
-			public_ids_to_remove.push_back(item.first);
+		if (!item.second.tcp_socket_ && !item.second.np2ps_tcp_socket_) { //if both sockets were NULLified
+			public_ids_to_remove.push_back(item.first); //push ID of that peer into list of peers to remove
 		}
 	}
 }

@@ -22,11 +22,6 @@
 #include "Margins.h"
 #include "protobuf_source/articles.pb.h"
 
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/set.hpp>
-
 #define COMMENT_ "[NScomment]:"
 #define BEGIN_HEADER_ "**BEGIN_HEADER**"
 #define END_HEADER_ "**END_HEADER**"
@@ -57,15 +52,6 @@ struct HashWrapper {
 	}
 	hash_t hash;
 	level_t paragraph_level;
-
-	/**
-	 * Serialize using boost archive.
-	 */
-	template <class Archive>
-	void serialize(Archive& ar, const unsigned int version) {
-		ar & hash;
-		ar & paragraph_level;
-	}
 };
 
 using hashes_container = std::map<std::int32_t, HashWrapper>;
@@ -142,29 +128,53 @@ private:
 	bool loaded_ = false;
 };
 
+/**
+ * @brief Class for newspaper article representation.
+ * 
+ * This class contains all neccessary metadata about newspaper article.
+ * 
+ */
 class Article {
 public:
+	/**
+	 * @brief Construct a new Article object
+	 * 
+	 * Default constructor
+	 * 
+	 */
 	Article() = default;
 	explicit Article(const np2ps::Article& protobuf_article);
 	Article(const np2ps::Article& protobuf_article_header, const std::string& article_actual);
 	void open_fstream(std::fstream& stream);
-	void load_information();
-	[[nodiscard]] article_format get_format() const {
+
+	/**
+	 * @brief Gets the article format.
+	 * 
+	 * Plain text or Markdown.
+	 * 
+	 * @return article_format Format of the article.
+	 */
+	article_format get_format() const {
 		return _format;
 	}
+
 	category_container_const_iter get_categories();
 	my_string get_path_to_file();
 	
 	void calculate_hashes(hashes_container&);
 
 	/**
-	 * \brief Used to initialize a new article, from "scratch".
-	 *
-	 * @tparam T Container of categories.
-	 * @param path_header
-	 * @param author_name
-	 * @param author_id
-	 * @param categories
+	 * @brief For initialization of new articles from "scratch".
+	 * 
+	 * Used when peer is uploading his own article into the network.
+	 * 
+	 * @tparam Container Type of container for categories.
+	 * @tparam Peer_t Type of peer that wrote this article.
+	 * @tparam NewspaperEntry_t Type of newspaper that this article will be inserted in.
+	 * @param categories Categories to include article in.
+	 * @param file_path Path to article file.
+	 * @param me Reference to peer that wrote the article.
+	 * @param news_entry Reference to newspaper entry that this article will be inserted in.
 	 */
 	template<class Container, class Peer_t, class NewspaperEntry_t>
 	void initialize_article(const Container &categories, const std::string& file_path,
@@ -174,6 +184,10 @@ public:
 		_path_to_article_file = file_path;
 
 		{
+			//parse article type from provided article file extension
+			//... via splitting it using periods and reading the last entry
+			//... of the split string
+
 			QString qpath = QString::fromStdString(_path_to_article_file);
 
 			if (qpath.split('.').last().toLower() == "md") {
@@ -188,12 +202,12 @@ public:
 		}
 
 		bool at_least_one_category = false;
-		for (auto&& i : categories) {
+		for (auto&& i : categories) { // insert all the categories into article category container
 			at_least_one_category = true;
 			_categories.insert(i);
 		}
 
-		if (!at_least_one_category) {
+		if (!at_least_one_category) { //if there was no category inserted, insert the "no_cat" category
 			_categories.insert("no_cat");
 		}
 
@@ -203,80 +217,141 @@ public:
 		_author_id = me.get_public_key();
 		_heading = "";
 
-		/* main hash, hashes, length and heading are calculated and found here: */
+		/* main hash, is calculated and found here: */
+
 		calculate_hashes(_hashes);
 
-		if (!categories.empty()) {
+		/*if (!categories.empty()) {
 			for (auto&& cat : categories) {
 				_categories.insert(cat);
 			}
-		}
+		}*/
 
-		article_present_ = true;
+		article_present_ = true; //we provided the article file in function arguments, so the article's contents is 
+								 //... naturally present
 
 
 	}
 
-
+	/**
+	 * @brief Checks if article belongs to the category.
+	 * 
+	 * @param category Category to check.
+	 * @return true Article belongs to category.
+	 * @return false Article does not belong to category.
+	 */
 	bool is_in_category(const std::string& category) const;
 
+	/**
+	 * @brief Gets the public identifier of the author of the article.
+	 * 
+	 * @return pk_t Public identifier of author.
+	 */
 	pk_t author_id() const { return _author_id; }
 
+	/**
+	 * @brief Gets the name of the author of the article.
+	 * 
+	 * @return pk_t Name of author.
+	 */
 	my_string author_name() const { return _author_name; }
 
+	/**
+	 * @brief Gets the public identifier of the author of the news.
+	 * 
+	 * @return pk_t Public identifier of news.
+	 */
 	pk_t news_id() const { return _news_id; }
 
+	/**
+	 * @brief Gets the name of the author of the news.
+	 * 
+	 * @return pk_t Name of news.
+	 */
 	my_string news_name() const { return _news_name; }
 
+	/**
+	 * @brief Gets the main hash of the article.
+	 * 
+	 * @return hash_t Main hash of the article.
+	 */
 	hash_t main_hash() const { return _main_hash; }
 
+	/**
+	 * @brief Gets the heading of the article.
+	 * 
+	 * @return my_string Heading of the article.
+	 */
 	my_string heading() const { return _heading; }
 
+	/**
+	 * @brief Checks if there is article's contents present and saved in file.
+	 * 
+	 * @return true If there is article's contents present.
+	 * @return false If there is not article's contents present.
+	 */
 	bool article_present() const { return article_present_; }
 
+	/**
+	 * @brief Gets both begin and end iterators to `_hashes` container.
+	 * 
+	 * @return Pair of iterators.
+	 */
 	std::pair<hashes_container::const_iterator, hashes_container::const_iterator> hashes() const { return {_hashes.cbegin(), _hashes.cend()}; }
 
+	/**
+	 * @brief Gets the length of article.
+	 * 
+	 * @return std::size_t Length of article.
+	 */
 	std::size_t length() const { return _length; }
 
+	/**
+	 * @brief Gets both begin and end iterators to `_categories` container.
+	 * 
+	 * @return Pair of iterators.
+	 */
 	std::pair<category_container::const_iterator, category_container::const_iterator> categories() const { return {_categories.cbegin(), _categories.cend()}; }
 
+	/**
+	 * @brief Gets both begin and end iterators to `_margins` container.
+	 * 
+	 * @return Pair of iterators.
+	 */
 	std::pair<margin_container::const_iterator, margin_container::const_iterator> margins() const { return {_margins.cbegin(), _margins.cend()}; }
 
 	void select_level(my_string& rv, level_t level);
 
+	/**
+	 * @brief Adds margin into `_margins` container.
+	 * 
+	 * @param pk Author of the margin.
+	 * @param margin Margin to insert.
+	 */
 	void add_margin(pk_t pk, Margin&& margin) {
 		_margins.emplace(pk, std::move(margin));
 	}
 
+	/**
+	 * @brief Removes margin into `_margins` container.
+	 * 
+	 * @param what Iterator to margin container containing margin, that should be deleted.
+	 */
 	void remove_margin(margin_container::iterator what) {
 		_margins.erase(what);
 	}
 
+	/**
+	 * @brief Gets the iterators for margins from given author.
+	 * 
+	 * @param pk Author of the margins to find.
+	 * @return Pair of iterators.
+	 */
 	std::pair<margin_container::iterator, margin_container::iterator> get_range_iterators(pk_t pk) {
 		return _margins.equal_range(pk);
 	}
 
 	void set_path(const std::string& article_actual);
-
-	/**
-	 * Serialize using boost archive.
-	 */
-	template <class Archive>
-	void serialize(Archive& ar, const unsigned int version) {
-		ar & _author_name;
-		ar & _author_id;
-		ar & _news_name;
-		ar & _news_id;
-		ar & _main_hash;
-		ar & _heading;
-		ar & _hashes;
-		ar & _length;
-		ar & _format;
-		ar & _categories;
-		ar & _path_to_article_file;
-		ar & _margins;
-		ar & _notes;
-	}
 
 	friend class ArticleDatabase;
 
@@ -287,13 +362,12 @@ private:
 	pk_t _news_id;
 	hash_t _main_hash;
 	my_string _heading;
-	//map <paragraph_position, hash>
-	hashes_container _hashes;
+	hashes_container _hashes; //map of hashes
 	std::uint64_t _length;
 	article_format _format;
-	std::set<my_string> _categories;
+	std::set<my_string> _categories; //set of categories
 	my_string _path_to_article_file;
-	margin_container _margins;
+	margin_container _margins; //unordered map of public identifiers and margins
 	my_string _notes;
 	bool article_present_;
 };
@@ -318,17 +392,14 @@ struct ArticleReaders {
 		readers.insert({user, reader});
 	}
 
+	/**
+	 * @brief Adds reader into the map.
+	 * 
+	 * @param user Public identifier of reader.
+	 * @param reader Pointer to PeerInfo object of the reader.
+	 */
 	void add_reader(pk_t user, PeerInfo* reader) {
 		readers.insert({user, reader});
-	}
-
-	/**
-	 * Serialize using boost archive.
-	 */
-	template <class Archive>
-	void serialize(Archive& ar, const unsigned int version) {
-		ar & article;
-		ar & readers;
 	}
 };
 

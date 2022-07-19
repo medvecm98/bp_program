@@ -65,6 +65,8 @@ private:
     void process_response_success_binding(stun_header_ptr stun_message, QTcpSocket* socket_);
     void process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message);
 
+    void host_connected();
+
     pk_t get_stun_server_any();
 
     //QTcpSocket* tcp_socket_;
@@ -74,6 +76,13 @@ private:
     std::vector<pk_t> stun_servers;
     factory_map stun_attribute_factories;
     Networking* networking_;
+
+    QHostAddress address_waiting_to_connect;
+    std::uint16_t port_waiting_to_connect;
+    stun_header_ptr header_waiting_to_connect;
+    pk_t connecting_to = 0;
+    bool message_waiting_to_connect = false;
+    bool save_socket = false;
 
     pk_t stun_server_awaiting_confirmation;
 

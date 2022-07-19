@@ -8,7 +8,7 @@ message HashWrapper {
 }
 
 message Margin {
-  uint32 id = 3;
+  uint64 id = 3;
   string type = 1;
   string content = 2;
 }

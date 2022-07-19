@@ -22,6 +22,15 @@ using eax_ptr_optional = std::optional<std::shared_ptr<CryptoPP::SecByteBlock>>;
 class MessageFactoryWrapper {
 public:
 
+	/**
+	 * @brief Sets the sender and receiver of the np2ps message.
+	 * 
+	 * Sets the random sequence number.
+	 * 
+	 * @param upm Message shared pointer.
+	 * @param from Message sender.
+	 * @param to Message receiver.
+	 */
 	static void set_from_to(unique_ptr_message& upm, pk_t from, pk_t to) {
 		std::cout << "set from to okasfopdkf" << std::endl;
 		upm->set_from(from);
@@ -34,8 +43,20 @@ public:
 	static unique_ptr_message upm_factory() {
 		return std::make_shared<proto_message>();
 	}
+	/////////////////////////////
+	//
+	// REQUESTS:
+	//
+	/////////////////////////////
 
-	/* Requests: */
+	/**
+	 * @brief Factory for Article message with request context.
+	 * 
+	 * @tparam CategoryContainer Type of container containing categories.
+	 * @param msg Barebones Article message, with only mandatory fields filled.
+	 * @param categories Container of categories.
+	 * @return unique_ptr_message 
+	 */
 	template <typename CategoryContainer>
 	static unique_ptr_message ReqArticleListFactory(unique_ptr_message&& msg, const CategoryContainer& categories) {
 		msg->mutable_article_list()->set_all_articles(true);

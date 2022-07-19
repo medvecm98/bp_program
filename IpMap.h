@@ -6,87 +6,256 @@
 #include <filesystem>
 #include <optional>
 
+/**
+ * @brief Very important class, that creates the interface to
+ * all the networking related information.
+ * 
+ * Stores IPs, ports, public and symmetric keys for all the peers using the
+ * IpWrapper class in the map.
+ * 
+ */
 class IpMap {
-	friend class boost::serialization::access;
 public:
-	bool add_to_map(pk_t, IpWrapper&& ip);
-	void remove_from_map(pk_t);
+	/**
+	 * @brief Adds a new IpWrapper into the map.
+	 * 
+	 * Calls `.emplace` function on underlying map.
+	 * 
+	 * @param id Public identifier of peer who's IpWrapper is being inserted.
+	 * @param ip IpWrapper to insert.
+	 * @return true If insertion took place.
+	 * @return false If insertion did not took place.
+	 */
+	bool add_to_map(pk_t id, IpWrapper&& ip);
+
+	/**
+	 * @brief Removes the IpWrapper and thus all the infromation for the peer.
+	 * 
+	 * @param id Public identifier of peer to remove all information about.
+	 */
+	void remove_from_map(pk_t id);
+
+	/**
+	 * @brief Updates the preferred STUN server of the peer.
+	 * 
+	 * @param who Whose STUN server to update.
+	 * @param server STUN server public identifier.
+	 */
 	void update_preferred_stun_server(pk_t who, pk_t server);
-	bool update_ip(pk_t, const QHostAddress& ip, std::uint16_t port = PORT);
-	bool update_stun_ip(pk_t, const QHostAddress& ip, std::uint16_t port = 3478);
-	bool update_ip(pk_t, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port = PORT);
-	bool update_rsa_public(pk_t, const std::string& rsa);
+
+	/**
+	 * @brief Updates the IPv4 for given peer.
+	 * 
+	 * Insertion will take place even if peer wasn't enrolled in ip_map_ before.
+	 * 
+	 * @param id Public identifier of peer, whose IP will be updated
+	 * @param ip New IP.
+	 * @param port New port.
+	 * @return true If update took place.
+	 * @return false Otherwise.
+	 */
+	bool update_ip(pk_t id, const QHostAddress& ip, std::uint16_t port = PORT);
+
+	/**
+	 * @brief Updates the STUN IPv4 for given peer.
+	 * 
+	 * If peer wasn't enrolled before, no insertion will take place.
+	 * 
+	 * @param id Public identifier of peer, whose STUN IP will be updated
+	 * @param ip New IP.
+	 * @param port New port.
+	 * @return true If update took place.
+	 * @return false Otherwise.
+	 */
+	bool update_stun_ip(pk_t id, const QHostAddress& ip, std::uint16_t port = 3478);
+
+	/**
+ 	 * @brief Update given IP.
+ 	 * 
+ 	 * @param pk Which user IP to update.
+ 	 * @param ip4 IPv4 to use.
+ 	 * @param ip6 IPv6 to use.
+ 	 * @return True, if update took place.
+ 	 */
+	bool update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port = PORT);
+
+	/**
+	 * @brief Updates the RSA public key for given peer.
+	 * 
+	 * If peer wasn't enrolled before, no insertion will take place.
+	 * 
+	 * @param id Public ID of the peer whose RSA public key will be updated.
+	 * @param rsa RSA public key in DER encoded form.
+	 * @return True, if update took place.
+	 */
+	bool update_rsa_public(pk_t id , const std::string& rsa);
+
+	/**
+	 * @brief Updates the RSA public key for given peer.
+	 * 
+	 * If peer wasn't enrolled before, no insertion will take place.
+	 * 
+	 * @param id Public ID of the peer whose RSA public key will be updated.
+	 * @param rsa RSA public key.
+	 * @return True, if update took place.
+	 */
 	bool update_rsa_public(pk_t, const CryptoPP::RSA::PublicKey& rsa);
-	bool update_eax(pk_t, const std::string&);
+
+	/**
+	 * @brief Updates the EAX key for given peer.
+	 * 
+	 * No insertion will take place if peer wasn't enrolled before.
+	 * 
+	 * @param id Peer whose EAX symmetric key will be updated.
+	 * @return True, if insertion took place.
+	 */
+	bool update_eax(pk_t id, const std::string&);
+
+	/**
+	 * @brief Sets the TCP socket for STUN communication.
+	 * 
+	 * Insertion won't take place, unless the peer was already enrolled.
+	 * 
+	 * @param id Public ID of Peer to who this socket is connected.
+	 * @param tcp_socket_ TCP socket pointer to set.
+	 */
 	void set_tcp_socket(pk_t id, QTcpSocket* tcp_socket_);
+
+	/**
+	 * @brief Gets the pointer to TCP socket for communication with given peer.
+	 * 
+	 * @param id Peer whose TCP socket to get.
+	 * @return QTcpSocket* Pointer to TCP socket.
+	 */
 	QTcpSocket* get_tcp_socket(pk_t id);
-	QHostAddress get_ip4(pk_t);
+	
+	/**
+	 * @brief Get the IPv4 address of the peer.
+	 * 
+	 * Default contructed QHostAddress is returned, when peer wasn't found.
+	 * 
+	 * @param id Public identifier of peer, whose IPv4 we want.
+	 * @return QHostAddress IPv4 of requested peer.
+	 */
+	QHostAddress get_ip4(pk_t id);
+
+	/**
+	 * @brief Get the IPv6 address of the peer.
+	 * 
+	 * Default contructed QHostAddress is returned, when peer wasn't found.
+	 * 
+	 * @param id Public identifier of peer, whose IPv6 we want.
+	 * @return QHostAddress IPv6 of requested peer.
+	 */
 	QHostAddress get_ip6(pk_t);
+
+	/**
+	 * @brief Gets the port of the peer.
+	 * 
+	 * Exception of std::logic_error is thrown, when peer was not found.
+	 * 
+	 * @return std::uint16_t Port of the requested peer.
+	 */
 	std::uint16_t get_port(pk_t);
+
+	/**
+	 * @brief Gets the RSA public key. 
+	 * 
+	 * std::optional with no value is returned when peer was not found.
+	 * 
+	 * @return Optional value with RSA public key.
+	 */
 	std::shared_ptr<rsa_public_optional> get_rsa_public(pk_t);
+
+	/**
+	 * @brief Gets the EAX+AES symmetric key. 
+	 * 
+	 * std::optional with no value is returned when peer was not found.
+	 * 
+	 * @return Optional value with EAX+AES symmetric key.
+	 */
 	std::shared_ptr<eax_optional> get_eax(pk_t);
+
+	/**
+	 * @brief Checks, if peer has IPv4 assigned in the map.
+	 * 
+	 * @return True, if IPv4 was found, otherwise false.
+	 */
 	bool have_ip4(pk_t);
+
+	/**
+	 * @brief Checks, if peer has IPv6 assigned in the map.
+	 * 
+	 * @return True, if IPv6 was found, otherwise false.
+	 */
 	bool have_ip6(pk_t);
+
+	/**
+	 * @brief Checks, if peer has port assigned in the map.
+	 * 
+	 * Exceptionally useful, because port that can't be found will always throw
+	 * an exception.
+	 * 
+	 * @return True if port was found, otherwise false.
+	 */
 	bool have_port(pk_t);
+
+	/**
+	 * @brief Checks, if peer has RSA public key assigned in the map.
+	 * 
+	 * @return True, if RSA public key was found, otherwise false.
+	 */
 	bool have_rsa_public(pk_t);
+
+	/**
+	 * @brief Checks, if peer has EAX+AES symmetric key assigned in the map.
+	 * 
+	 * @return True, if EAX+AES symmetric key was found, otherwise false.
+	 */
 	bool have_eax(pk_t);
+
+	/**
+	 * @brief Gets the end iterator of the map.
+	 */
 	ip_map::iterator get_map_end() {
 		return map_.end();
 	}
+
+	/**
+	 * @brief Inserts TCP socket for NP2PS communication into the map.
+	 * 
+	 * Checks, if the socket pointer has a non NULL value.
+	 * Sets the socket option to be always alive.
+	 * Update won't take place, if socket is already assigned.
+	 * 
+	 * @param id ID of peer whose NP2PS socket will be updated.
+	 * @param socket Socket to use.
+	 */
 	void enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket);
 
 	/**
-	 * Serialize using boost archive.
+	 * @brief Gets the IpWrapper for given peer.
+	 * 
+	 * Returns end iterator if no such peer was enrolled.
+	 * 
+	 * @param id Peer public identifier.
+	 * @return ip_map::iterator IpWrapper for requested peer.
 	 */
-	template <class Archive>
-	void save(Archive& ar, const unsigned int version) const {
-		ar & my_ip;
-		ar & my_public_id;
-		if (private_rsa.has_value()) {
-			std::string s;
-			CryptoPP::StringSink ss(s);
-			private_rsa.value().DEREncode(ss);
-			ar & s;
-		}
-		else {
-			ar & "";
-		}
-		ar & map_;
-	}
+	ip_map::iterator get_wrapper_for_pk(pk_t id);
 
 	/**
-	 * Serialize using boost archive.
+	 * @brief Scans all enrolled sockets and remove those peers, who are 
+	 * comlpetely disconnected.
+	 * 
+	 * @param public_ids_to_remove Push back peers, whose sockets were detected disconnected.
 	 */
-	template <class Archive>
-	void load(Archive& ar, const unsigned int version) {
-		ar & my_ip;
-		ar & my_public_id;
-		std::string private_rsa_str;
-		ar & private_rsa_str;
-		if (private_rsa_str != "") {
-			private_rsa = {CryptoPP::RSA::PrivateKey()};
-			CryptoPP::StringSource ss(private_rsa_str, true);
-			private_rsa.value().BERDecode(ss);
-		}
-		else {
-			private_rsa = {};
-		}
-		ar & map_;
-	}
-
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
-	
-
-	ip_map::iterator get_wrapper_for_pk(pk_t);
 	void remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove);
 
-	IpWrapper my_ip;
-	pk_t my_public_id;
-	rsa_private_optional private_rsa;
+	IpWrapper my_ip; //IpWrapper containing information related to my networking
+	pk_t my_public_id; //my public identifier, set by Peer
+	rsa_private_optional private_rsa; //my private RSA key
 private:
-	void serialize_keys();
-	void deserialize_keys();
-	ip_map map_;
+	ip_map map_; //The map
 };
 
 #endif //PROGRAM_IPMAP_H

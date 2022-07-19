@@ -196,28 +196,8 @@ public:
 	 * @param content Content of the margin.
 	 */
 	void add_margin(hash_t article_hash, my_string type, my_string content) {
-		/*auto article = find_article(article_hash);
-		if (article.has_value()) {
-			auto author = article.value()->author_id();
-			std::vector<Margin> vm = { Margin(type, content) };
-			margins_added_.insert({article_hash, vm.back()});
-			networking_->enroll_message_to_be_sent(
-				MFW::SetMessageContextRequest(
-					MFW::UpdateMarginAddFactory(
-						public_identifier_,
-						author,
-						article_hash,
-						vm
-					)
-				)
-			);
-		}
-		else {
-			//TODO: log error
-		}*/
-
 		article_optional article = find_article(article_hash);
-		article.value()->add_margin(public_identifier_, Margin(type, content));
+		article.value()->add_margin(public_identifier_, Margin(type, content, public_identifier_));
 	}
 
 	/**
@@ -398,30 +378,6 @@ public:
 	 */
 	std::string get_my_news_name() {
 		return newspaper_name_;
-	}
-
-	/**
-	 * @brief Serialize using boost archive.
-	 * 
-	 * @tparam Archive Archive type.
-	 * @param ar Archive to use.
-	 */
-	template <class Archive>
-	void serialize(Archive& ar, const unsigned int version) {
-		ar & user_map;
-		ar & news_;
-		ar & public_identifier_;
-		ar & name_;
-		ar & networking_;
-		ar & margins_added_;
-		ar & article_headers_only;
-		ar & readers_;
-		ar & newspaper_all_readers;
-		ar & articles_categories_;
-		ar & newspaper_name_;
-		ar & newspaper_id_;
-		ar & authorities_;
-		ar & journalists_;
 	}
 
 	void networking_init_sender_receiver() {

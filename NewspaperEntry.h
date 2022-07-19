@@ -10,15 +10,6 @@ using database_iterator_t = article_database_container::iterator;
 struct ArticleListWrapper {
 	std::set<my_string> categories;
 	std::unordered_map<hash_t, Article> article_headers; 
-
-	/**
-	 * Serialize using boost archive.
-	 */
-	template <class Archive>
-	void serialize(Archive& ar, const unsigned int version) {
-		ar & categories;
-		ar & article_headers;
-	}
 };
 
 class NewspaperEntry {
@@ -53,19 +44,6 @@ public:
 	ArticleListWrapper& get_list_of_articles() {
 		return article_list_wrapper_;
 	};
-
-	/**
-	 * Serialize using boost archive.
-	 */
-	template <class Archive>
-	void serialize(Archive& ar, const unsigned int version) {
-		ar & news_id_;
-		ar & news_name_;
-		ar & _articles;
-		ar & _authorities;
-		ar & level_;
-		ar & article_list_wrapper_;
-	}
 
 private:
 	pk_t news_id_;

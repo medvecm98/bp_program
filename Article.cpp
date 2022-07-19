@@ -71,7 +71,7 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 		break;
 	}
 
-	if (!article_actual.empty()) 
+	if (!article_actual.empty()) //we want to set the path, if there is article downloaded locally
 	{
 		set_path(article_actual);
 	}
@@ -83,13 +83,27 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 
 }
 
+/**
+ * @brief Construct a new Article:: Article object. Constructor is used for header-only articles.
+ * 
+ * @param protobuf_article Protobuf message to create Article from.
+ */
 Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_article, ""){}
 
+/**
+ * @brief Forms path and creates a file for article contents.
+ * 
+ * If formed path doesn't exist, it will be created.
+ * 
+ * @param article_actual Article contents.
+ */
 void Article::set_path(const std::string& article_actual) {
 	article_present_ = true;
+
+		/* name of the file, without path, with spaces replaced with underscores and with article hash appended */
 		QString file_name = QString::fromStdString(_heading).replace(' ', '_').append('-').append(QString::number(_main_hash));
 
-		switch (_format)
+		switch (_format) //set correct file suffix
 		{
 		case article_format::PlainText:
 			file_name.append(".txt");
@@ -102,7 +116,7 @@ void Article::set_path(const std::string& article_actual) {
 			break;
 		
 		default:
-			file_name.append(".txt");
+			file_name.append(".txt"); //`.txt` is the default one
 			break;
 		}
 
@@ -110,20 +124,21 @@ void Article::set_path(const std::string& article_actual) {
 
 		QString dir_path, root_path;
 
+		/* sets correct path, some support for MS Windows is provided */
 		set_dir_path_and_root(dir_path, root_path);
 
-		QDir dir(dir_path);
-		QDir rdir(root_path);
+		QDir dir(dir_path); //directory, where we want to place our article
+		QDir rdir(root_path); //root of path of dir variable
 		if (!dir.exists()) {
-			rdir.mkpath(dir.path());
+			rdir.mkpath(dir.path()); //create the directory if it doesn't exist
 		}
 
-		file_name.prepend(dir_path);
+		file_name.prepend(dir_path); //form full path together with file name
 
 		file.setFileName(file_name);
 		file.open(QIODevice::ReadWrite);
 		QTextStream qts(&file);
-		qts << QString::fromStdString(article_actual);
+		qts << QString::fromStdString(article_actual); //write article's contents into the file
 		file.close();
 		_path_to_article_file = file_name.toStdString();
 }
@@ -140,25 +155,40 @@ void Article::calculate_hashes(hashes_container& hashes) {
 	if (article_file.is_open())
 		std::cout << "Opened article file for " << _path_to_article_file << std::endl;
 
-	if (std::getline(article_file, line)) {
-		article_builder << line;
-		_heading = line;
+	if (std::getline(article_file, line)) { //read first line for the heading
+		article_builder << line; 
+		QString qline = QString::fromStdString(line);
+		if (qline.contains('#')) { //sets the heading...
+			auto i = qline.indexOf('#');
+			_heading = qline.mid(i + 1).toStdString(); //...for markdown, where it needs to cut the trailing `#`
+		}
+		else {
+			_heading = line; //...for plaintext
+		}
 	}
 
 	while (std::getline(article_file, line)) {
 		article_builder << line;
 	}
-	_main_hash = std::hash<std::string>{}(article_builder.str());
+	_main_hash = std::hash<std::string>{}(article_builder.str()); //calculates the main hash from article's contents
 }
 
-void Article::load_information() {
-
-}
-
+/**
+ * @brief Getter for `_path_to_article_file`. 
+ * 
+ * @return my_string Path to article file.
+ */
 my_string Article::get_path_to_file() {
 	return _path_to_article_file;
 }
 
+/**
+ * @brief Checks if article belongs in a category
+ * 
+ * @param category Category to check for.
+ * @return true Article belongs into the category.
+ * @return false Article doesn't belong into the category.
+ */
 bool Article::is_in_category(const std::string& category) const {
 	if (_categories.find(category) != _categories.end())
 		return true;
@@ -166,10 +196,20 @@ bool Article::is_in_category(const std::string& category) const {
 	return false;
 }
 
+/**
+ * @brief Opens file stream for article file.
+ * 
+ * @param stream Reference to stream, which will be opened with article file.
+ */
 void Article::open_fstream(std::fstream& stream) {
 	stream.open(_path_to_article_file);
 }
 
+/**
+ * @brief Gets the begin iterator for article categories container.
+ * 
+ * @return category_container_const_iter Begin iterator for categories container.
+ */
 category_container_const_iter Article::get_categories() {
 	return _categories.cbegin();
 }

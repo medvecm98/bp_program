@@ -1,8 +1,8 @@
 #include "DataAttribute.hpp"
 
 DataAttribute::DataAttribute() : StunMessageAttribute::StunMessageAttribute()  {
-    stun_attr_type = STUN_ATTR_DATA;
-    attribute_type = StunAttributeEnum::data;
+    stun_attr_type = STUN_ATTR_DATA; //numberic form
+    attribute_type = StunAttributeEnum::data; //enum form
 }
 
 void DataAttribute::initialize(QByteArray& d, StunMessageHeader* h) {

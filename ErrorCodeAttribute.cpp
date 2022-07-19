@@ -7,7 +7,7 @@ void ErrorCodeAttribute::set_error_code(std::uint32_t code) {
 
 void ErrorCodeAttribute::set_reason() {
     QString qs;
-    switch(error_code) {
+    switch(error_code) { //reason is set based on provided error code.
         case 300:
             qs = QString("The client should contact an alternate server for this request."); 
             break;
@@ -37,7 +37,7 @@ std::uint16_t ErrorCodeAttribute::read_stun_attribute(QDataStream& input, std::u
     std::uint16_t read_length = StunMessageAttribute::read_stun_attribute(input, length, type);
     QByteArray in_reason(length - 4, 0);
 
-    input >> error_code >> in_reason;
+    input >> error_code >> in_reason; //reads error code and reason
 
     read_length += length;
 
@@ -46,5 +46,5 @@ std::uint16_t ErrorCodeAttribute::read_stun_attribute(QDataStream& input, std::u
 
 void ErrorCodeAttribute::write_stun_attribute(QDataStream& output) {
     StunMessageAttribute::write_stun_attribute(output);
-    output << error_code << reason;
+    output << error_code << reason; //writes error code and reason
 }

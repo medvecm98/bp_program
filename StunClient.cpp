@@ -40,6 +40,8 @@ void printQByteArray(QByteArray& a) {
     }
 }
 
+
+
 void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id) {
     std::cout << "STUN client: sending STUN message" << std::endl;
     QTcpSocket* socket;
@@ -60,30 +62,20 @@ void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id)
         connect(socket, &QIODevice::readyRead, this, &StunClient::receive_msg);
         connect(socket, &QAbstractSocket::errorOccurred, this, &StunClient::error);
         QObject::connect(socket, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
-        //connect(tcp_socket_, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
+        QObject::connect(socket, &QAbstractSocket::connected, this, &StunClient::host_connected);
+
+        address_waiting_to_connect = addr;
+        port_waiting_to_connect = port;
+        header_waiting_to_connect = stun_message;
+        connecting_to = public_id;
+        save_socket = true;
+        message_waiting_to_connect = true;
 
         socket->connectToHost(addr, port);
 
-        if (!socket->waitForConnected(10000))
-            throw std::logic_error("Connection to STUN server timed-out. (10 seconds)");
+        /*if (!socket->waitForConnected(10000))
+            throw std::logic_error("Connection to STUN server timed-out. (10 seconds)");*/
     }
-
-    if (stun_message->stun_class == StunClassEnum::request && stun_message->stun_method == StunMethodEnum::allocate) {
-        socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
-        networking_->ip_map_.set_tcp_socket(public_id, socket);
-    }
-
-    QByteArray block;
-    QDataStream out_stream(&block, QIODevice::WriteOnly);
-    out_stream.setVersion(QDataStream::Qt_5_0);
-    stun_message->write_stun_message(out_stream);
-    //stun_message->print_message();
-    //printQByteArray(block);
-    int b = 0;
-    if ((b = socket->write(block)) == -1)
-        std::cout << "SC: Error occured while writing the block" << std::endl;
-    else
-        std::cout << "SC: bytes written: " << b << std::endl;
 
     
 }
@@ -93,18 +85,44 @@ void StunClient::send_stun_message_transport_address(stun_header_ptr stun_messag
     connect(socket, &QAbstractSocket::errorOccurred, this, &StunClient::error);
     connect(socket, &QIODevice::readyRead, this, &StunClient::receive_msg);
     QObject::connect(socket, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
+    QObject::connect(socket, &QAbstractSocket::connected, this, &StunClient::host_connected);
 
+    address_waiting_to_connect = address;
+    port_waiting_to_connect = port;
+    header_waiting_to_connect = stun_message;
+    message_waiting_to_connect = true;
+    
     socket->connectToHost(address, port);
 
-    if (!socket->waitForConnected(10000))
-        throw std::logic_error("Connection to STUN server timed-out. (10 seconds)");
+    /*if (!socket->waitForConnected(10000))
+        throw std::logic_error("Connection to STUN server timed-out. (10 seconds)");*/
+
+    
+}
+
+void StunClient::host_connected() {
+    auto socket = (QTcpSocket*) QObject::sender();
+
+    auto mtemp = header_waiting_to_connect;
+    auto atemp = address_waiting_to_connect;
+    auto ptemp = port_waiting_to_connect;
+
+    if (save_socket) {
+        auto pktemp = connecting_to;
+        if (mtemp->stun_class == StunClassEnum::request && mtemp->stun_method == StunMethodEnum::allocate) {
+            socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+            networking_->ip_map_.set_tcp_socket(pktemp, socket);
+        }
+        save_socket = false;
+    }
+
+    message_waiting_to_connect = false;
+
 
     QByteArray block;
     QDataStream out_stream(&block, QIODevice::WriteOnly);
     out_stream.setVersion(QDataStream::Qt_5_0);
-    stun_message->write_stun_message(out_stream);
-    //stun_message->print_message();
-    //printQByteArray(block);
+    mtemp->write_stun_message(out_stream);
     int b = 0;
     if ((b = socket->write(block)) == -1)
         std::cout << "SC: Error occured while writing the block" << std::endl;
@@ -220,7 +238,7 @@ void StunClient::accept() {
 
 void StunClient::error(QAbstractSocket::SocketError socketError) {
     QTcpSocket* socket = (QTcpSocket*)QObject::sender();
-    std::cout << "Damn bro, thats crazy, is socket still valid? " << socket->isValid() << std::endl;
+    std::cout << "Connection to STUN server failed:" << socket->isValid() << std::endl;
     std::cout << "Error number: " << socketError << std::endl;
 }
 
@@ -269,13 +287,13 @@ void StunClient::process_response_success_identify(stun_header_ptr stun_message)
         if (attr->attribute_type == StunAttributeEnum::public_identifier) {
             pia = (PublicIdentifierAttribute*)attr.get();
         }
-        if (attr->attribute_type == StunAttributeEnum::xor_relayed_address) {
+        else if (attr->attribute_type == StunAttributeEnum::xor_relayed_address) {
             xraa = (XorRelayedAddressAttribute*)attr.get();
         }
-        if (attr->attribute_type == StunAttributeEnum::relayed_publid_identifier) {
+        else if (attr->attribute_type == StunAttributeEnum::relayed_publid_identifier) {
             ria = (RelayedPublicIdentifierAttribute*)attr.get();
         }
-        if (attr->attribute_type == StunAttributeEnum::public_key) {
+        else if (attr->attribute_type == StunAttributeEnum::public_key) {
             pka = (PublicKeyAttribute*)attr.get();
         }
     }

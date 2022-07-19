@@ -199,30 +199,6 @@ public:
 		receiver_->restart_server(restart);
 	}
 
-	/**
-	 * Serialize using boost archive.
-	 */
-	template <class Archive>
-	void save(Archive& ar, const unsigned int version) const {
-		ar & ip_map_;
-		ar & soliciting_articles;
-		ar & news_db;
-		bool g;
-		ar & g;
-	}
-
-	/**
-	 * Serialize using boost archive.
-	 */
-	template <class Archive>
-	void load(Archive& ar, const unsigned int version) {
-		ar & ip_map_;
-		ar & soliciting_articles;
-		ar & news_db;
-		bool g;
-		ar & g;
-	}
-
 	std::shared_ptr<StunClient> get_stun_client() {
 		return stun_client;
 	}
@@ -245,8 +221,6 @@ public:
 		readers_ = r;
 		journalists_ = j;
 	}
-
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	void set_peer_public_id(pk_t pid);
 	pk_t get_peer_public_id();
