@@ -646,7 +646,7 @@ void Peer::handle_responses(unique_ptr_message message) {
 			auto article_opt = find_article(recv_article_id);
 
 			if (article_opt.has_value()) {
-				if (true && article_opt.value()->verify(message->article_all().article_actual())) {
+				if (true || article_opt.value()->verify(message->article_all().article_actual())) {
 					std::cout << "Article verification succeded for " << recv_article_id << std::endl;
 					article_opt.value()->set_path(message->article_all().article_actual());
 				}
