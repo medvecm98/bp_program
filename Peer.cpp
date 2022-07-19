@@ -642,18 +642,36 @@ void Peer::handle_responses(unique_ptr_message message) {
 
 	if (type == np2ps::ARTICLE_ALL) {
 		if (message->has_article_all() && message->article_all().has_header() && message->article_all().has_article_actual()) {
-			hash_t recv_article_hash = message->article_all().article_hash();
-			auto article_opt = find_article(recv_article_hash);
+			hash_t recv_article_id = message->article_all().article_hash();
+			auto article_opt = find_article(recv_article_id);
 
 			if (article_opt.has_value()) {
-				article_opt.value()->set_path(message->article_all().article_actual());
+				if (article_opt.value()->verify(message->article_all().article_actual())) {
+					std::cout << "Article verification succeded for " << recv_article_id << std::endl;
+					article_opt.value()->set_path(message->article_all().article_actual());
+				}
+				else {
+					std::cout << "Article verification failed for: " << recv_article_id << std::endl;
+
+					if (networking_->soliciting_articles.find(recv_article_id) != networking_->soliciting_articles.end()) {
+						//try another peer when this one failed
+						auto destination = networking_->soliciting_articles[recv_article_id].back();
+						networking_->soliciting_articles[recv_article_id].pop_back();
+						generate_article_all_message(destination, recv_article_id);
+					}
+
+					return;
+				}
 			}
 			else {
 				Article recv_article(message->article_all().header(), message->article_all().article_actual());
 				enroll_new_article(recv_article, false);
 			}
-			downloading_articles.erase(recv_article_hash);
+			downloading_articles.erase(recv_article_id);
 			emit check_selected_item();
+			if (networking_->soliciting_articles.find(recv_article_id) != networking_->soliciting_articles.end()) { //remote the article from soliticing articles, since we got an answer
+				networking_->soliciting_articles.erase(recv_article_id);
+			}
 		}
 		else {
 			//TODO: log error

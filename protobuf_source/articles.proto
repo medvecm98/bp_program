@@ -29,6 +29,7 @@ message Article {
   repeated string categories = 9;
   map<uint64, Margins> margins = 10;
   uint32 type = 11;
+  bytes crypto_hash = 12;
   /*
     Left out `notes` and `article path`, since those are only relevant for client.
     Length could be irrelevant as well, we'll see about that.

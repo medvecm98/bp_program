@@ -24,6 +24,13 @@
 #include "cryptopp/aes.h"
 #include "cryptopp/pssr.h"
 
+#include <cryptopp/cryptlib.h>
+#include <cryptopp/osrng.h>
+#include <cryptopp/sha3.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/files.h>
+#include <cryptopp/hex.h>
+
 #include <cstdlib>
 
 #define PORT 14128

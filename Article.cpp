@@ -74,9 +74,11 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 	if (!article_actual.empty()) //we want to set the path, if there is article downloaded locally
 	{
 		set_path(article_actual);
+		calculate_crypto_hash();
 	}
 	else {
 		article_present_ = false;
+		crypto_hash_ = protobuf_article.crypto_hash();
 	}
 
 	
@@ -144,10 +146,9 @@ void Article::set_path(const std::string& article_actual) {
 }
 
 /**
- * Calculated hashes for various paragraphs. Will also fill in heading_ member.
- * @param hashes Where to put hashes.
+ * Will fill in heading_ member.
  */
-void Article::calculate_hashes(hashes_container& hashes) {
+void Article::calculate_hashes() {
 	std::fstream article_file(_path_to_article_file);
 	std::string line;
 	std::stringstream article_builder;
@@ -170,7 +171,6 @@ void Article::calculate_hashes(hashes_container& hashes) {
 	while (std::getline(article_file, line)) {
 		article_builder << line;
 	}
-	_main_hash = std::hash<std::string>{}(article_builder.str()); //calculates the main hash from article's contents
 }
 
 /**
@@ -224,4 +224,24 @@ void Article::select_level(my_string& rv, level_t level) {
 		++pi;
 	}
 	rv = std::move(rv_stream.str());
+}
+
+void Article::calculate_crypto_hash() {
+	if (article_present()) {
+		CryptoPP::SHA3_256 hash;
+		CryptoPP::FileSource(_path_to_article_file.c_str(), true, new CryptoPP::HashFilter(hash, new CryptoPP::StringSink(crypto_hash_)));
+	}
+}
+
+bool Article::verify(const std::string& article_to_check) {
+	bool result;
+	CryptoPP::SHA3_256 hash;
+	CryptoPP::StringSource(article_to_check + crypto_hash_, true, 
+		new CryptoPP::HashVerificationFilter(hash, 
+			new CryptoPP::ArraySink((CryptoPP::byte*)&result, sizeof(result))));
+	return result;
+}
+
+std::string Article::get_crypto_hash() {
+	return crypto_hash_;
 }

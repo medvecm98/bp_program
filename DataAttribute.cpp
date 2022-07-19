@@ -15,12 +15,14 @@ std::uint16_t DataAttribute::read_stun_attribute(QDataStream& input, std::uint16
     StunMessageAttribute::read_stun_attribute(input, length, type);
     data.resize(length);
     input >> data;
+    unpad(input, length);
     return length;
 }
 
 void DataAttribute::write_stun_attribute(QDataStream& output) {
     StunMessageAttribute::write_stun_attribute(output);
     output << data;
+    pad(output, data.size());
 }
 
 std::string DataAttribute::get_np2ps_messsage() {

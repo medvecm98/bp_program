@@ -161,7 +161,7 @@ public:
 	category_container_const_iter get_categories();
 	my_string get_path_to_file();
 	
-	void calculate_hashes(hashes_container&);
+	void calculate_hashes();
 
 	/**
 	 * @brief For initialization of new articles from "scratch".
@@ -219,7 +219,10 @@ public:
 
 		/* main hash, is calculated and found here: */
 
-		calculate_hashes(_hashes);
+		CryptoPP::AutoSeededRandomPool prng;
+		calculate_hashes();
+		_main_hash = prng.GenerateWord32();
+		calculate_crypto_hash();
 
 		/*if (!categories.empty()) {
 			for (auto&& cat : categories) {
@@ -353,6 +356,12 @@ public:
 
 	void set_path(const std::string& article_actual);
 
+	void calculate_crypto_hash();
+
+	bool verify(const std::string& to_check);
+
+	std::string get_crypto_hash();
+
 	friend class ArticleDatabase;
 
 private:
@@ -369,6 +378,7 @@ private:
 	my_string _path_to_article_file;
 	margin_container _margins; //unordered map of public identifiers and margins
 	my_string _notes;
+	std::string crypto_hash_;
 	bool article_present_;
 };
 
