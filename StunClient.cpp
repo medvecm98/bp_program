@@ -55,6 +55,16 @@ void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id)
     
     if (networking_->ip_map_.get_tcp_socket(public_id) && networking_->ip_map_.get_tcp_socket(public_id)->isValid()) {
         socket = networking_->ip_map_.get_tcp_socket(public_id);
+
+        QByteArray block;
+        QDataStream out_stream(&block, QIODevice::WriteOnly);
+        out_stream.setVersion(QDataStream::Qt_5_0);
+        stun_message->write_stun_message(out_stream);
+        int b = 0;
+        if ((b = socket->write(block)) == -1)
+            std::cout << "SC: Error occured while writing the block" << std::endl;
+        else
+            std::cout << "SC: bytes written: " << b << std::endl;
     }
     else {
         socket = new QTcpSocket(this);
