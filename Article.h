@@ -222,7 +222,6 @@ public:
 		CryptoPP::AutoSeededRandomPool prng;
 		calculate_hashes();
 		_main_hash = prng.GenerateWord32();
-		calculate_crypto_hash();
 
 		/*if (!categories.empty()) {
 			for (auto&& cat : categories) {
@@ -232,6 +231,7 @@ public:
 
 		article_present_ = true; //we provided the article file in function arguments, so the article's contents is 
 								 //... naturally present
+		calculate_crypto_hash();
 
 
 	}
