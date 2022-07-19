@@ -676,12 +676,13 @@ void Peer::handle_responses(unique_ptr_message message) {
 			}
 
 			std::cout << "Emit new article list" << std::endl;
-			emit check_selected_item();
 			emit new_article_list(list_news_id);
 		}
 		else {
 			std::cout << "Article List response; empty list" << std::endl;
 		}
+		getting_article_list.erase(message->from());
+		emit check_selected_item();
 	}
 	else if (type == np2ps::USER_IS_MEMBER) {
 		if (message->user_is_member().is_member() && (message->user_is_member().level() > 127)) {
