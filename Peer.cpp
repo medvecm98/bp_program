@@ -774,6 +774,13 @@ void Peer::allocate_on_stun_server(pk_t target) {
 	networking_->get_stun_client()->allocate_request(target);
 }
 
+pk_t Peer::check_destination_valid(pk_t destination, pk_t newspaper) {
+	if (networking_->ip_map_.get_wrapper_for_pk(destination) == networking_->ip_map_.get_map_end()) {
+		return newspaper;
+	}
+	return destination;
+}
+
 /**
  * @brief Article all message generator.
  * 

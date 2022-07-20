@@ -191,7 +191,11 @@ void MainWindow::on_pushButton_external_article_released()
 		}
 		else {
 			if (!present_article.value()->article_present()) { //check if article contains its contents
-				ctx->p.generate_article_all_message(present_article.value()->author_id(), article_selected_hash); //no, and so it needs to be requested
+				ctx->p.generate_article_all_message(
+					ctx->p.check_destination_valid(
+						present_article.value()->author_id(), 
+						news_db_id), 
+					article_selected_hash); //no, and so it needs to be requested
 			}
 			else {
 				ui->textEdit_article->clear();

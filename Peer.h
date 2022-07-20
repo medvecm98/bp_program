@@ -118,6 +118,8 @@ public:
 	void send_stun_binding_request();
 	void removed_external_article(hash_t article, pk_t to);
 
+	pk_t check_destination_valid(pk_t destination, pk_t newspaper);
+
 	/**
 	 * @brief Set the name of the peer.
 	 * 
