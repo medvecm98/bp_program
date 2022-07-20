@@ -412,6 +412,16 @@ public:
 		return getting_article_list;
 	}
 
+	void remove_reader(hash_t article, pk_t reader) {
+		auto [ait, eit] = readers_.equal_range(article);
+		for (; ait != eit; ait++) {
+			if (ait->second->peer_key == reader) {
+				readers_.erase(ait);
+				break;
+			}
+		}
+	}
+
 public slots:
 	void handle_message(unique_ptr_message message);
 

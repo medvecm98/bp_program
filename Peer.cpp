@@ -956,6 +956,7 @@ void Peer::handle_error(unique_ptr_message msg) {
 		}
 		else {
 			std::cout << "Requested article with hash " << msg->article_sol().article_hash() << " was not found inside the network." << std::endl;
+			downloading_articles.erase(msg->article_sol().article_hash());
 		}
 	}
 	else if (type == np2ps::ARTICLE_HEADER) {

@@ -296,6 +296,10 @@ void MainWindow::on_pushButton_delete_article_clicked()
 			if (ctx->p.get_public_key() != news_id) {
 				ctx->p.removed_external_article(h, news_id);
 			}
+			else {
+				ctx->p.remove_reader(h, ctx->p.get_public_key());
+
+			}
 			ui->treeWidget_newspaper->clear();
 			generate_article_list(); //article is deleted from Newspaper tree when the tree is regenerated
 		}

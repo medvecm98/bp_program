@@ -700,7 +700,11 @@ void Networking::peer_process_disconnected_users() {
 
 	if (!to_remove.empty()) {
 		for (auto&& user : to_remove) {
-			readers_->erase(user);
+			for (auto it = readers_->begin(); it != readers_->end(); it++) {
+				if (it->second->peer_key == user) {
+					it = readers_->erase(it);
+				}
+			}
 			user_map->erase(user);
 			ip_map_.remove_from_map(user);
 			journalists_->erase(user);
