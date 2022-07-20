@@ -696,27 +696,15 @@ pk_t Networking::get_peer_public_id() {
 void Networking::peer_process_disconnected_users() {
 	std::vector<pk_t> to_remove;
 	ip_map_.remove_disconnected_users(to_remove);
+	pk_t peer_id;
 
 	if (!to_remove.empty()) {
-
-	for (auto it = readers_->begin(); it != readers_->end(); it++) {
 		for (auto&& user : to_remove) {
-			if (user == it->second->peer_key) {
-				readers_->erase(it);
-			}
+			readers_->erase(user);
+			user_map->erase(user);
+			ip_map_.remove_from_map(user);
+			journalists_->erase(user);
 		}
-	}
-	for (auto it = user_map->begin(); it != user_map->end(); it++) {
-		for (auto&& user : to_remove) {
-			if (user == it->second.peer_key) {
-				user_map->erase(it);
-			}
-		}
-	}
-	for (auto&& user : to_remove) {
-		ip_map_.remove_from_map(user);
-		journalists_->erase(user);
-	}
 	}
 	
 }
