@@ -122,7 +122,7 @@ size_t Peer::list_all_articles_from_news(article_container &articles, const std:
 size_t Peer::list_all_articles_from_news(article_container &articles) {
 	size_t article_counter = 0;
 	
-	auto news = news_[get_my_news_id()];
+	auto& news = news_[get_my_news_id()];
 	auto bit = news.get_iterator_database();
 	auto eit = news.get_iterator_database_end();
 
