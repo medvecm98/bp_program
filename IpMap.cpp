@@ -231,16 +231,16 @@ void IpMap::remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove) {
 				item.second.tcp_socket_ = NULL; //NULLify the STUN socket
 			}
 		}
-		if (item.second.np2ps_tcp_socket_) { //check if NP2PS socket is connected
-			std::cout << "NP2PS Socket state: " << item.second.tcp_socket_->state() << std::endl;
-			std::cout << "NP2PS Socket error: " << item.second.tcp_socket_->error() << std::endl;
+		/*if (item.second.np2ps_tcp_socket_) { //check if NP2PS socket is connected
+			std::cout << "NP2PS Socket state: " << item.second.np2ps_tcp_socket_->state() << std::endl;
+			std::cout << "NP2PS Socket error: " << item.second.np2ps_tcp_socket_->error() << std::endl;
 			if (item.second.np2ps_tcp_socket_->state() == QAbstractSocket::UnconnectedState ||
 				item.second.np2ps_tcp_socket_->error() == QAbstractSocket::RemoteHostClosedError) 
 			{
 				item.second.np2ps_tcp_socket_ = NULL; //NULLify the NP2PS socket
 			}
-		}
-		if (!item.second.tcp_socket_ && !item.second.np2ps_tcp_socket_) { //if both sockets were NULLified
+		}*/
+		if (!item.second.tcp_socket_/* && !item.second.np2ps_tcp_socket_*/) { //if both sockets were NULLified
 			public_ids_to_remove.push_back(item.first); //push ID of that peer into list of peers to remove
 		}
 	}
