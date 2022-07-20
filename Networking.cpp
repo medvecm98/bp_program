@@ -340,7 +340,7 @@ void PeerReceiver::prepare_for_message_receive() {
 	tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
 	in_.setDevice(tcp_socket_);
 	in_.setVersion(QDataStream::Qt_5_0);
-	QObject::connect(tcp_socket_, &QIODevice::readyRead, this, &PeerReceiver::message_receive);
+	QObject::connect(tcp_socket_, &QIODevice::readyRead, this, &PeerReceiver::message_receive_connected);
 	QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, tcp_socket_, &QObject::deleteLater);
 	QObject::connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &PeerReceiver::display_error);
     QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, networking_.get(), &Networking::peer_process_disconnected_users);
@@ -348,6 +348,7 @@ void PeerReceiver::prepare_for_message_receive() {
 }
 
 void PeerReceiver::message_receive_connected() {
+	//in_.commitTransaction();
 	tcp_socket_ = (QTcpSocket*)QObject::sender();
 	in_.setDevice(tcp_socket_);
 	in_.setVersion(QDataStream::Qt_5_0);
@@ -359,12 +360,12 @@ void PeerReceiver::message_receive() {
 	in_.startTransaction();
 	std::cout << "transaction started" << std::endl;
 
-	if (!in_.commitTransaction()) {
+	/*if (!in_.commitTransaction()) {
 		//TODO: receiving failed
 		std::cout << "Message receiving failed" << std::endl;
 		tcp_socket_->disconnectFromHost();
 		return;
-	}
+	}*/
 
 	process_received_np2ps_message(in_, tcp_socket_);
 }
