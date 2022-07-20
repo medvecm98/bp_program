@@ -205,10 +205,14 @@ void MainWindow::on_pushButton_external_article_released()
 				QTextStream text_stream(&file);
 				QString line, contents;
 				ui->textEdit_article->clear();
+				if (!text_stream.atEnd()) {
+					line = text_stream.readLine();
+					contents.append(line);
+				}
 				while (!text_stream.atEnd()) { 
 					line = text_stream.readLine();
-					contents.append(line); //loads the article line by line
 					contents.append('\n');
+					contents.append(line); //loads the article line by line
 				}
 				switch (present_article.value()->get_format()) //sets the correct format for Article field
 				{
