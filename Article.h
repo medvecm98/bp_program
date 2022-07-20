@@ -364,6 +364,26 @@ public:
 
 	friend class ArticleDatabase;
 
+	std::string read_contents() {
+		QString path(_path_to_article_file.c_str());
+		QFile file;
+		file.setFileName(path);
+		file.open(QIODevice::ReadOnly); //opens the file
+		QTextStream text_stream(&file);
+		QString line, contents;
+		if (!text_stream.atEnd()) {
+			line = text_stream.readLine();
+			contents.append(line);
+			contents.append('\n');
+		}
+		while (!text_stream.atEnd()) { 
+			line = text_stream.readLine();
+			contents.append(line); //loads the article line by line
+			contents.append('\n');
+		}
+		return contents.toStdString();
+	}
+
 private:
 	my_string _author_name;
 	pk_t _author_id;
@@ -411,6 +431,8 @@ struct ArticleReaders {
 	void add_reader(pk_t user, PeerInfo* reader) {
 		readers.insert({user, reader});
 	}
+
+	
 };
 
 /*

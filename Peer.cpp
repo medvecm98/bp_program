@@ -365,8 +365,8 @@ void Peer::handle_requests(unique_ptr_message message) {
 			if (article.has_value() && article.value()->article_present()) {
 				std::cout << "ARTICLE_ALL Article found.\n";
 				std::string article_whole;
-				//select only appropriate level
-				article.value()->select_level(article_whole, final_level);
+
+				article_whole = article.value()->read_contents();
 
 				unique_ptr_message article_msg = MFW::RespArticleDownloadFactory(
 					MFW::ArticleDownloadFactory(

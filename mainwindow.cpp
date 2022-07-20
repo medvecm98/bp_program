@@ -198,22 +198,9 @@ void MainWindow::on_pushButton_external_article_released()
 
 				//article content is present and we may print it
 
-				QString path(present_article.value()->get_path_to_file().c_str());
-				QFile file;
-				file.setFileName(path);
-				file.open(QIODevice::ReadOnly); //opens the file
-				QTextStream text_stream(&file);
-				QString line, contents;
 				ui->textEdit_article->clear();
-				if (!text_stream.atEnd()) {
-					line = text_stream.readLine();
-					contents.append(line);
-				}
-				while (!text_stream.atEnd()) { 
-					line = text_stream.readLine();
-					contents.append('\n');
-					contents.append(line); //loads the article line by line
-				}
+				QString contents = QString::fromStdString(present_article.value()->read_contents());
+
 				switch (present_article.value()->get_format()) //sets the correct format for Article field
 				{
 				case article_format::Markdown:
@@ -227,7 +214,6 @@ void MainWindow::on_pushButton_external_article_released()
 					ui->textEdit_article->setPlainText(contents);
 					break;
 				}
-				file.close();
 			}
 		}
 	}
