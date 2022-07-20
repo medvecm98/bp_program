@@ -446,6 +446,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 			send_message_using_socket(tcp_socket_, msg_key_sstream_block);
 
 			//tcp_socket_->disconnectFromHost();
+			msg.commitTransaction();
 			return;
 		}
 	}
@@ -476,6 +477,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		}
 
 		//tcp_socket_->disconnectFromHost();
+		msg.commitTransaction();
 		return; 
 	}
 }
