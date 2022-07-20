@@ -481,19 +481,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 	}
 	else if (type == np2ps::ARTICLE_LIST) {
 		article_container articles;
-
-		pk_t news_id = 0;
-
-		if (message->article_list().all_articles()) {
-			list_all_articles_by_me(articles, news_id);
-		}
-		else {
-			category_container categories;
-			for (int i = 0; i < message->article_list().categories_size(); i++) {
-				categories.insert(message->article_list().categories(i));
-			}
-			list_all_articles_by_me(articles, categories, news_id);
-		}
+		list_all_articles_from_news(articles);
 
 		networking_->enroll_message_to_be_sent(
 			MFW::RespArticleListFactory(
