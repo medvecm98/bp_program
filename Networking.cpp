@@ -343,7 +343,7 @@ void PeerReceiver::prepare_for_message_receive() {
 	QObject::connect(tcp_socket_, &QIODevice::readyRead, this, &PeerReceiver::message_receive_connected);
 	QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, tcp_socket_, &QObject::deleteLater);
 	QObject::connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &PeerReceiver::display_error);
-    QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, networking_.get(), &Networking::peer_process_disconnected_users);
+    //QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, networking_.get(), &Networking::peer_process_disconnected_users);
 
 }
 
@@ -508,7 +508,7 @@ void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
 		QObject::connect(socket_, &QAbstractSocket::connected, this, &PeerSender::host_connected);
 		QObject::connect(socket_, &QAbstractSocket::errorOccurred, this, &PeerSender::handle_connection_error);
 		QObject::connect(socket_, &QAbstractSocket::disconnected, this, &QObject::deleteLater);
-    	QObject::connect(socket_, &QAbstractSocket::disconnected, networking_.get(), &Networking::peer_process_disconnected_users);
+    	//QObject::connect(socket_, &QAbstractSocket::disconnected, networking_.get(), &Networking::peer_process_disconnected_users);
 
 		QObject::connect(socket_, &QAbstractSocket::readyRead, networking_->get_peer_receiver(), &PeerReceiver::message_receive_connected);
 
