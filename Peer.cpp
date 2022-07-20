@@ -450,21 +450,33 @@ void Peer::handle_requests(unique_ptr_message message) {
 		}
 	}
 	else if (type == np2ps::ARTICLE_HEADER) {
-		auto article_header = find_article(message->article_header().article_hash());
-		if (article_header.has_value()) {
-			networking_->enroll_message_to_be_sent(
-				MFW::RespArticleHeaderFactory(
-					MFW::ArticleHeaderFactory(
-						public_identifier_,
-						message->from(),
-						message->article_header().article_hash()
-					),
-					article_header.value()
-				)
-			);
-		}
-		else {
-			//TODO: send error
+		if (message->has_article_header() && message->article_header().has_article()) {
+			hash_t recv_article_hash = message->article_header().article_hash();
+			if (journalists_.find(message->article_header().article().author_id()) != journalists_.end()) {
+				Article recv_article(message->article_header().article());
+				enroll_new_article(recv_article, true);
+				networking_->enroll_message_to_be_sent(
+					MFW::SetMessageContextResponse(
+						MFW::ArticleHeaderFactory(
+							public_identifier_,
+							message->from(),
+							recv_article_hash
+						)
+					)
+				);
+			}
+			else {
+				std::cout << "invalid journalist" << std::endl;
+				networking_->enroll_message_to_be_sent(
+					MFW::SetMessageContextError(
+						MFW::ArticleHeaderFactory(
+							public_identifier_,
+							message->from(),
+							recv_article_hash
+						)
+					)
+				);
+			}
 		}
 	}
 	else if (type == np2ps::ARTICLE_LIST) {
@@ -678,9 +690,9 @@ void Peer::handle_responses(unique_ptr_message message) {
 		}
 	}
 	else if (type == np2ps::ARTICLE_HEADER) {
-		if (message->has_article_header()) {
+		/*if (message->has_article_header()) {
 			article_headers_only.insert_or_assign(message->article_header().article_hash(), Article(message->article_header().article()));
-		}
+		}*/
 	}
 	else if (type == np2ps::ARTICLE_LIST) {
 		auto list_size = message->article_list().response_size();
@@ -923,16 +935,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		);
 	}
 	else if (type == np2ps::ARTICLE_HEADER) {
-		if (msg->has_article_header() && msg->article_header().has_article()) {
-			if (journalists_.find(msg->article_header().article().author_id()) != journalists_.end()) {
-				hash_t recv_article_hash = msg->article_header().article_hash();
-				Article recv_article(msg->article_header().article());
-				enroll_new_article(recv_article, true);
-			}
-			else {
-				std::cout << "invalid journalist" << std::endl;
-			}
-		}
+		
 	}
 }
 
@@ -953,6 +956,9 @@ void Peer::handle_error(unique_ptr_message msg) {
 		else {
 			std::cout << "Requested article with hash " << msg->article_sol().article_hash() << " was not found inside the network." << std::endl;
 		}
+	}
+	else if (type == np2ps::ARTICLE_HEADER) {
+		std::cout << "Article " << msg->article_header().article_hash() << " failed to upload" << std::endl;
 	}
 }
 
@@ -993,7 +999,7 @@ void Peer::removed_external_article(hash_t article, pk_t to) {
 void Peer::upload_external_article(Article a) {
 	enroll_new_article(a, false);
 	networking_->enroll_message_to_be_sent(
-		MFW::OneWayArticleHeaderFactory (
+		MFW::ReqArticleHeaderFactory (
 			MFW::ArticleHeaderFactory(
 				public_identifier_,
 				a.news_id(),

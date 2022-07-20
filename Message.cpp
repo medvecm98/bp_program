@@ -225,10 +225,10 @@ unique_ptr_message MFW::RespArticleHeaderFactory(unique_ptr_message&& msg, artic
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::OneWayArticleHeaderFactory(unique_ptr_message&& msg, Article* article_header) {
+unique_ptr_message MFW::ReqArticleHeaderFactory(unique_ptr_message&& msg, Article* article_header) {
 	auto header_ptr = msg->mutable_article_header()->mutable_article();
 	CreateArticle(header_ptr, article_header);
-	msg->set_msg_ctx(np2ps::ONE_WAY);
+	msg->set_msg_ctx(np2ps::REQUEST);
 
 	return std::move(msg);
 }

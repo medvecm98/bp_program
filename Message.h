@@ -85,7 +85,7 @@ public:
 	static unique_ptr_message RespCredentialsFactory(unique_ptr_message&& msg, QString ip4, QString ip6, 
 		std::shared_ptr<rsa_public_optional> public_key, std::shared_ptr<eax_optional> eax_key);
 
-	static unique_ptr_message OneWayArticleHeaderFactory(unique_ptr_message&& msg, Article* article_header);
+	static unique_ptr_message ReqArticleHeaderFactory(unique_ptr_message&& msg, Article* article_header);
 
 	/* Basic factories: */
 	
