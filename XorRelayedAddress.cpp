@@ -57,7 +57,6 @@ std::uint16_t XorRelayedAddressAttribute::read_stun_attribute(QDataStream& input
 
     input >> address_family >> tcp_port;
 
-    std::cout << "AF: " << address_family << ", TP: " << tcp_port << std::endl;
 
     read_length += 4;
 
@@ -112,7 +111,6 @@ void XorRelayedAddressAttribute::write_stun_attribute(QDataStream& output) {
     StunMessageAttribute::write_stun_attribute(output);
     output << address_family << tcp_port;
 
-    std::cout << "Sending STUN XMA: " << address_family << ", port: " << tcp_port << std::endl;
 
     FAMILY_SELECT(
         address_family,

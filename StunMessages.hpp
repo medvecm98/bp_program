@@ -78,6 +78,15 @@ enum class StunAttributeEnum {
     relayed_publid_identifier = 9
 };
 
+/**
+ * @brief Class representing the STUN attribute.
+ * 
+ * Initializes, reads and writes the attribute.
+ * 
+ * Padding and unpadding options as well for those attributes, who's length
+ * is not divisible by 4.
+ * 
+ */
 class StunMessageAttribute {
 public:
     virtual ~StunMessageAttribute() = default;
@@ -90,14 +99,48 @@ public:
         header = h;
     }
 
+    /**
+     * @brief Initializes attrbitue with length and pointer to its header.
+     * 
+     * Used when creating new attributes.
+     * 
+     */
     virtual void initialize(std::uint16_t len, StunMessageHeader* h);
 
-    virtual std::uint16_t read_stun_attribute(QDataStream&, std::uint16_t length, std::uint16_t type);
+    /**
+     * @brief Reads the STUN attribute from the network (through stream) using provided strean.
+     * 
+     * Length and type needs to be supplied, because are read earlier on by
+     * another method.
+     * 
+     * @param input Stream to read from.
+     * @param length Length of attrbiute.
+     * @param type Type of attribute.
+     * @return std::uint16_t Read length.
+     */
+    virtual std::uint16_t read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type);
 
-    virtual void write_stun_attribute(QDataStream&);
+    /**
+     * @brief Write STUN attribute to the network (through stream).
+     * 
+     * @param output Stream to write into.
+     */
+    virtual void write_stun_attribute(QDataStream& output);
 
+    /**
+     * @brief Pad until the length is divisible by 4. That is STUN requirement.
+     * 
+     * @param output Stream to write padding into.
+     * @param length Pre-pad length.
+     */
     virtual void pad(QDataStream& output, std::uint16_t length);
 
+    /**
+     * @brief Unpad until the length matches the pre-pad length.
+     * 
+     * @param output Stream to read padding from.
+     * @param length Pre-pad length.
+     */
     virtual void unpad(QDataStream& input, std::uint16_t length);
 
     std::uint16_t stun_attr_type, stun_attr_length;
@@ -109,15 +152,28 @@ protected:
 
 using stun_attr_ptr = std::shared_ptr<StunMessageAttribute>;
 
+/**
+ * @brief Base class for attribute factory.
+ * 
+ */
 class StunMessageAttributeFactory {
 public:
     virtual ~StunMessageAttributeFactory() = default;
 
+    /**
+     * @brief Creates new instance of given attribute on heap.
+     * 
+     * @return stun_attr_ptr Shared pointer to new attribute.
+     */
     virtual stun_attr_ptr create() = 0;
 };
 
 using factory_map = std::map<std::uint16_t, std::shared_ptr<StunMessageAttributeFactory>>;
 
+/**
+ * @brief Class representing the header of the STUN message.
+ * 
+ */
 class StunMessageHeader {
 public:
     std::uint16_t stun_length;
@@ -130,18 +186,96 @@ public:
     StunMessageHeader() = default;
     explicit StunMessageHeader(std::uint16_t length);
     StunMessageHeader(StunClassEnum stun_class, StunMethodEnum stun_method);
+
+    /**
+     * @brief Decode the stun class and method from its type.
+     * 
+     * @param type Type to decode
+     * @return true Always.
+     */
     bool decode_type(std::uint16_t type);
+
+    /**
+     * @brief Encodes the message class and method into message type.
+     * 
+     * @return std::uint16_t Type of the message.
+     */
     std::uint16_t encode_type();
+
+    /**
+     * @brief Append given attribute to the message.
+     * 
+     * Increases length of message accordingly.
+     * 
+     * @param attribute Attribute to insert.
+     */
     void append_attribute(std::shared_ptr<StunMessageAttribute> attribute);
+
+    /**
+     * @brief Inserts TID, one 4B number after another.
+     * 
+     * Send in network order; big endian.
+     * 
+     * @param t0 First number.
+     * @param t1 Second number.
+     * @param t2 Third number.
+     */
     void insert_tid(std::uint32_t t0, std::uint32_t t1, std::uint32_t t2);
+
+    /**
+     * @brief Copies TID from other message.
+     * 
+     * Used when creating responses.
+     * 
+     * @param header2 Header to copy TID from.
+     */
     void copy_tid(std::shared_ptr<StunMessageHeader> header2);
+
+    /**
+     * @brief Generates new TID for the message.
+     * 
+     * Used when creating requests and indications.
+     * 
+     * @param rng Random number generator for random numbers.
+     */
     void generate_tid(CryptoPP::AutoSeededRandomPool& rng);
 
-    void read_message_header(QDataStream&);
-    void read_attributes(QDataStream&, factory_map&);
+    /**
+     * @brief Read message header from the network.
+     * 
+     * Checks magic cookie.
+     * 
+     * @param input Stream to read from.
+     */
+    void read_message_header(QDataStream& input);
 
-    void write_stun_message(QDataStream&);
-    void write_header(QDataStream&);
+    /**
+     * @brief Reads attributes from the network.
+     * 
+     * Compares legth in message and length of read attributes if it matches.
+     * 
+     * @param input Stream to read from.
+     * @param factories Factories to build the attributes.
+     */
+    void read_attributes(QDataStream& input, factory_map& factories);
+
+    /**
+     * @brief Writes entire message into network.
+     * 
+     * Writes entire message including the 
+     * 
+     * @param output Stream to write into.
+     */
+    void write_stun_message(QDataStream& output);
+
+    /**
+     * @brief Writes the message header into the network.
+     * 
+     * Only header is written.
+     * 
+     * @param output Stream to write into.
+     */
+    void write_header(QDataStream& output);
 
     void print_message();
 

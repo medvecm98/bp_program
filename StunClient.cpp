@@ -15,14 +15,7 @@ StunClient::StunClient(Networking* networking) {
     stun_attribute_factories.emplace(STUN_ATTR_PUBLIC_KEY, std::make_shared<PublicKeyAttributeFactory>());
     stun_attribute_factories.emplace(STUN_ATTR_RELAYED_PUBLIC_IDENTIFIER, std::make_shared<RelayedPublicIdentifierAttributeFactory>());
 
-    stun_server.first = QHostAddress(QString("10.19.160.208"));
-    stun_server.second = STUN_PORT;
     networking_ = networking;
-}
-
-StunClient::StunClient(Networking* networking, QHostAddress address, std::uint16_t port_stun) : StunClient::StunClient(networking) {
-    stun_server.first = address;
-    stun_server.second = port_stun;
 }
 
 void printQByteArray(QByteArray& a) {
@@ -43,7 +36,6 @@ void printQByteArray(QByteArray& a) {
 
 
 void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id) {
-    std::cout << "STUN client: sending STUN message" << std::endl;
     QTcpSocket* socket;
 
     if (!networking_->ip_map_.have_ip4(public_id)) {
@@ -63,8 +55,7 @@ void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id)
         int b = 0;
         if ((b = socket->write(block)) == -1)
             std::cout << "SC: Error occured while writing the block" << std::endl;
-        else
-            std::cout << "SC: bytes written: " << b << std::endl;
+
     }
     else {
         socket = new QTcpSocket(this);
@@ -82,9 +73,6 @@ void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id)
         message_waiting_to_connect = true;
 
         socket->connectToHost(addr, port);
-
-        /*if (!socket->waitForConnected(10000))
-            throw std::logic_error("Connection to STUN server timed-out. (10 seconds)");*/
     }
 
     
@@ -103,11 +91,6 @@ void StunClient::send_stun_message_transport_address(stun_header_ptr stun_messag
     message_waiting_to_connect = true;
     
     socket->connectToHost(address, port);
-
-    /*if (!socket->waitForConnected(10000))
-        throw std::logic_error("Connection to STUN server timed-out. (10 seconds)");*/
-
-    
 }
 
 void StunClient::host_connected() {
@@ -136,8 +119,6 @@ void StunClient::host_connected() {
     int b = 0;
     if ((b = socket->write(block)) == -1)
         std::cout << "SC: Error occured while writing the block" << std::endl;
-    else
-        std::cout << "SC: bytes written: " << b << std::endl;
 }
 
 /**
@@ -148,7 +129,7 @@ void StunClient::host_connected() {
 void StunClient::handle_received_message(stun_header_ptr stun_message_header, QTcpSocket* socket) {
     if (stun_message_header->stun_class == StunClassEnum::response_success) {
         if (stun_message_header->stun_method == StunMethodEnum::binding) {
-            QString client_IP("lol");
+            QString client_IP;
             MPProcess<CResponseSuccessTag, MBindingTag> mpps(stun_message_header, client_IP);
             MessageProcessor<CResponseSuccessTag, MBindingTag>::process(mpps);
             std::cout << "IP: " << client_IP.toStdString() << ", port: " << mpps.port << std::endl;
@@ -167,6 +148,9 @@ void StunClient::handle_received_message(stun_header_ptr stun_message_header, QT
         }
         else if (stun_message_header->stun_method == StunMethodEnum::identify) {
             process_response_error_identify(stun_message_header);
+        }
+        else if (stun_message_header->stun_method == StunMethodEnum::allocate) {
+            process_response_error_allocate(stun_message_header);
         }
     }
     else if (stun_message_header->stun_class == StunClassEnum::indication) {
@@ -188,7 +172,6 @@ void StunClient::handle_received_message(stun_header_ptr stun_message_header, QT
  */
 void StunClient::receive_msg() {
     QTcpSocket* socket = (QTcpSocket*)QObject::sender();
-    std::cout << "SC: message received" << std::endl;
     QDataStream in_stream;
     in_stream.setVersion(QDataStream::Qt_5_0);
     in_stream.setDevice(socket);
@@ -207,20 +190,7 @@ void StunClient::receive_msg() {
     handle_received_message(stun_message_header, socket);
 }
 
-/**
- * @brief Creates and sends binding request message to STUN server.
- * 
- */
-void StunClient::binding_request() {
-    stun_header_ptr msg = std::make_shared<StunMessageHeader>();
-    create_binding_request(msg);
-    send_stun_message_transport_address(msg, stun_server.first, stun_server.second);
-
-    //receive_msg();
-}
-
 void StunClient::allocate_request(pk_t where) {
-    std::cout << "StunClient::allocate_request(pk_t where)\n";
     stun_header_ptr msg = std::make_shared<StunMessageHeader>();
     create_request_allocate(msg, 600, networking_->get_peer_public_id());
     send_stun_message(msg, where);
@@ -229,21 +199,6 @@ void StunClient::allocate_request(pk_t where) {
 void StunClient::create_binding_request(stun_header_ptr stun_msg) {
     MPCreate<CRequestTag, MBindingTag> mpc(rng, stun_msg);
     MessageProcessor<CRequestTag, MBindingTag>::create(mpc);
-}
-
-void StunClient::accept() {
-    in.startTransaction();
-
-    stun_header_ptr stun_reply = std::make_shared<StunMessageHeader>();
-
-    try {
-        stun_reply->read_message_header(in);
-        stun_reply->read_attributes(in, stun_attribute_factories);
-    }
-    catch (invalid_stun_message_format_error de) {
-        in.abortTransaction();
-        std::cout << de.what() << std::endl;
-    }
 }
 
 void StunClient::error(QAbstractSocket::SocketError socketError) {
@@ -288,7 +243,6 @@ void StunClient::create_request_identify_address(stun_header_ptr& stun_message, 
 
 
 void StunClient::process_response_success_identify(stun_header_ptr stun_message) {
-    std::cout << "Processing success response identify" << std::endl;
     PublicIdentifierAttribute* pia;
     XorRelayedAddressAttribute* xraa;
     RelayedPublicIdentifierAttribute* ria;
@@ -350,7 +304,6 @@ void StunClient::process_response_error_identify(stun_header_ptr stun_message) {
 }
 
 void StunClient::create_request_send(stun_header_ptr stun_message, QByteArray& msg, pk_t where) {
-    std::cout << "creating request send" << std::endl;
     stun_message->stun_class = StunClassEnum::request;
     stun_message->stun_method = StunMethodEnum::send;
 
@@ -370,7 +323,6 @@ void StunClient::create_request_send(stun_header_ptr stun_message, QByteArray& m
 }
 
 void StunClient::create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id) {
-    std::cout << "StunClient::create_request_allocate(stun_header_ptr stun_message, std::uint32_t lifetime, pk_t public_id)\n";
     stun_message->stun_class = StunClassEnum::request;
     stun_message->stun_method = StunMethodEnum::allocate;
 
@@ -413,14 +365,7 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
     networking_->ip_map_.my_ip.ipv4 = QHostAddress(xma->get_address());
     networking_->ip_map_.my_ip.port = xma->get_port();
     add_stun_server(tcp_socket, pia->get_public_identifier());
-    std::cout << "Goo goo" << std::endl;
     emit confirmed_newspaper(pia->get_public_identifier());
-}
-
-void StunClient::check_for_nat() {
-    auto msg = std::make_shared<StunMessageHeader>();
-    create_binding_request(msg);
-    send_stun_message(msg, get_stun_server_any());
 }
 
 void StunClient::process_response_success_binding(stun_header_ptr stun_message, QTcpSocket* socket_) {
@@ -441,12 +386,17 @@ void StunClient::process_response_success_binding(stun_header_ptr stun_message, 
 void StunClient::identify(pk_t who) {
     auto msg = std::make_shared<StunMessageHeader>();
     create_request_identify(msg, who);
-    auto preferred_stun_server = networking_->ip_map_.get_wrapper_for_pk(who)->second.preferred_stun_server;
-    if (preferred_stun_server == 0) {
-        send_stun_message(msg, get_stun_server_any());
+    if (networking_->ip_map_.get_wrapper_for_pk(who) != networking_->ip_map_.get_map_end()) {
+        auto preferred_stun_server = networking_->ip_map_.get_wrapper_for_pk(who)->second.preferred_stun_server;
+        if (preferred_stun_server == 0) {
+            send_stun_message(msg, get_stun_server_any());
+        }
+        else {
+            send_stun_message(msg, preferred_stun_server);
+        }
     }
     else {
-        send_stun_message(msg, preferred_stun_server);
+        std::cout << "Failed to connect to peer " << who << std::endl;
     }
 }
 
@@ -461,7 +411,6 @@ pk_t StunClient::get_stun_server_any() {
 }
 
 void StunClient::stun_server_connected() {
-    std::cout << "STUN server added and connected for: " << stun_server_awaiting_confirmation << std::endl;
     QTcpSocket* socket = (QTcpSocket*) QObject::sender();
 }
 
@@ -477,7 +426,6 @@ void StunClient::add_stun_server(QTcpSocket* tcp_socket_, pk_t pid) {
 }
 
 void StunClient::process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message) {
-    std::cout << "processing send indication" << std::endl;
     PublicIdentifierAttribute* pia;
     RelayedPublicIdentifierAttribute* ria;
     DataAttribute* data;
@@ -502,4 +450,16 @@ void StunClient::process_indication_send(stun_header_ptr stun_message, std::stri
 
 void StunClient::delete_disconnected_users() {
     
+}
+
+void StunClient::process_response_error_allocate(stun_header_ptr stun_message) {
+    RelayedPublicIdentifierAttribute* ria;
+
+    for (auto&& attr : stun_message->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::relayed_publid_identifier) { //server
+            ria = (RelayedPublicIdentifierAttribute*) attr.get();
+        }
+    }
+
+    std::cout << "Identifier was already allocated for " << ria->get_public_identifier() << std::endl;
 }

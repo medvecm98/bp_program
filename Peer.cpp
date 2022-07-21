@@ -29,7 +29,6 @@ void Peer::newspaper_identified(pk_t newspaper_key, my_string newspaper_name, st
  * @param newspaper_ip_domain IP, or domain name, of the newspaper.
  */
 void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain) {
-	std::cout << "Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain)\n";
 	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
 	networking_->get_stun_client()->allocate_request(newspaper_key);
 
@@ -37,7 +36,6 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 }
 
 void Peer::newspaper_confirm(pk_t pid) {
-	std::cout << "Peer::newspaper_confirm(pk_t pid)\n";
 	auto ne = newspapers_awaiting_confirmation.find(pid);
 	news_.emplace(pid, ne->second);
 	newspapers_awaiting_confirmation.erase(ne);
@@ -183,7 +181,6 @@ size_t Peer::list_all_articles_by_me(std::set<Article*> &articles, const std::se
 				if (i->second.author_id() == public_identifier_) {
 					articles.insert(&(i->second));
 					article_counter++;
-					std::cout << "added article" << std::endl;
 				}
 			}
 		}
@@ -285,21 +282,16 @@ void Peer::create_margin_request(pk_t to, hash_t article_hash) {
  * @param article_hash Shared pointer to message which needs to be handled.
  */
 void Peer::handle_message(unique_ptr_message message) {
-	std::cout << "message handling for pid: " << message->from() << std::endl;
 	if (message->msg_ctx() == np2ps::REQUEST) {
-		std::cout << "message request" << std::endl;
 		handle_requests( std::move( message));
 	}
 	else if (message->msg_ctx() == np2ps::RESPONSE) {
-		std::cout << "message response" << std::endl;
 		handle_responses( std::move( message));
 	}
 	else if (message->msg_ctx() == np2ps::ONE_WAY) {
-		std::cout << "message one way" << std::endl;
 		handle_one_way( std::move( message));
 	}
 	else if (message->msg_ctx() == np2ps::ERROR) {
-		std::cout << "message error (context is error)" << std::endl;
 		handle_error( std::move( message));
 	}
 	else {
@@ -319,57 +311,9 @@ void Peer::handle_requests(unique_ptr_message message) {
 	auto type = message->msg_type();
 
 	if (type == np2ps::ARTICLE_ALL) {
-		//first we will determine what is the level of the peer that requested article
-		//TODO: redo this without using .bucket()
-
-		auto article_bucket = readers_.bucket(message->article_all().header().main_hash());
-		auto article_readers_iterator = readers_.begin(article_bucket);
-
-		bool user_not_found = true;
-		level_t req_level = message->article_all().level();
-		level_t found_level = 0;
-		level_t final_level = 0;
-
-		for (; user_not_found && (article_readers_iterator != readers_.end(article_bucket)); article_readers_iterator++) {
-			//we search for given user, if it exists in our database and we will check for his level
-			if (article_readers_iterator->second->peer_key == message->from()) {
-				user_not_found = false;
-				found_level = article_readers_iterator->second->peer_level;
-			}
-		}
-
-		for (auto&& user : user_map) {
-			if (user.first == message->from()) {
-				user_not_found = false;
-				found_level = user.second.peer_level;
-			}
-		}
-
-		final_level = req_level < found_level ? req_level : found_level;
-
-		if (false && user_not_found) {
-			/* if no user was found in database, we need to check with authority, what his level is */
-			std::cout << "ARTICLE_ALL User not found in database\n";
-
-			auto user_check_msg = MFW::UpdateSeqNumber(
-				MFW::ReqUserIsMemberFactory(
-					MFW::UserIsMemberFactory(public_identifier_, 
-						news_[ message->article_all().header().news_id()].get_id(), 
-						message->from()), 
-					message->article_all().level()),
-				message->seq());
-
-			networking_->store_to_map(std::move(message)); //stores current message, so it waits for answer
-			networking_->enroll_message_to_be_sent(std::move(user_check_msg)); //sends request for user level in given
-		}
-		else {
-			/* send user requested article */
-			std::cout << "ARTICLE_ALL User found in database\n";
-			std::cout << "Looking for " << message->article_all().article_hash() << std::endl;
 
 			auto article = find_article(message->article_all().article_hash());
 			if (article.has_value() && article.value()->article_present()) {
-				std::cout << "ARTICLE_ALL Article found.\n";
 				std::string article_whole;
 
 				article_whole = article.value()->read_contents();
@@ -379,7 +323,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 						public_identifier_, 
 						message->from(), 
 						article.value()->main_hash(), 
-						final_level),
+						255),
 					article.value(), 
 					std::move(article_whole)
 				);
@@ -400,7 +344,6 @@ void Peer::handle_requests(unique_ptr_message message) {
 				networking_->enroll_message_to_be_sent(article_msg);
 			}
 			else {
-				std::cout << "ARTICLE_ALL Article not found.\n";
 				//article not found in database
 
 				std::vector<pk_t> article_peers;
@@ -453,12 +396,12 @@ void Peer::handle_requests(unique_ptr_message message) {
 					);
 				}
 			}
-		}
+
 	}
 	else if (type == np2ps::ARTICLE_HEADER) {
 		if (message->has_article_header() && message->article_header().has_article()) {
 			hash_t recv_article_hash = message->article_header().article_hash();
-			if (journalists_.find(message->article_header().article().author_id()) != journalists_.end()) {
+			if (journalists_.find(message->article_header().article().author_id()) != journalists_.end()) { //check if sender is a journalist for this newspaper
 				Article recv_article(message->article_header().article());
 				enroll_new_article(recv_article, true);
 				networking_->enroll_message_to_be_sent(
@@ -472,7 +415,6 @@ void Peer::handle_requests(unique_ptr_message message) {
 				);
 			}
 			else {
-				std::cout << "invalid journalist" << std::endl;
 				networking_->enroll_message_to_be_sent(
 					MFW::SetMessageContextError(
 						MFW::ArticleHeaderFactory(
@@ -499,27 +441,7 @@ void Peer::handle_requests(unique_ptr_message message) {
 			)
 		);
 	}
-	else if (type == np2ps::USER_IS_MEMBER) {
-		//TODO: error, if user is not authority
-		bool is_member = false;
-		auto find_result = user_map.find(message->user_is_member().user_pk());
-		if ((find_result != user_map.end()) && (find_result->second.peer_level >= message->user_is_member().level())) {
-			is_member = true;
-		}
-		networking_->enroll_message_to_be_sent(
-			MFW::RespUserIsMemberFactory(
-				MFW::UserIsMemberFactory(
-					public_identifier_,
-					message->from(),
-					message->user_is_member().user_pk()
-				),
-				is_member,
-				message->user_is_member().level()
-			)
-		);
-	}
 	else if (type == np2ps::ARTICLE_DATA_UPDATE) {
-		std::cout << "Article data update" << std::endl;
 		//reporter part
 		if (find_article(message->article_data_update().article_pk()).has_value()) {
 			if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
@@ -533,10 +455,8 @@ void Peer::handle_requests(unique_ptr_message message) {
 				}
 			}
 			else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
-				std::cout << "Article data update removal from " << message->from() << std::endl;
 				auto [bit, eit] = readers_.equal_range(message->article_data_update().article_pk());
 				for (auto it = bit; it != eit; it++) {
-					std::cout << "Iterator on : " << it->second->peer_key << std::endl;
 					if (it->second->peer_key == message->from()) {
 						readers_.erase(it);
 						break;
@@ -565,8 +485,6 @@ void Peer::handle_requests(unique_ptr_message message) {
 		}
 	}
 	else if (type == np2ps::UPDATE_MARGIN) {
-		std::cout << "Request for margin arrived" << std::endl;
-
 		auto article = find_article(message->update_margin().article_pk());
 
 		auto [margin_begin, margin_end] = article.value()->get_range_iterators(public_identifier_);
@@ -586,9 +504,6 @@ void Peer::handle_requests(unique_ptr_message message) {
 				)
 			)
 		);
-	}
-	else if (type == np2ps::UPDATE_ARTICLE) {
-		//TODO: send unsupported error
 	}
 	else if (type == np2ps::CREDENTIALS) {
 		QString resp_ip4, resp_ip6;
@@ -665,6 +580,12 @@ void Peer::handle_responses(unique_ptr_message message) {
 						networking_->soliciting_articles[recv_article_id].pop_back();
 						generate_article_all_message(destination, recv_article_id);
 					}
+					else {
+						if (downloading_articles.find(recv_article_id) != downloading_articles.end()) {
+							downloading_articles.erase(recv_article_id);
+							emit check_selected_item();
+						}
+					}
 
 					return;
 				}
@@ -678,19 +599,21 @@ void Peer::handle_responses(unique_ptr_message message) {
 			if (networking_->soliciting_articles.find(recv_article_id) != networking_->soliciting_articles.end()) { //remote the article from soliticing articles, since we got an answer
 				networking_->soliciting_articles.erase(recv_article_id);
 			}
+			if (message->article_all().header().news_id() != message->from()) {
+				networking_->enroll_message_to_be_sent(
+					MFW::SetMessageContextRequest(
+					MFW::ArticleDataChangeFactory(
+						public_identifier_,
+						message->from(),
+						recv_article_id,
+						true
+					))
+				);
+			}
 		}
-		else {
-			//TODO: log error
-		}
-	}
-	else if (type == np2ps::ARTICLE_HEADER) {
-		/*if (message->has_article_header()) {
-			article_headers_only.insert_or_assign(message->article_header().article_hash(), Article(message->article_header().article()));
-		}*/
 	}
 	else if (type == np2ps::ARTICLE_LIST) {
 		auto list_size = message->article_list().response_size();
-		std::cout << "Article List response size: " << list_size << '\n';
 		if (list_size != 0) {
 			pk_t list_news_id = message->article_list().response().begin()->news_id();
 
@@ -699,32 +622,13 @@ void Peer::handle_responses(unique_ptr_message message) {
 				news_[list_news_id].add_article(a.main_hash(), std::move(a));
 			}
 
-			std::cout << "Emit new article list" << std::endl;
 			emit new_article_list(list_news_id);
 		}
 		else {
-			std::cout << "Article List response; empty list" << std::endl;
+			std::cout << "Article List response for " << message->article_list().response().begin()->news_id() << "; empty list" << std::endl;
 		}
 		getting_article_list.erase(message->from());
 		emit check_selected_item();
-	}
-	else if (type == np2ps::USER_IS_MEMBER) {
-		if (message->user_is_member().is_member() && (message->user_is_member().level() > 127)) {
-			user_map.insert({message->user_is_member().user_pk(), PeerInfo(message->user_is_member().user_pk(), message->user_is_member().level())});
-		}
-		if (networking_->check_if_in_map(message->seq())) {
-			if (message->user_is_member().is_member()) {
-				//user was member of given level, message can be sent
-
-				emit user_is_member_verification(message->seq(), true);
-			}
-			else {
-				//message can't be sent, user wasn't member of given level
-
-				emit user_is_member_verification(message->seq(), false);
-				//TODO: log error
-			}
-		}
 	}
 	else if (type == np2ps::CREDENTIALS) {
 		if (message->credentials().req_ipv4()) {
@@ -745,7 +649,6 @@ void Peer::handle_responses(unique_ptr_message message) {
 		}
 	}
 	else if (type == np2ps::PUBLIC_KEY) {
-		std::cout << "public key update" << std::endl;
 		networking_->ip_map_.update_rsa_public((pk_t)message->from(), message->public_key().key());
 		if (newspapers_awaiting_confirmation.find((pk_t)message->from()) != newspapers_awaiting_confirmation.end()) {
 			news_.insert({message->from(), newspapers_awaiting_confirmation[(pk_t)message->from()]});
@@ -757,7 +660,6 @@ void Peer::handle_responses(unique_ptr_message message) {
 		emit symmetric_key_exchanged(message->from());
 	}
 	else if (type == np2ps::UPDATE_MARGIN) {
-		std::cout << "Gor margin request" << std::endl;
 
 		auto article = find_article(message->update_margin().article_pk());
 		for (int i = 0; i < message->update_margin().margin().margins_size(); i++) {
@@ -838,39 +740,30 @@ void Peer::generate_article_header_message(pk_t destination, hash_t article_hash
 void Peer::handle_one_way(unique_ptr_message msg) {
 	auto type = msg->msg_type();
 	if (type == np2ps::ARTICLE_SOLICITATION) {
-		std::cout << "Got article solicitation one-way" << std::endl;
-		auto check_for_existence = networking_->soliciting_articles.find(msg->article_sol().article_hash());
+		auto check_for_existence = networking_->soliciting_articles.find(msg->article_sol().article_hash()); //check if this article is in fact in solicitation
 		if (check_for_existence == networking_->soliciting_articles.end()) {
 			std::vector<pk_t> potential_owners;
 			for (auto i = msg->article_sol().possible_owners().begin(); i != msg->article_sol().possible_owners().end(); i++) {
-				potential_owners.push_back(*i);
+				potential_owners.push_back(*i); //get potential owners
 			}
 			networking_->soliciting_articles.insert({msg->article_sol().article_hash(), std::move(potential_owners)});
 		}
-		auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back();
-		networking_->soliciting_articles[msg->article_sol().article_hash()].pop_back();
-		networking_->ip_map_.update_preferred_stun_server(destination, msg->from());
-		generate_article_all_message(destination, msg->article_sol().article_hash());
+		auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back(); //get one owner
+		networking_->soliciting_articles[msg->article_sol().article_hash()].pop_back(); //remove owner you just got
+		networking_->ip_map_.update_preferred_stun_server(destination, msg->from()); //update his preferred stun server
+		generate_article_all_message(destination, msg->article_sol().article_hash()); //send him article all message
 	}
 	else if (type == np2ps::SYMMETRIC_KEY) {
-		std::cout << "handling and saving a symmetric key" << std::endl;
 		CryptoPP::AutoSeededRandomPool rng;
-		std::cout << "SYMMETRIC_KEY A" << std::endl;
 		std::string key_str = msg->symmetric_key().key();
-		std::cout << "SYMMETRIC_KEY B" << std::endl;
 		std::string signature_str = msg->symmetric_key().signature();
-		std::cout << "SYMMETRIC_KEY C" << std::endl;
 
 		CryptoPP::SecByteBlock key_encrypted(reinterpret_cast<const CryptoPP::byte*>(&key_str[0]), key_str.size());
-		std::cout << "SYMMETRIC_KEY D" << std::endl;
 		CryptoPP::SecByteBlock signature(reinterpret_cast<const CryptoPP::byte*>(&signature_str[0]), signature_str.size());
 
-		std::cout << "SYMMETRIC_KEY E" << std::endl;
 		signer_verifier::Verifier verifier(networking_->ip_map_.get_rsa_public(msg->from())->value());
-		std::cout << "SYMMETRIC_KEY F" << std::endl;
 		rsa_encryptor_decryptor::Decryptor rsa_decryptor(networking_->ip_map_.private_rsa.value());
 
-		std::cout << "SYMMETRIC_KEY G" << std::endl;
 		std::string key_decrypted_str;
 
 		CryptoPP::StringSource ss1(
@@ -883,11 +776,9 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 				new CryptoPP::StringSink(key_decrypted_str)
 			)
 		);
-		std::cout << "SYMMETRIC_KEY H" << std::endl;
 
 		CryptoPP::SecByteBlock key_decrypted(reinterpret_cast<const CryptoPP::byte*>(&key_decrypted_str[0]), key_decrypted_str.size());
 
-		std::cout << "SYMMETRIC_KEY I" << std::endl;
 		bool verification_result = verifier.VerifyMessage(
 			key_decrypted.data(),
 			key_decrypted.SizeInBytes(),
@@ -895,17 +786,13 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 			signature.size()
 		);
 
-		std::cout << "SYMMETRIC_KEY J" << std::endl;
 		if (!verification_result) {
 			std::cout << "Verification FAILED" << std::endl;
-			//TODO: throw error
 		}
 		else {
 			std::cout << "Verification SUCCEEDED" << std::endl;
 			networking_->ip_map_.get_wrapper_for_pk(msg->from())->second.add_eax_key(std::move(key_decrypted));
 		}
-
-		std::cout << "SYMMETRIC_KEY K" << std::endl;
 
 		//send response that symmetric key was received and processed
 		unique_ptr_message _msg = std::make_shared<proto_message>();
@@ -917,11 +804,8 @@ void Peer::handle_one_way(unique_ptr_message msg) {
 		networking_->enroll_message_to_be_sent(
 			std::move(_msg)
 		);
-
-		std::cout << "SYMMETRIC_KEY L" << std::endl;
 	}
 	else if (type == np2ps::PUBLIC_KEY) {
-		std::cout << "got one-way public key" << std::endl;
 		networking_->ip_map_.update_rsa_public((pk_t)msg->from(), msg->public_key().key());
 		user_map.insert({(pk_t)msg->from(), PeerInfo((pk_t)msg->from())});
 		
@@ -947,12 +831,12 @@ void Peer::handle_one_way(unique_ptr_message msg) {
  */
 void Peer::handle_error(unique_ptr_message msg) {
 	auto type = msg->msg_type();
-	if (type == np2ps::ARTICLE_SOLICITATION) {
+	if (type == np2ps::ARTICLE_SOLICITATION) { //possible owner did not have the article
 		auto check_for_existence = networking_->soliciting_articles.find(msg->article_sol().article_hash());
 		if (check_for_existence != networking_->soliciting_articles.end()) {
-			auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back();
-			networking_->soliciting_articles[msg->article_sol().article_hash()].pop_back();
-			generate_article_all_message(destination, msg->article_sol().article_hash());
+			auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back(); //get next owner
+			networking_->soliciting_articles[msg->article_sol().article_hash()].pop_back(); //pop him
+			generate_article_all_message(destination, msg->article_sol().article_hash()); //ask him
 		}
 		else {
 			std::cout << "Requested article with hash " << msg->article_sol().article_hash() << " was not found inside the network." << std::endl;
@@ -962,10 +846,6 @@ void Peer::handle_error(unique_ptr_message msg) {
 	else if (type == np2ps::ARTICLE_HEADER) {
 		std::cout << "Article " << msg->article_header().article_hash() << " failed to upload" << std::endl;
 	}
-}
-
-void Peer::send_stun_binding_request() {
-	networking_->get_stun_client()->binding_request();
 }
 
 bool Peer::remove_article(hash_t hash) {

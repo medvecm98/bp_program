@@ -208,11 +208,9 @@ unique_ptr_message MFW::RespArticleDownloadFactory(unique_ptr_message&& msg, art
 	msg->set_msg_ctx(np2ps::RESPONSE);
 	CreateArticle(header_ptr, article_header);
 
-	std::cout << "Original: " << article << std::endl;
 
 	msg->mutable_article_all()->set_article_actual(article);
 
-	std::cout << "Protobuf: " << msg->article_all().article_actual() << std::endl;
 
 	return std::move(msg);
 }

@@ -145,7 +145,6 @@ bool StunMessageHeader::decode_type(std::uint16_t type) {
     stun_method = get_method_enum_from_int(m);
     stun_class = get_class_enum_from_int(c);
 
-    //std::cout << "SMH: decode_type, method: " << m << ", class: " << c << std::endl; 
 
     return true;
 }
@@ -179,10 +178,6 @@ void StunMessageHeader::read_message_header(QDataStream& in_stream) {
 
     in_stream >> stun_header_type >> stun_header_length >> stun_header_magic_cookie;
 
-    std::cout << "Cookie in read_message_header: " << stun_header_magic_cookie << std::endl;
-    std::cout << "Type in read_message_header: " << stun_header_type << std::endl;
-    std::cout << "Length in read_message_header: " << stun_header_length << std::endl;
-
     this->stun_length = stun_header_length;
 
     if (stun_header_magic_cookie != MAGIC_COOKIE_VALUE)
@@ -212,8 +207,6 @@ void StunMessageHeader::read_attributes(QDataStream& in_stream, factory_map& stu
     while (stun_message_remaining_length > 0) { //load all attributes
         in_stream >> attr_type >> attr_length;
 
-        std::cout << "SM: RA: type: " << attr_type << ", length: " << attr_length << std::endl;
-        std::cout << "SM: RA: stun_length: " << stun_length << std::endl;
 
         stun_message_remaining_length -= type_and_length_length;
 
@@ -230,7 +223,6 @@ void StunMessageHeader::read_attributes(QDataStream& in_stream, factory_map& stu
         stun_attribute->stun_attr_length = attr_length;
 
         append_attribute(stun_attribute);
-        std::cout << attributes.size() << std::endl;
     }
 
     if (stun_message_remaining_length < 0)
@@ -261,7 +253,6 @@ std::uint16_t StunMessageAttribute::read_stun_attribute(QDataStream& input, std:
     stun_attr_type = type;
     stun_attr_length = length;
 
-    std::cout << "StunMessageAttribute::read_stun_attribute: " << stun_attr_type << ' ' << stun_attr_length << std::endl;
 
     read_length = 2 + 2;
 

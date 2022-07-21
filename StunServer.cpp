@@ -22,14 +22,12 @@ void StunServer::init_server() {
 }
 
 void StunServer::display_error() {
-    std::cout << "STUN server somehow got into an error..." << std::endl;
 }
 
 void StunServer::new_connection() {
     tcp_socket_ = tcp_server_->nextPendingConnection();
     tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
 
-    //std::cout << "SS: tcp_socket_ pointer: " << tcp_socket_ << std::endl;
 
     in_stream.setVersion(QDataStream::Qt_5_0);
     QObject::connect(tcp_socket_, &QIODevice::readyRead, this, &StunServer::reply);
@@ -40,13 +38,10 @@ void StunServer::new_connection() {
 
 void StunServer::reply() {
     QTcpSocket* socket = (QTcpSocket*) QObject::sender();
-    std::cout << "STUN server: replying to STUN message" << std::endl;
 
     stun_header_ptr stun_message = std::make_shared<StunMessageHeader>();
     stun_header_ptr stun_new = std::make_shared<StunMessageHeader>();
 
-    //std::cout << "SS: tcp_socket_ pointer: " << tcp_socket_ << std::endl;
-    //std::cout << "SS: socket state: " << tcp_socket_->state() << std::endl;
 
     stun_attr_type_vec unknown_cr_attributes;
     in_stream.setDevice(socket);
@@ -71,7 +66,6 @@ void StunServer::reply() {
             else if (stun_message->stun_method == StunMethodEnum::send) {
                 pk_t to;
                 process_request_send(stun_message, stun_new, to);
-                std::cout << "Relaying SEND STUN message to " << to << " peer.\n";
                 socket = networking_->ip_map_.get_wrapper_for_pk(to)->second.tcp_socket_;
             }
         }
@@ -88,7 +82,6 @@ void StunServer::reply() {
     }
     catch (invalid_stun_message_format_error de) {
         in_stream.abortTransaction();
-        std::cout << de.what() << std::endl;
     }
     catch (unknown_comprehension_required_attribute_error u) {
         send_error(420, socket, socket->peerAddress(), socket->peerPort());
@@ -135,7 +128,6 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
 
     if (pia) {
 
-        std::cout << "Request for pid: " << pia->get_public_identifier() << std::endl;
         auto my_public_id = networking_->get_peer_public_id();
         auto pia_public_id = pia->get_public_identifier();
     
@@ -162,7 +154,6 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
         }
     }
     else {
-        std::cout << "Request for my pid" << std::endl;
         create_response_success_identify(message_orig, message_new, networking_->get_peer_public_id(), QHostAddress(xraa->get_address()), PORT, networking_->ip_map_.my_ip.key_pair.first.value());
     }
 }
@@ -238,23 +229,16 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
             }
         }
 
-        /*auto address = networking_->ip_map_.get_ip4(public_identifier);
-        auto port = networking_->ip_map_.get_port(public_identifier);
-        auto rsa_public = networking_->ip_map_.get_rsa_public(public_identifier);*/
-
         if (networking_->ip_map_.have_ip4(public_identifier) && networking_->ip_map_.have_rsa_public(public_identifier)) {
-            throw public_identifier_already_allocated("Sadly, this identifier is already allocated.");
-            //TODO: send back error 437 (Allocation Mismatch)
+            create_response_error_allocate(message_orig, message_new);
+            return;
         }
         else {
-            //networking_->ip_map_.update_ip(public_identifier, socket->peerAddress(), socket->peerPort());
             networking_->ip_map_.update_rsa_public(public_identifier, pk);
 
             networking_->ip_map_.set_tcp_socket(public_identifier, socket);
-            //std::cout << "Allocated: " << public_identifier << ", IP: " << ipm.get_ip4(public_identifier).toString().toStdString() << ", port: " << ipm.get_port(public_identifier) << std::endl;
             networking_->user_map->emplace(public_identifier, PeerInfo(public_identifier, 127));
         }
-
 
         create_response_success_allocate(message_orig, message_new, lifetime, socket);
 }
@@ -265,7 +249,7 @@ void StunServer::create_response_success_allocate(stun_header_ptr message_orig, 
         
     message_new->copy_tid(message_orig);
 
-    std::shared_ptr<XorMappedAddressAttribute> xma = std::make_shared<XorMappedAddressAttribute>();
+    std::shared_ptr<XorMappedAddressAttribute> xma = std::make_shared<XorMappedAddressAttribute>(); //transport address of the sender
     xma->initialize(message_new.get(), STUN_IPV4, socket);
 
     std::shared_ptr<LifetimeAttribute> la = std::make_shared<LifetimeAttribute>();
@@ -282,7 +266,6 @@ void StunServer::create_response_success_allocate(stun_header_ptr message_orig, 
 }
 
 void StunServer::process_request_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t& to) {
-    std::cout << "processing request send" << std::endl;
     RelayedPublicIdentifierAttribute* ria;
     PublicIdentifierAttribute* pia;
     DataAttribute* data;
@@ -304,7 +287,6 @@ void StunServer::process_request_send(stun_header_ptr message_orig, stun_header_
 }
 
 void StunServer::create_indication_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t source_pk, std::string&& np2ps_message) {
-    std::cout << "creating indication send" << std::endl;
     message_new->stun_class = StunClassEnum::indication;
     message_new->stun_method = StunMethodEnum::send;
 
@@ -325,17 +307,31 @@ void StunServer::create_indication_send(stun_header_ptr message_orig, stun_heade
 }
 
 void StunServer::start_server(QHostAddress address) {
-    tcp_server_ = new QTcpServer(this);
+    if (!server_started) {
+        tcp_server_ = new QTcpServer(this);
 
-    if (!tcp_server_->listen(address, (quint16) STUN_PORT)) {
-        std::cout << "STUN Server failed to start" << std::endl;
-        return;
-    }
-    else {
-        std::cout << "STUN Server is running on IP: " 
-            << address.toString().toStdString() 
-            << " and port: " << STUN_PORT << std::endl;
-    }
+        if (!tcp_server_->listen(address, (quint16) STUN_PORT)) {
+            std::cout << "STUN Server failed to start" << std::endl;
+            return;
+        }
+        else {
+            std::cout << "STUN Server is running on IP: " 
+                << address.toString().toStdString() 
+                << " and port: " << STUN_PORT << std::endl;
+        }
 
-    QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &StunServer::new_connection);
+        QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &StunServer::new_connection);
+        server_started = true;
+    }
+}
+
+void StunServer::create_response_error_allocate(stun_header_ptr message_orig, stun_header_ptr message_new) {
+    message_new->stun_class = StunClassEnum::response_error;
+    message_new->stun_method = StunMethodEnum::allocate;
+
+    auto ria = std::make_shared<RelayedPublicIdentifierAttribute>();
+    ria->initialize(networking_->get_peer_public_id(), message_new.get());
+    message_new->append_attribute(ria);
+
+    message_new->copy_tid(message_orig);
 }

@@ -32,7 +32,6 @@ public:
 	 * @param to Message receiver.
 	 */
 	static void set_from_to(unique_ptr_message& upm, pk_t from, pk_t to) {
-		std::cout << "set from to okasfopdkf" << std::endl;
 		upm->set_from(from);
 		upm->set_to(to);
 

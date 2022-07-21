@@ -244,6 +244,10 @@ private slots:
 	 */
 	void on_pushButton_add_margin_clicked();
 
+	void on_pushButton_testPeer1_clicked();
+
+	void on_pushButton_testPeer2_clicked();
+
 signals:
 	/**
 	 * @brief Emits when Add article button is clicked and file is selected
@@ -270,6 +274,8 @@ signals:
 	 * @param article 
 	 */
 	void add_margin(article_ptr article);
+
+	
 
 private:
 	/**

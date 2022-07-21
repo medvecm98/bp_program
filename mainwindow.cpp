@@ -59,7 +59,6 @@ void MainWindow::generate_article_list() {
 }
 
 void MainWindow::article_list_received(pk_t newspaper_id) {
-	std::cout << "about to print article_list" << std::endl;
 	auto news_the_one  = ctx->p.get_news_db().at(newspaper_id); //find requested new in database
 
 	auto news_articles_it = news_the_one.get_iterator_database();
@@ -134,7 +133,6 @@ void MainWindow::on_pushButton_add_article_released()
 
 void MainWindow::on_pushButton_article_list_released()
 {
-	std::cout << "Article list requested" << std::endl;
 	QErrorMessage qem(this);
 	if (ui->treeWidget_newspaper->selectedItems().size() == 0) { //no item was selected from Newspaper tree
 		std::cout << "Please, select one item, thank you." << std::endl;
@@ -424,3 +422,58 @@ void MainWindow::new_margin(std::string type, std::string contents) {
 		article.value()->add_margin(ctx->p.get_public_key(), Margin(type, contents, ctx->p.get_public_key())); //add the margin with provided type and contents
 	}
 }
+
+void MainWindow::on_pushButton_testPeer1_clicked()
+{
+	ctx->p.set_name("OnePeer"); //set the name of the peer
+
+	ctx->p.init_newspaper("OneNews"); //initializes new newspaper
+	
+	/* enables or disables all the buttons */
+	enable_add_article();
+	disable_new_peer();
+	newspaper_created();
+	
+	enable_add_news();
+	enable_print_peer();
+
+	std::set<std::string> categories;
+	categories.insert("sport");
+	categories.insert("politics");
+	categories.insert("yolo");
+
+	QString path("/home/michal/a.txt");
+	
+	Article a;
+	a.initialize_article(categories, path.toStdString(), ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
+	ctx->p.enroll_new_article(std::move(a), false); //insert new article into the map of my newspaper, including the article's contents
+}
+
+
+void MainWindow::on_pushButton_testPeer2_clicked()
+{
+	ctx->p.set_name("TwoPeer"); //set the name of the peer
+
+	ctx->p.init_newspaper("TwoNews"); //initializes new newspaper
+	
+	/* enables or disables all the buttons */
+	enable_add_article();
+	disable_new_peer();
+	newspaper_created();
+	
+	enable_add_news();
+	enable_print_peer();
+
+	std::set<std::string> categories;
+	categories.insert("sport");
+	categories.insert("politics");
+	categories.insert("yolo");
+
+	QString path("/home/michal/a.txt");
+	
+	Article a;
+	a.initialize_article(categories, path.toStdString(), ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
+	ctx->p.enroll_new_article(std::move(a), false); //insert new article into the map of my newspaper, including the article's contents
+
+}
+

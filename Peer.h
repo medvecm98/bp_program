@@ -76,10 +76,6 @@ public:
 
 		user_map.emplace(public_identifier_, PeerInfo(public_identifier_, 255));
 
-		/* slots and signals connections: */
-		QObject::connect(this, &Peer::ip_credentials_arrived,
-						 &(*networking_), &Networking::send_message_again_ip);
-
 		QObject::connect(this, &Peer::new_symmetric_key,
 						 &(*networking_), &Networking::decrypt_encrypted_messages);
 
@@ -88,9 +84,6 @@ public:
 
 		QObject::connect(this, &Peer::symmetric_key_exchanged, 
 						 &(*networking_), &Networking::symmetric_exchanged);
-
-		/*QObject::connect(this, &Peer::got_newspaper_confirmation, 
-						 this, &Peer::allocate_on_stun_server);*/
 
 		QObject::connect(networking_->get_stun_client().get(), &StunClient::confirmed_newspaper,
 							this, &Peer::newspaper_confirm);
@@ -362,17 +355,7 @@ public:
 	news_database& get_news_db() {
 		return news_;
 	}
-
-	/**
-	 * @brief Restarts `PeerReceiver` server in `Networking`.
-	 * 
-	 * For example, when IP is changed.
-	 * 
-	 */
-	void restart_server(bool restart = true) {
-		networking_->restart_server(restart);
-	}
-
+	
 	/**
 	 * @brief News name getter. 
 	 * 
@@ -412,6 +395,9 @@ public:
 		return getting_article_list;
 	}
 
+	/**
+	 * @brief Removes reader for given article.
+	 */
 	void remove_reader(hash_t article, pk_t reader) {
 		auto [ait, eit] = readers_.equal_range(article);
 		for (; ait != eit; ait++) {
