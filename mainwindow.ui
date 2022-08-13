@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1053</width>
-    <height>635</height>
+    <width>1070</width>
+    <height>647</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,17 +15,17 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="1" column="0">
-     <widget class="QPushButton" name="pushButton_testPeer1">
-      <property name="text">
-       <string>Test Peer 1 create</string>
-      </property>
-     </widget>
-    </item>
     <item row="1" column="1">
      <widget class="QPushButton" name="pushButton_testPeer2">
       <property name="text">
        <string>Test Peer 2 create</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QPushButton" name="pushButton_testPeer1">
+      <property name="text">
+       <string>Test Peer 1 create</string>
       </property>
      </widget>
     </item>
@@ -239,7 +239,10 @@
         <item>
          <widget class="QTextEdit" name="textEdit_article">
           <property name="readOnly">
-           <bool>false</bool>
+           <bool>true</bool>
+          </property>
+          <property name="placeholderText">
+           <string>README: To ease the testing, we have provided two testing peers. Peer 1 and Peer 2. Both of them will create their own newspaper and will add some articles with categories. However, we couldn't automate setting the IP, so that needs to be done manually, using the dropdown menu and Set IP button.</string>
           </property>
          </widget>
         </item>

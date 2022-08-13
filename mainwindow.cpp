@@ -438,15 +438,28 @@ void MainWindow::on_pushButton_testPeer1_clicked()
 	enable_print_peer();
 
 	std::set<std::string> categories;
-	categories.insert("sport");
 	categories.insert("politics");
-	categories.insert("yolo");
 
-	QString path("/home/michal/a.txt");
-	
+	QString path("../data/heger.md");
 	Article a;
 	a.initialize_article(categories, path.toStdString(), ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
 	ctx->p.enroll_new_article(std::move(a), false); //insert new article into the map of my newspaper, including the article's contents
+
+	path = "../data/ecb.md";
+	categories.insert("economy");
+	Article a2;
+	a2.initialize_article(categories, path.toStdString(), ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
+	ctx->p.enroll_new_article(std::move(a2), false); //insert new article into the map of my newspaper, including the article's contents
+
+	path = "../data/lorem.txt";
+	categories.clear();
+	categories.insert("txt");
+	Article a3;
+	a3.initialize_article(categories, path.toStdString(), ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
+	ctx->p.enroll_new_article(std::move(a3), false); //insert new article into the map of my newspaper, including the article's contents
+
+	ui->pushButton_testPeer1->setEnabled(false);
+	ui->pushButton_testPeer2->setEnabled(false);
 }
 
 
@@ -466,14 +479,25 @@ void MainWindow::on_pushButton_testPeer2_clicked()
 
 	std::set<std::string> categories;
 	categories.insert("sport");
-	categories.insert("politics");
-	categories.insert("yolo");
-
-	QString path("/home/michal/a.txt");
-	
+	QString path("../data/ferencvaros.md");
 	Article a;
 	a.initialize_article(categories, path.toStdString(), ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
 	ctx->p.enroll_new_article(std::move(a), false); //insert new article into the map of my newspaper, including the article's contents
 
+	categories.clear();
+	categories.insert("economy");
+	path = "../data/kurenie.md";
+	Article a2;
+	a2.initialize_article(categories, path.toStdString(), ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
+	ctx->p.enroll_new_article(std::move(a2), false); //insert new article into the map of my newspaper, including the article's contents
+
+	categories.insert("politics");
+	path = "../data/taliani.md";
+	Article a3;
+	a3.initialize_article(categories, path.toStdString(), ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
+	ctx->p.enroll_new_article(std::move(a3), false); //insert new article into the map of my newspaper, including the article's contents
+
+	ui->pushButton_testPeer1->setEnabled(false);
+	ui->pushButton_testPeer2->setEnabled(false);
 }
 
