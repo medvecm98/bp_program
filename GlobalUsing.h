@@ -93,4 +93,6 @@ using user_level_map_citer = user_level_map::const_iterator;
 
 using optional_my_string = std::optional<my_string>;
 
+using my_clock = std::chrono::system_clock;
+
 #endif //PROGRAM_GLOBALUSING_H

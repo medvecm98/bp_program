@@ -11,6 +11,7 @@
 #include <map>
 #include <regex>
 #include <optional>
+#include <chrono>
 
 #include <QString>
 #include <QFile>
@@ -223,11 +224,10 @@ public:
 		calculate_hashes();
 		_main_hash = prng.GenerateWord32();
 
-		/*if (!categories.empty()) {
-			for (auto&& cat : categories) {
-				_categories.insert(cat);
-			}
-		}*/
+		creation_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::system_clock::now().time_since_epoch()
+		).count();
+		modification_time_ = creation_time_;
 
 		article_present_ = true; //we provided the article file in function arguments, so the article's contents is 
 								 //... naturally present
@@ -362,6 +362,14 @@ public:
 
 	std::string get_crypto_hash();
 
+	std::uint64_t get_creation_time() {
+		return creation_time_;
+	}
+
+	std::uint64_t get_modification_time() {
+		return modification_time_;
+	}
+
 	friend class ArticleDatabase;
 
 	std::string read_contents() {
@@ -400,6 +408,8 @@ private:
 	my_string _notes;
 	std::string crypto_hash_;
 	bool article_present_;
+	std::uint64_t creation_time_;
+	std::uint64_t modification_time_;
 };
 
 using article_ptr = Article*;

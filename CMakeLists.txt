@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 project(news_p2p_sharing)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-pedantic -O0 -g)
 
@@ -14,7 +14,7 @@ set(CMAKE_AUTOUIC ON)
 include(FindProtobuf)
 find_package(Protobuf REQUIRED)
 find_package(Qt5 COMPONENTS Core Network Widgets REQUIRED)
-find_package(Doxygen REQUIRED dot)
+#find_package(Doxygen REQUIRED dot)
 include_directories( ${Boost_INCLUDE_DIRS} )
 
 find_library(CryptoPP cryptopp)
@@ -39,11 +39,11 @@ add_executable(news_p2p_sharing main.cpp newarticleform.h newarticleform.cpp new
 target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
 	Qt5::Widgets Qt5::Network Qt5::Core)
 
-if (DOXYGEN_FOUND)
-	doxygen_add_docs(news_p2p_sharing_docs
-		${CMAKE_SOURCE_DIR}
-		ALL
-		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-else (DOXYGEN_FOUND)
-	message("Doxygen needs to be installed to generate the doxygen documentation.")
-endif (DOXYGEN_FOUND)
+#if (DOXYGEN_FOUND)
+#	doxygen_add_docs(news_p2p_sharing_docs
+#		${CMAKE_SOURCE_DIR}
+#		ALL
+#		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+#else (DOXYGEN_FOUND)
+#	message("Doxygen needs to be installed to generate the doxygen documentation.")
+#endif (DOXYGEN_FOUND)

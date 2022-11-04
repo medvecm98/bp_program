@@ -184,6 +184,8 @@ void CreateArticle(np2ps::Article* art, article_ptr article) {
 	art->set_heading(article->heading());
 	art->set_type(article->get_format());
 	art->set_crypto_hash(article->get_crypto_hash());
+	art->set_creation_time(article->get_creation_time());
+	art->set_modification_time(article->get_modification_time());
  
 	auto [hi, hie] = article->hashes();
 	for (; hi != hie; hi++) {

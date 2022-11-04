@@ -30,3 +30,16 @@ database_iterator_t NewspaperEntry::get_iterator_database_end() {
 	return _articles.end();
 }
 
+article_data_vec NewspaperEntry::get_articles_for_time_span(my_clock::time_point time_span_begin, my_clock::time_point time_span_end) {
+	article_data_vec rv;
+	auto ms_begin = std::chrono::duration_cast<std::chrono::milliseconds>(time_span_begin.time_since_epoch()).count();
+	auto ms_end = std::chrono::duration_cast<std::chrono::milliseconds>(time_span_end.time_since_epoch()).count();
+	for (auto article_it = get_iterator_database(); article_it != get_iterator_database_end(); article_it++) {
+		auto& [article_hash, article_content] = *article_it;
+		auto creation_time = article_content.get_creation_time();
+		if (creation_time >= ms_begin && creation_time < ms_end) {
+			rv.push_back(article_it);
+		}
+	}
+	return rv;
+}
