@@ -6,6 +6,7 @@
 #include <optional>
 
 using database_iterator_t = article_database_container::iterator;
+using article_data_vec = std::vector<database_iterator_t>;
 
 struct ArticleListWrapper {
 	std::set<my_string> categories;
@@ -21,6 +22,7 @@ public:
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
 	database_iterator_t get_iterator_database();
 	database_iterator_t get_iterator_database_end();
+	article_data_vec get_articles_for_time_span(my_clock::time_point time_span_begin, my_clock::time_point time_span_end);
 
 	user_container_citer get_first_authority() const {
 		return _authorities.cbegin();
