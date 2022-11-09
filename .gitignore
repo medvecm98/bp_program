@@ -4,4 +4,6 @@ build/
 cmake-build-debug/
 html/
 b/
+b_docker/
+core
 CMakeLists.txt.user
