@@ -21,7 +21,6 @@
 #include "StringSplitter.h"
 #include "GlobalUsing.h"
 #include "Margins.h"
-#include "protobuf_source/articles.pb.h"
 
 #define COMMENT_ "[NScomment]:"
 #define BEGIN_HEADER_ "**BEGIN_HEADER**"
@@ -428,10 +427,6 @@ public:
 		art->set_path_to_article_file(_path_to_article_file);
 		art->set_article_present(article_present_);
 		art->set_notes(_notes);
-	}
-
-	friend std::ofstream& operator<< (std::ofstream& stream, const Article& a) {
-			
 	}
 
 private:

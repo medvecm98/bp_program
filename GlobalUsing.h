@@ -18,6 +18,11 @@
 #include <QHostAddress>
 #include <QString>
 
+#include "protobuf_source/articles.pb.h"
+#include "protobuf_source/messages.pb.h"
+#include "protobuf_source/newspaper_entry.pb.h"
+#include "protobuf_source/peer.pb.h"
+
 #include "cryptopp/rsa.h"
 #include "cryptopp/rijndael.h"
 #include "cryptopp/eax.h"

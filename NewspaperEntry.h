@@ -47,6 +47,28 @@ public:
 		return article_list_wrapper_;
 	};
 
+	void serialize_entry(np2ps::NewspaperEntry* entry) {
+		entry->set_news_name(news_name_);
+		entry->set_news_id(news_id_);
+		//TODO: entry->set_authorities();
+	}
+
+	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne) {
+		serialize_entry(nserialized_ne->mutable_entry());
+		for (auto& [hash, art] : _articles) {
+			np2ps::Article* pa = nserialized_ne->add_articles();
+			art.network_serialize_article(pa);
+		}
+	}
+
+	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* nserialized_ne) {
+		serialize_entry(nserialized_ne->mutable_entry());
+		for (auto& [hash, art] : _articles) {
+			np2ps::SerializedArticle* pa = nserialized_ne->add_articles();
+			art.local_serialize_article(pa);
+		}
+	}
+
 private:
 	pk_t news_id_;
 	my_string news_name_;
