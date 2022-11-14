@@ -145,6 +145,7 @@ public:
 	 */
 	Article() = default;
 	explicit Article(const np2ps::Article& protobuf_article);
+	explicit Article(const np2ps::SerializedArticle& protobuf_article);
 	Article(const np2ps::Article& protobuf_article_header, const std::string& article_actual);
 	void open_fstream(std::fstream& stream);
 
@@ -392,24 +393,65 @@ public:
 		return contents.toStdString();
 	}
 
+	void network_serialize_article(np2ps::Article* art) {
+		art->set_author_id(_author_id);
+		art->set_author_name(_author_name);
+		art->set_news_id(_news_id);
+		art->set_news_name(_news_name);
+		art->set_main_hash(_main_hash);
+		art->set_heading(_heading);
+		art->set_type(_format);
+		art->set_crypto_hash(crypto_hash_);
+		art->set_creation_time(creation_time_);
+		art->set_modification_time(modification_time_);
+	
+		auto [hi, hie] = hashes();
+		for (; hi != hie; hi++) {
+			np2ps::HashWrapper hw;
+			hw.set_hash(hi->second.hash);
+			hw.set_level(hi->second.paragraph_level);
+
+			google::protobuf::MapPair<google::protobuf::int32, np2ps::HashWrapper> vt(hi->first, hw);
+			art->mutable_paragraph_hashes()->insert(vt);
+		}
+
+		art->set_length(_length);
+		
+		auto [ci, cie] = categories();
+		for (; ci != cie; ci++) {
+			art->add_categories(*ci);
+		}
+	}	
+
+	void local_serialize_article(np2ps::SerializedArticle* art) {
+		network_serialize_article(art->mutable_article());
+		art->set_path_to_article_file(_path_to_article_file);
+		art->set_article_present(article_present_);
+		art->set_notes(_notes);
+	}
+
+	friend std::ofstream& operator<< (std::ofstream& stream, const Article& a) {
+			
+	}
+
 private:
-	my_string _author_name;
-	pk_t _author_id;
-	my_string _news_name;
-	pk_t _news_id;
-	hash_t _main_hash;
-	my_string _heading;
-	hashes_container _hashes; //map of hashes
-	std::uint64_t _length;
-	article_format _format;
-	std::set<my_string> _categories; //set of categories
-	my_string _path_to_article_file;
-	margin_container _margins; //unordered map of public identifiers and margins
-	my_string _notes;
-	std::string crypto_hash_;
-	bool article_present_;
-	std::uint64_t creation_time_;
-	std::uint64_t modification_time_;
+	my_string _author_name; //network, local
+	pk_t _author_id; //network, local
+	my_string _news_name; //network, local
+	pk_t _news_id; //network, local
+	hash_t _main_hash; //network, local
+	my_string _heading; //network, local
+	hashes_container _hashes; //map of hashes, UNUSED
+	std::uint64_t _length; //UNUSED
+	article_format _format; //network, local, UNUSED
+	std::set<my_string> _categories; //set of categories //network, local
+	my_string _path_to_article_file; //local
+	margin_container _margins; //unordered map of public identifiers and margins //network, local
+	my_string _notes; //local
+	std::string crypto_hash_; //network, local
+	bool article_present_; //local
+	std::uint64_t creation_time_; //network, local
+	std::uint64_t modification_time_; //network, local
 };
 
 using article_ptr = Article*;

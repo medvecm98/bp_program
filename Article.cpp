@@ -80,9 +80,15 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 		article_present_ = false;
 		crypto_hash_ = protobuf_article.crypto_hash();
 	}
-
-	
-
+}
+ /**
+  * @brief Construct Article object from SerializedArticle GPB.
+ */
+Article::Article(const np2ps::SerializedArticle& protobuf_article) : Article(protobuf_article.article())
+{
+	_path_to_article_file = protobuf_article.path_to_article_file();
+	article_present_ = protobuf_article.article_present();
+	_notes = protobuf_article.notes();
 }
 
 /**

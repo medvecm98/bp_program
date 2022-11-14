@@ -37,3 +37,10 @@ message Article {
     Length could be irrelevant as well, we'll see about that.
   */
 }
+
+message SerializedArticle {
+  Article article = 1;
+  string path_to_article_file = 2;
+  bool article_present = 3;
+  string notes = 4;
+}

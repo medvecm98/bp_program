@@ -171,45 +171,12 @@ unique_ptr_message MFW::ReqCredentialsFactory(unique_ptr_message&& msg, bool req
 		return std::move(msg);
 	}
 
-/* Responses: */
-/**
- * @brief Converts article from internal representation to protocol buffer representation.
- */
-void CreateArticle(np2ps::Article* art, article_ptr article) {
-	art->set_author_id(article->author_id());
-	art->set_author_name(article->author_name());
-	art->set_news_id(article->news_id());
-	art->set_news_name(article->news_name());
-	art->set_main_hash(article->main_hash());
-	art->set_heading(article->heading());
-	art->set_type(article->get_format());
-	art->set_crypto_hash(article->get_crypto_hash());
-	art->set_creation_time(article->get_creation_time());
-	art->set_modification_time(article->get_modification_time());
- 
-	auto [hi, hie] = article->hashes();
-	for (; hi != hie; hi++) {
-		np2ps::HashWrapper hw;
-		hw.set_hash(hi->second.hash);
-		hw.set_level(hi->second.paragraph_level);
 
-		google::protobuf::MapPair<google::protobuf::int32, np2ps::HashWrapper> vt(hi->first, hw);
-		art->mutable_paragraph_hashes()->insert(vt);
-	}
-
-	art->set_length(article->length());
-	
-	auto [ci, cie] = article->categories();
-	for (; ci != cie; ci++) {
-		art->add_categories(*ci);
-	}
-}
 
 unique_ptr_message MFW::RespArticleDownloadFactory(unique_ptr_message&& msg, article_ptr article_header, std::string&& article) { 
 	auto header_ptr = msg->mutable_article_all()->mutable_header();
 	msg->set_msg_ctx(np2ps::RESPONSE);
-	CreateArticle(header_ptr, article_header);
-
+	article_header->network_serialize_article(header_ptr);
 
 	msg->mutable_article_all()->set_article_actual(article);
 
@@ -219,7 +186,7 @@ unique_ptr_message MFW::RespArticleDownloadFactory(unique_ptr_message&& msg, art
 
 unique_ptr_message MFW::RespArticleHeaderFactory(unique_ptr_message&& msg, article_ptr article_header) {
 	auto header_ptr = msg->mutable_article_header()->mutable_article();
-	CreateArticle(header_ptr, article_header);
+	article_header->network_serialize_article(header_ptr);
 	msg->set_msg_ctx(np2ps::RESPONSE);
 
 	return std::move(msg);
@@ -227,7 +194,7 @@ unique_ptr_message MFW::RespArticleHeaderFactory(unique_ptr_message&& msg, artic
 
 unique_ptr_message MFW::ReqArticleHeaderFactory(unique_ptr_message&& msg, Article* article_header) {
 	auto header_ptr = msg->mutable_article_header()->mutable_article();
-	CreateArticle(header_ptr, article_header);
+	article_header->network_serialize_article(header_ptr);
 	msg->set_msg_ctx(np2ps::REQUEST);
 
 	return std::move(msg);
@@ -236,7 +203,7 @@ unique_ptr_message MFW::ReqArticleHeaderFactory(unique_ptr_message&& msg, Articl
 unique_ptr_message MFW::RespArticleListFactory(unique_ptr_message&& msg, article_container& articles) { 
 	for(auto&& article : articles) {
 		auto a = msg->mutable_article_list()->add_response();
-		CreateArticle(a, article);
+		article->network_serialize_article(a);
 	}
 	msg->set_msg_ctx(np2ps::RESPONSE);
 	return std::move(msg);
