@@ -1,11 +1,12 @@
 syntax = "proto3";
 
 package np2ps;
-import "articles.proto";
 import "newspaper_entry.proto";
+import "ip_map.proto";
 
 message Peer {
     uint64 public_identifier = 1;
     string name = 2;
-    repeated NewspaperEntry news = 3;
+    IpMap ip_map = 4; //networking
+    repeated LocalSerializedNewspaperEntry news = 3;
 }

@@ -22,13 +22,6 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="0">
-     <widget class="QPushButton" name="pushButton_testPeer1">
-      <property name="text">
-       <string>Test Peer 1 create</string>
-      </property>
-     </widget>
-    </item>
     <item row="0" column="0" colspan="2">
      <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,2">
       <item>
@@ -308,6 +301,27 @@
        </layout>
       </item>
      </layout>
+    </item>
+    <item row="1" column="0">
+     <widget class="QPushButton" name="pushButton_testPeer1">
+      <property name="text">
+       <string>Test Peer 1 create</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QPushButton" name="pushButton_save">
+      <property name="text">
+       <string>Save</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QPushButton" name="pushButton_load">
+      <property name="text">
+       <string>Load</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>

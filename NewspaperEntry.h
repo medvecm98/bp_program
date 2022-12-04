@@ -17,6 +17,8 @@ class NewspaperEntry {
 public:
 	NewspaperEntry() = default;
 	NewspaperEntry(pk_t first_key, pk_t id, const my_string& name);
+	explicit NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne);
+	explicit NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
 	void add_article(hash_t article_hash, Article&& article);
 	bool remove_article(hash_t article_hash);
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
@@ -48,6 +50,7 @@ public:
 	};
 
 	void serialize_entry(np2ps::NewspaperEntry* entry) {
+		std::cout << "serializing newspaper\n";
 		entry->set_news_name(news_name_);
 		entry->set_news_id(news_id_);
 		//TODO: entry->set_authorities();

@@ -16,6 +16,10 @@
  */
 class IpMap {
 public:
+	IpMap() = default;
+
+	explicit IpMap(const np2ps::IpMap& ip_map_serialized);
+
 	/**
 	 * @brief Adds a new IpWrapper into the map.
 	 * 
@@ -250,6 +254,33 @@ public:
 	 * @param public_ids_to_remove Push back peers, whose sockets were detected disconnected.
 	 */
 	void remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove);
+
+	void serialize_ip_map(np2ps::IpMap* im) {
+		std::cout << "Serializing IP MAP" << std::endl;
+		auto my_wrapper = im->mutable_my_ip();
+		my_ip.serialize_wrapper(my_wrapper);
+		im->set_my_public_id(my_public_id);
+
+		if (private_rsa.has_value()) {
+			std::string public_key_b64;
+			CryptoPP::Base64Encoder encoder(new CryptoPP::StringSink(public_key_b64));
+			CryptoPP::RSA::PublicKey& private_key = private_rsa.value();
+
+			CryptoPP::ByteQueue queue;
+			private_key.Save(queue);
+			queue.CopyTo(encoder);
+			encoder.MessageEnd();
+			im->set_rsa_private_key(public_key_b64);
+		}
+
+		for (auto&& wrapper_map_pair : map_) {
+			std::cout << "	serializing user: " << wrapper_map_pair.first << std::endl;
+			auto& wrapper = wrapper_map_pair.second;
+			auto serialized_wrapper = im->add_wrapper_map();
+			wrapper.serialize_wrapper(serialized_wrapper);
+			serialized_wrapper->set_publicid(wrapper_map_pair.first);
+		}
+	}
 
 	IpWrapper my_ip; //IpWrapper containing information related to my networking
 	pk_t my_public_id; //my public identifier, set by Peer

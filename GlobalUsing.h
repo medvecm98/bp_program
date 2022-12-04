@@ -8,12 +8,13 @@
 #include <optional>
 #include <variant>
 #include <filesystem>
-#include <exception>
 #include <utility>
 #include <iostream>
 #include <functional>
 #include <chrono>
 #include <memory>
+
+#include "MyExceptions.hpp"
 
 #include <QHostAddress>
 #include <QString>
@@ -22,6 +23,7 @@
 #include "protobuf_source/messages.pb.h"
 #include "protobuf_source/newspaper_entry.pb.h"
 #include "protobuf_source/peer.pb.h"
+#include "protobuf_source/ip_map.pb.h"
 
 #include "cryptopp/rsa.h"
 #include "cryptopp/rijndael.h"
@@ -35,6 +37,7 @@
 #include <cryptopp/filters.h>
 #include <cryptopp/files.h>
 #include <cryptopp/hex.h>
+#include <cryptopp/base64.h>
 
 #include <cstdlib>
 

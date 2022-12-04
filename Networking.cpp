@@ -126,19 +126,27 @@ void Networking::send_message(unique_ptr_message msg) {
 	
 
     auto ip_map_iter = ip_map_.get_wrapper_for_pk(msg->to());
-	if (ip_map_iter != ip_map_.get_map_end() && msg->msg_type() == np2ps::PUBLIC_KEY) { //user is in IpMap database, and NP2PS message is of type PUBLIC_KEY
-		IpWrapper& ipw = ip_map_iter->second;
-		sender_->message_send(std::move(msg), ipw);
+	if (ip_map_iter != ip_map_.get_map_end()) {
+		std::cout << "User found in IP MAP database; Networking::send_message(unique_ptr_message msg)" << std::endl;
+		if (msg->msg_type() == np2ps::PUBLIC_KEY) {// I'm requesting public key
+			std::cout << "	PUBLIC_KEY type of message" << std::endl;
+			IpWrapper& ipw = ip_map_iter->second;
+			sender_->message_send(std::move(msg), ipw);
+			return;
+		}
+		else if (ip_map_iter->second.key_pair.first.has_value()) { // I have public key
+			std::cout << "	Public key found, and user is in database" << std::endl;
+			IpWrapper& ipw = ip_map_iter->second;
+			sender_->message_send(std::move(msg), ipw);
+			return;
+		}
 	}
-	else if (ip_map_iter != ip_map_.get_map_end() && ip_map_iter->second.key_pair.first.has_value()) {//user is in IpMap database, and we have his public key
-		IpWrapper& ipw = ip_map_iter->second;
-		sender_->message_send(std::move(msg), ipw);
-	}
-	else { //user was not found in IpMap and we need its IP and RSA public
-		std::cout << "requesting IP and public key for pid: " << msg->to() << std::endl;
-		stun_client->identify(msg->to()); //use STUN for IP and RSA public
-		waiting_ip.emplace(msg->to(), msg); //store message for later, when IP and RSA will arrive
-	}
+	//user was not found in IpMap and we need its IP and RSA public
+	
+	std::cout << "requesting IP and public key for pid: " << msg->to() << std::endl;
+	stun_client->identify(msg->to()); //use STUN for IP and RSA public
+	waiting_ip.emplace(msg->to(), msg); //store message for later, when IP and RSA will arrive
+	
 }
 
 /**
@@ -440,9 +448,9 @@ void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
 }
 
 void PeerSender::host_connected() {
-	std::cout << "Host successfuly connected" << std::endl; //connection to host was successful
+	std::cout << "Host successfuly connected:" << std::endl; //connection to host was successful
 	QTcpSocket* socket_ = (QTcpSocket*)QObject::sender();
-	std::cout << socket_->peerAddress().toString().toStdString() << ' ' << socket_->peerPort() << std::endl;
+	std::cout << '\t' << socket_->peerAddress().toString().toStdString() << ' ' << socket_->peerPort() << std::endl;
 
 	auto mtemp = message_waiting_for_connection;
 	auto itemp = ipw_waiting_for_connection;
@@ -577,6 +585,7 @@ void Networking::symmetric_exchanged(pk_t other_peer) {
 
 void Networking::set_peer_public_id(pk_t pid) {
 	peer_public_id = pid;
+	ip_map_.my_public_id = pid;
 }
 
 pk_t Networking::get_peer_public_id() {

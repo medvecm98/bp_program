@@ -36,7 +36,7 @@ add_executable(news_p2p_sharing main.cpp newarticleform.h newarticleform.cpp new
 	PublicIdentifierAttribute.hpp PublicIdentifierAttribute.cpp MPCreate.hpp MPProcess.hpp StunTags.hpp 
 	DataAttribute.hpp DataAttribute.cpp PublicKeyAttribute.hpp PublicKeyAttribute.cpp 
 	RelayedPublicIdentifierAttribute.hpp RelayedPublicIdentifierAttribute.cpp addmargin.h addmargin.cpp addmargin.ui)
-target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
+target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art proto_nee proto_per proto_ipm ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
 	Qt5::Widgets Qt5::Network Qt5::Core)
 
 #if (DOXYGEN_FOUND)

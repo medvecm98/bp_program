@@ -178,8 +178,7 @@ public:
 	 * @param news_entry Reference to newspaper entry that this article will be inserted in.
 	 */
 	template<class Container, class Peer_t, class NewspaperEntry_t>
-	void initialize_article(const Container &categories, const std::string& file_path,
-		Peer_t& me, NewspaperEntry_t& news_entry )
+	void initialize_article(const Container &categories, const std::string& file_path, Peer_t& me, NewspaperEntry_t& news_entry, hash_t hash__ = 0 )
 	{
 
 		_path_to_article_file = file_path;
@@ -222,7 +221,12 @@ public:
 
 		CryptoPP::AutoSeededRandomPool prng;
 		calculate_hashes();
-		_main_hash = prng.GenerateWord32();
+		if (hash__ == 0) {
+			_main_hash = prng.GenerateWord32();
+		}
+		else {
+			_main_hash = hash__;
+		}
 
 		creation_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::system_clock::now().time_since_epoch()
@@ -392,42 +396,9 @@ public:
 		return contents.toStdString();
 	}
 
-	void network_serialize_article(np2ps::Article* art) {
-		art->set_author_id(_author_id);
-		art->set_author_name(_author_name);
-		art->set_news_id(_news_id);
-		art->set_news_name(_news_name);
-		art->set_main_hash(_main_hash);
-		art->set_heading(_heading);
-		art->set_type(_format);
-		art->set_crypto_hash(crypto_hash_);
-		art->set_creation_time(creation_time_);
-		art->set_modification_time(modification_time_);
-	
-		auto [hi, hie] = hashes();
-		for (; hi != hie; hi++) {
-			np2ps::HashWrapper hw;
-			hw.set_hash(hi->second.hash);
-			hw.set_level(hi->second.paragraph_level);
+	void network_serialize_article(np2ps::Article* art);
 
-			google::protobuf::MapPair<google::protobuf::int32, np2ps::HashWrapper> vt(hi->first, hw);
-			art->mutable_paragraph_hashes()->insert(vt);
-		}
-
-		art->set_length(_length);
-		
-		auto [ci, cie] = categories();
-		for (; ci != cie; ci++) {
-			art->add_categories(*ci);
-		}
-	}	
-
-	void local_serialize_article(np2ps::SerializedArticle* art) {
-		network_serialize_article(art->mutable_article());
-		art->set_path_to_article_file(_path_to_article_file);
-		art->set_article_present(article_present_);
-		art->set_notes(_notes);
-	}
+	void local_serialize_article(np2ps::SerializedArticle* art);
 
 private:
 	my_string _author_name; //network, local

@@ -53,7 +53,7 @@ void MainWindow::generate_article_list() {
 								QString::number(news.second.get_id())
 							}))
 		);
-		article_list_received(news.second.get_id()); //generate the article list
+		article_list_received(news.second.get_id()); //generate the article list for given newspaper
 	}
 	
 }
@@ -88,7 +88,7 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 	if (requseted_newspaper) { //if we found newspaper in the newspaper tree
 		for (auto&& category : categories) { //iterate thorugh all the categories
 			for (int i = 0; i < requseted_newspaper->childCount(); i++) { //traverse thorugh all the children of the newspaper (those are categories)
-				if (requseted_newspaper->child(i)->text(0) == category.c_str()) { //is the currently iterated category `category` already in the Newspaper tree?
+				if (requseted_newspaper->child(i)->text(0).compare(QString::fromStdString(category))) { //is the currently iterated category `category` already in the Newspaper tree?
 					category_found = true; //found category we are looking for in Newspaper tree
 					auto article = news_articles_it;
 					for (; article != news_atricles_it_end; article++) { //traverse thorugh all articles
@@ -501,3 +501,19 @@ void MainWindow::on_pushButton_testPeer2_clicked()
 	ui->pushButton_testPeer2->setEnabled(false);
 }
 
+
+void MainWindow::on_pushButton_save_clicked()
+{
+    np2ps::Peer serialized_peer;
+    ctx->p.serialize(&serialized_peer);
+
+	QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"), "/", tr("NP2PS archive (*.npps)"));
+
+    std::ofstream file(fileName.toStdString());
+    serialized_peer.SerializeToOstream(&file);
+}
+
+void MainWindow::on_pushButton_load_clicked()
+{
+    std::filesystem::remove("./archive.txt");
+}

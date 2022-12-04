@@ -36,46 +36,43 @@ public:
 	 * private keys are generated here as well.
 	 * 
 	 */
-	Peer() : networking_(std::make_shared<Networking>())
+	Peer(pk_t public_id) : 
+		networking_(std::make_shared<Networking>()) 
 	{
-		std::cout << "Peer constructor" << std::endl;
-		name_ = "";
-		newspaper_name_ = "";
-		networking_->init_sender_receiver(&news_);
 		CryptoPP::AutoSeededRandomPool prng;
-		public_identifier_ = prng.GenerateByte();
-		networking_->set_peer_public_id(public_identifier_);
-		networking_->set_maps(&user_map, &news_, &readers_, &journalists_);
-		//public_identifier_ = (std::uint64_t)prng.GenerateWord32() << 32 | (std::uint64_t)prng.GenerateWord32();
+		if (public_id == 0)
+			public_identifier_ = (std::uint64_t)prng.GenerateWord32() << 32 | (std::uint64_t)prng.GenerateWord32();
+		else
+			public_identifier_ = 123;
 		std::cout << "Public ID: " << public_identifier_ << std::endl;
 
 		CryptoPP::RSA::PrivateKey private_key_new;
 		private_key_new.GenerateRandomWithKeySize(prng, 4096);
 		CryptoPP::RSA::PublicKey public_key_new(private_key_new);
 
-		CryptoPP::RSA::PublicKey pk2;
-
-		CryptoPP::ByteQueue bq;
-		public_key_new.Save(bq);
-		std::string output;
-		CryptoPP::StringSink ss(output);
-		bq.CopyTo(ss);
-		ss.MessageEnd();
-		std::cout << output.size() << std::endl;
-
-		bq = CryptoPP::ByteQueue();
-		CryptoPP::StringSource ss1(output, true);
-		ss1.CopyTo(bq);
-		bq.MessageEnd();
-		pk2.Load(bq);
-
 		networking_->ip_map_.my_ip.add_rsa_key(std::move(public_key_new));
 		networking_->ip_map_.private_rsa = {std::move(private_key_new)};
+		qobject_connect_peer();
+		peer_init();
+	}
 
-		newspaper_id_ = 0;
+	explicit Peer(np2ps::Peer& peer_serialized) : 
+		public_identifier_(peer_serialized.public_identifier()),
+		name_(peer_serialized.name()),
+		networking_(std::make_shared<Networking>(peer_serialized.ip_map()))
+	{
+		for (const np2ps::LocalSerializedNewspaperEntry& ne : peer_serialized.news()) {
+			news_.emplace(ne.entry().news_id(), NewspaperEntry(ne));
+			if (ne.entry().news_id() == public_identifier_) {
+				newspaper_id_ = ne.entry().news_id();
+				newspaper_name_ = ne.entry().news_name();
+			}
+		}
+		qobject_connect_peer();
+		peer_init();
+	}
 
-		user_map.emplace(public_identifier_, PeerInfo(public_identifier_, 255));
-
+	void qobject_connect_peer() {
 		QObject::connect(this, &Peer::new_symmetric_key,
 						 &(*networking_), &Networking::decrypt_encrypted_messages);
 
@@ -89,7 +86,29 @@ public:
 							this, &Peer::newspaper_confirm);
 
 		QObject::connect(networking_.get(), &Networking::newspaper_identified, this, &Peer::newspaper_identified);
-		
+	}
+
+	/**
+	 * @brief To initialize all the fields of Peer class that
+	 * are common to both constructors. QObject::connect has
+	 * its own method like this one.
+	 * 
+	 */
+	void peer_init() {
+		user_map.emplace(public_identifier_, PeerInfo(public_identifier_, 255));
+		networking_->init_sender_receiver(&news_);
+		networking_->set_peer_public_id(public_identifier_);
+		networking_->set_maps(&user_map, &news_, &readers_, &journalists_);
+	}
+
+	void peer_init(const std::string& peer_name) {
+		set_name(peer_name);
+		peer_init();
+	}
+
+	void peer_init(const std::string& peer_name, const std::string& peer_newspaper_name) {
+		init_newspaper(peer_newspaper_name);
+		peer_init(peer_name);
 	}
 
 	void load_ip_authorities(pk_t newspaper_key); //to load the IPs of authorities
@@ -408,6 +427,18 @@ public:
 		}
 	}
 
+	void serialize(np2ps::Peer* p) {
+		p->set_name(name_);
+		p->set_public_identifier(public_identifier_);
+		auto ip_map_gpb = p->mutable_ip_map();
+		networking_->ip_map_.serialize_ip_map(ip_map_gpb);
+		for (auto&& newspapers : news_) {
+			auto ne_gpb = p->add_news();
+			NewspaperEntry& ne = newspapers.second;
+			ne.local_serialize_entry(ne_gpb);
+		}
+	}
+
 public slots:
 	void handle_message(unique_ptr_message message);
 
@@ -464,6 +495,7 @@ signals:
 
 	void check_selected_item();
 
+	
 private:
 	//reader part
 	pk_t public_identifier_; //public identifier of my peer

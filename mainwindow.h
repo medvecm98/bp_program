@@ -66,6 +66,12 @@ public:
 	 */
 	~MainWindow();
 
+	/**
+	 * @brief Generates article list for all newspapers in database.
+	 * 
+	 */
+	void generate_article_list();
+
 public slots:
 	/**
 	 * @brief New newspaper was added to database.
@@ -148,6 +154,12 @@ public slots:
 	 * buttons that are related to either article or newspaper.
 	 */
 	void check_selected_item();
+
+private slots:
+    void on_pushButton_load_clicked();
+
+private slots:
+    void on_pushButton_save_clicked();
 
 private slots:
 	/**
@@ -297,11 +309,7 @@ private:
 	 */
 	void check_item(QTreeWidgetItem* item);
 
-	/**
-	 * @brief Generates article list for all newspapers in database.
-	 * 
-	 */
-	void generate_article_list();
+	
 
 	/**
 	 * @brief Enables and disables the article buttons based on argument

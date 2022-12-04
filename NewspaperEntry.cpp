@@ -6,6 +6,24 @@ NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name) {
 	news_name_= name;
 }
 
+NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne) : 
+	news_id_(serialized_ne.entry().news_id()),
+	news_name_(serialized_ne.entry().news_name()) 
+{
+	for(const np2ps::SerializedArticle& gpb_articles : serialized_ne.articles()) {
+		_articles.emplace(gpb_articles.article().main_hash(), Article(gpb_articles));
+	}
+}
+
+NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne) :
+	news_id_(serialized_ne.entry().news_id()),
+	news_name_(serialized_ne.entry().news_name())
+{
+	for(const np2ps::Article& gpb_articles : serialized_ne.articles()) {
+		_articles.emplace(gpb_articles.main_hash(), Article(gpb_articles));
+	}
+}
+
 void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
 	_articles.insert_or_assign(article_hash, article);
 }

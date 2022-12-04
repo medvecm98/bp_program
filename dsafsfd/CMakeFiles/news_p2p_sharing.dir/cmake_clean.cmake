@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/news_p2p_sharing_autogen.dir/AutogenUsed.txt"
+  "CMakeFiles/news_p2p_sharing_autogen.dir/ParseCache.txt"
+  "news_p2p_sharing_autogen"
+  "CMakeFiles/news_p2p_sharing.dir/Article.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/DataAttribute.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/ErrorCodeAttribute.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/IpMap.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/LifetimeAttribute.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/Message.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/MessageProcessor.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/Networking.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/NewspaperEntry.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/Peer.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/PublicIdentifierAttribute.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/PublicKeyAttribute.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/RelayedPublicIdentifierAttribute.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/RequestedTransportAttribute.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/StunClient.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/StunMessages.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/StunServer.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/UnknownAttributesAttribute.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/XorMappedAddressAttribute.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/XorRelayedAddress.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/add_newspaper.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/addmargin.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/categoriesform.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/form.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/main.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/mainwindow.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/newarticleform.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/news_p2p_sharing_autogen/mocs_compilation.cpp.o"
+  "CMakeFiles/news_p2p_sharing.dir/programcontext.cpp.o"
+  "news_p2p_sharing"
+  "news_p2p_sharing.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/news_p2p_sharing.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

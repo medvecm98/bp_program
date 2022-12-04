@@ -1,4 +1,5 @@
-#include "GlobalUsing.h"
+#include <string>
+#include <exception>
 
 class invalid_stun_message_format_error : public std::exception {
 public:
@@ -75,6 +76,23 @@ public:
     }
 
     public_identifier_already_allocated(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};
+
+class user_not_found_in_database : public std::exception {
+public:
+    user_not_found_in_database(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    user_not_found_in_database(std::string& what_arg) throw() : std::exception() {
         message = what_arg;
     }
 

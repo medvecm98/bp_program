@@ -284,6 +284,12 @@ public:
 		QObject::connect(this, &Networking::new_message_enrolled, this, &Networking::send_message);
 	}
 
+	Networking(const np2ps::IpMap& serialized_ip_map) : Networking() {
+		auto my_ip_new = ip_map_.my_ip.ipv4;
+		ip_map_ = IpMap(serialized_ip_map);
+		ip_map_.my_ip.ipv4 = my_ip_new;
+	}
+
 	/**
 	 * @brief Enrolls message to be sent.
 	 * 

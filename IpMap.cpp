@@ -1,5 +1,39 @@
 #include "IpMap.h"
 
+IpMap::IpMap(const np2ps::IpMap& ip_map_serialized) : 
+	my_ip(ip_map_serialized.my_ip()),
+	my_public_id(ip_map_serialized.my_public_id())
+{
+	std::cout << "Deserializing IP MAP" << std::endl;
+	for (auto& wrapper : ip_map_serialized.wrapper_map()) {
+		std::cout << " deserializing user: " << wrapper.publicid() << std::endl;
+		map_.emplace(wrapper.publicid(), wrapper);
+	}
+
+	if (ip_map_serialized.has_rsa_private_key()) {
+		using namespace CryptoPP;
+		std::string encoded_key = ip_map_serialized.rsa_private_key();
+		std::string decoded_key;
+		Base64Decoder decoder;
+		decoder.Put( (byte*) encoded_key.data(), encoded_key.size() );
+		decoder.MessageEnd();
+
+		word64 size = decoder.MaxRetrievable();
+		if (size && size <= SIZE_MAX) {
+			decoded_key.resize(size);
+			decoder.Get((byte*)&decoded_key[0], decoded_key.size());
+		}
+
+		ByteQueue bq;
+
+		StringSource ss(decoded_key, true);
+		ss.TransferTo(bq);
+		RSA::PrivateKey pk;
+		pk.Load(bq);
+		private_rsa = {pk};
+	}
+}
+
 bool IpMap::add_to_map(pk_t pk, IpWrapper&& ip) {
 	return map_.emplace(pk, ip).second;
 }
@@ -9,14 +43,24 @@ void IpMap::remove_from_map(pk_t pk) {
 }
 
 void IpMap::enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket) {
-	if (socket) { //check if socket isn't NULL, function IS called like that
-		auto w = get_wrapper_for_pk(id);
-		if (!w->second.np2ps_tcp_socket_) { //check if given NP2PS socket isn't already enrolled
-			w->second.np2ps_tcp_socket_ = socket;
-			w->second.np2ps_tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+	if (socket) { //check if socket isn't NULL, function IS called with socket set to null
+		try {
+			auto w = get_wrapper_for_pk(id);
+			if (!w->second.np2ps_tcp_socket_) { //check if given NP2PS socket isn't already enrolled
+				w->second.np2ps_tcp_socket_ = socket;
+				w->second.np2ps_tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+			}
+			else {
+				std::cout << "Np2ps socket already enrolled " << id << std::endl;
+			}
 		}
-		else {
-			std::cout << "Np2ps socket already enrolled " << id << std::endl;
+		catch (const user_not_found_in_database& e) {
+			std::cout << "User readded to database\n";
+			IpWrapper ipw(socket->peerAddress(), socket->peerPort());
+			ipw.np2ps_tcp_socket_ = socket;
+			ipw.np2ps_tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+			
+			add_to_map(id, std::move(ipw));
 		}
 	}
 }
@@ -167,7 +211,7 @@ ip_map::iterator IpMap::get_wrapper_for_pk(pk_t pk) {
 	if (find_result != map_.end()) {
 		return find_result;
 	}
-	return map_.end();
+	throw user_not_found_in_database("IpWrapper for given user was not found.");
 }
 
 void IpMap::set_tcp_socket(pk_t pk, QTcpSocket* tcp_socket_) {

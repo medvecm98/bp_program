@@ -1,0 +1,2 @@
+/usr/bin/ar qc libproto_msg.a CMakeFiles/proto_msg.dir/proto_msg_autogen/mocs_compilation.cpp.o CMakeFiles/proto_msg.dir/messages.pb.cc.o
+/usr/bin/ranlib libproto_msg.a

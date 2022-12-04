@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <QtNetwork/QHostAddress>
 #include <QtNetwork/QTcpSocket>
+#include <cryptopp/filters.h>
 
 //types for map to store keys for given user
 using rsa_public_optional = std::optional< CryptoPP::RSA::PublicKey>;
@@ -64,6 +65,46 @@ struct IpWrapper {
 		key_pair.first = {pk};
 	}
 
+	explicit IpWrapper(const np2ps::IpWrapper& serialized_wrapper) : 
+		ipv4(QHostAddress(serialized_wrapper.ipv4())),
+		port(serialized_wrapper.port()),
+		relay_flag(serialized_wrapper.relay_flag())
+	{
+		if (serialized_wrapper.has_rsa_public_key()) { //deserialize RSA public
+			using namespace CryptoPP;
+			std::string encoded_key = serialized_wrapper.rsa_public_key();
+			std::string decoded_key;
+			Base64Decoder decoder;
+			decoder.Put( (byte*) encoded_key.data(), encoded_key.size());
+			decoder.MessageEnd();
+
+			word64 size = decoder.MaxRetrievable();
+			if (size && size <= SIZE_MAX) {
+				decoded_key.resize(size);
+				decoder.Get((byte*)&decoded_key[0], decoded_key.size());
+			}
+
+			ByteQueue bq;
+
+			StringSource ss(decoded_key, true);
+			ss.TransferTo(bq);
+			RSA::PublicKey pk;
+			pk.Load(bq);
+			key_pair.first = {pk};
+		}
+
+		if (serialized_wrapper.has_eax_key()) { //deserialize EAX
+			using namespace CryptoPP;
+			std::string encoded = serialized_wrapper.eax_key();
+			std::string decoded;
+			Base64Decoder decoder(new StringSink(decoded));
+			decoder.Put(reinterpret_cast<const byte*>(&encoded[0]), encoded.size());
+			decoder.MessageEnd();
+
+			key_pair.second = {SecByteBlock(reinterpret_cast<const byte*>(&decoded[0]), decoded.size())};
+		}
+	}
+
 	void add_rsa_key(const std::string& pkey_str) {
 		CryptoPP::RSA::PublicKey pub_key;
 		CryptoPP::StringSource s(pkey_str, true);
@@ -118,6 +159,35 @@ struct IpWrapper {
 		relay_flag = false;
 	}
 
+	void serialize_wrapper(np2ps::IpWrapper* wrapper) {
+		wrapper->set_ipv4(ipv4.toIPv4Address());
+		wrapper->set_port(port);
+
+		if (key_pair.second.has_value()) {
+			std::string shared_key_b64;
+			CryptoPP::Base64Encoder encoder(new CryptoPP::StringSink(shared_key_b64));
+			CryptoPP::SecByteBlock& shared_key = key_pair.second.value();
+
+			encoder.Put(shared_key, shared_key.size());
+			encoder.MessageEnd();
+			wrapper->set_eax_key(shared_key_b64);
+		}
+
+		if (key_pair.first.has_value()) {
+			std::string public_key_b64;
+			CryptoPP::Base64Encoder encoder(new CryptoPP::StringSink(public_key_b64));
+			CryptoPP::RSA::PublicKey& public_key = key_pair.first.value();
+
+			CryptoPP::ByteQueue queue;
+			public_key.Save(queue);
+			queue.CopyTo(encoder);
+			encoder.MessageEnd();
+			wrapper->set_rsa_public_key(public_key_b64);
+		}
+
+		wrapper->set_relay_flag(relay_flag);
+	}
+
 	//for normal traversal
 	QHostAddress ipv4;
 	QHostAddress ipv6;
@@ -133,7 +203,7 @@ struct IpWrapper {
 	pk_t preferred_stun_server = 0;
 	TimePoint time_since_last_disconnect; 
 
-	rsa_eax_pair key_pair;
+	rsa_eax_pair key_pair;	
 	
 	bool relay_flag = false;
 };

@@ -194,53 +194,53 @@ void StunServer::create_response_error_identify(stun_header_ptr message_orig, st
 }
 
 void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, QTcpSocket* socket) {
-        pk_t public_identifier;
-        bool request_transport_found = false;
-        std::uint32_t protocol;
-        std::uint32_t lifetime = 600;
-        CryptoPP::RSA::PublicKey pk;
-        PublicKeyAttribute* pka;
+    pk_t public_identifier;
+    bool request_transport_found = false;
+    std::uint32_t protocol;
+    std::uint32_t lifetime = 600;
+    CryptoPP::RSA::PublicKey pk;
+    PublicKeyAttribute* pka;
 
-        IpMap& ipm = networking_->ip_map_;
+    IpMap& ipm = networking_->ip_map_;
 
-        for (auto&& attr : message_orig->attributes) {
-            if (attr->attribute_type == StunAttributeEnum::requested_transport) {
-                request_transport_found = true;
+    for (auto&& attr : message_orig->attributes) { //process attributes
+        if (attr->attribute_type == StunAttributeEnum::requested_transport) {
+            request_transport_found = true;
 
-                protocol = ((RequestedTransportAttribute*)attr.get())->get_protocol();
+            protocol = ((RequestedTransportAttribute*)attr.get())->get_protocol();
+        }
+        if (attr->attribute_type == StunAttributeEnum::lifetime) {
+            std::uint32_t temp;
+
+            temp = ((LifetimeAttribute*)attr.get())->time;
+            if (temp >= lifetime && temp <= MAX_TIME) {
+                lifetime = temp;
             }
-            if (attr->attribute_type == StunAttributeEnum::lifetime) {
-                std::uint32_t temp;
-
-                temp = ((LifetimeAttribute*)attr.get())->time;
-                if (temp >= lifetime && temp <= MAX_TIME) {
-                    lifetime = temp;
-                }
-                else if (temp > MAX_TIME) {
-                    lifetime = MAX_TIME;
-                }
-            }
-            if (attr->attribute_type == StunAttributeEnum::public_identifier) {
-                public_identifier = ((PublicIdentifierAttribute*)attr.get())->get_public_identifier();
-            }
-            if (attr->attribute_type == StunAttributeEnum::public_key) {
-                pka = (PublicKeyAttribute*)attr.get();
-                pk = pka->get_value();
+            else if (temp > MAX_TIME) {
+                lifetime = MAX_TIME;
             }
         }
-
-        if (networking_->ip_map_.have_ip4(public_identifier) && networking_->ip_map_.have_rsa_public(public_identifier)) {
-            create_response_error_allocate(message_orig, message_new);
-            return;
+        if (attr->attribute_type == StunAttributeEnum::public_identifier) {
+            public_identifier = ((PublicIdentifierAttribute*)attr.get())->get_public_identifier();
         }
-        else {
-            networking_->ip_map_.update_rsa_public(public_identifier, pk);
-
-            networking_->ip_map_.set_tcp_socket(public_identifier, socket);
-            networking_->user_map->emplace(public_identifier, PeerInfo(public_identifier, 127));
+        if (attr->attribute_type == StunAttributeEnum::public_key) {
+            pka = (PublicKeyAttribute*)attr.get();
+            pk = pka->get_value();
         }
+    }
 
-        create_response_success_allocate(message_orig, message_new, lifetime, socket);
+    if (networking_->ip_map_.have_ip4(public_identifier) && networking_->ip_map_.have_rsa_public(public_identifier)) {
+        create_response_error_allocate(message_orig, message_new);
+        return;
+    }
+    else {
+        networking_->ip_map_.update_rsa_public(public_identifier, pk);
+
+        networking_->ip_map_.set_tcp_socket(public_identifier, socket);
+        networking_->user_map->emplace(public_identifier, PeerInfo(public_identifier, 127));
+    }
+
+    create_response_success_allocate(message_orig, message_new, lifetime, socket);
 }
 
 void StunServer::create_response_success_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint32_t lifetime, QTcpSocket* socket) {

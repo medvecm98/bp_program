@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <exception>
-#include "MyExceptions.hpp"
 #include "GlobalUsing.h"
 
 #include <QObject>

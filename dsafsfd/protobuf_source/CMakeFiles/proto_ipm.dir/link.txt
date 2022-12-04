@@ -1,0 +1,2 @@
+/usr/bin/ar qc libproto_ipm.a CMakeFiles/proto_ipm.dir/proto_ipm_autogen/mocs_compilation.cpp.o CMakeFiles/proto_ipm.dir/ip_map.pb.cc.o
+/usr/bin/ranlib libproto_ipm.a
