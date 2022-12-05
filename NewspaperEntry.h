@@ -21,6 +21,7 @@ public:
 	explicit NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
 	void add_article(hash_t article_hash, Article&& article);
 	timed_article_map_pair get_newest_articles(std::size_t count);
+	timed_article_map_pair get_newest_articles(QDate date, std::size_t count);
 	bool remove_article(hash_t article_hash);
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
 	database_iterator_t get_iterator_database();

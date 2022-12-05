@@ -18,6 +18,7 @@
 
 #include <QHostAddress>
 #include <QString>
+#include <QDate>
 
 #include "protobuf_source/articles.pb.h"
 #include "protobuf_source/messages.pb.h"
