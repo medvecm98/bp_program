@@ -80,6 +80,8 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 		article_present_ = false;
 		crypto_hash_ = protobuf_article.crypto_hash();
 	}
+
+	creation_time_timepoint_ = my_timepoint(std::chrono::seconds(creation_time_));
 }
  /**
   * @brief Construct Article object from SerializedArticle GPB.

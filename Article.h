@@ -232,6 +232,7 @@ public:
 			std::chrono::system_clock::now().time_since_epoch()
 		).count();
 		modification_time_ = creation_time_;
+		
 
 		article_present_ = true; //we provided the article file in function arguments, so the article's contents is 
 								 //... naturally present
@@ -418,6 +419,7 @@ private:
 	bool article_present_; //local
 	std::uint64_t creation_time_; //network, local
 	std::uint64_t modification_time_; //network, local
+	my_timepoint creation_time_timepoint_; //network, local
 };
 
 using article_ptr = Article*;

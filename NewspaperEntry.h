@@ -20,6 +20,7 @@ public:
 	explicit NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne);
 	explicit NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
 	void add_article(hash_t article_hash, Article&& article);
+	timed_article_map_pair get_newest_articles(std::size_t count);
 	bool remove_article(hash_t article_hash);
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
 	database_iterator_t get_iterator_database();
@@ -79,6 +80,7 @@ private:
 	user_container _authorities; //authorities of these newspapers
 	level_t level_ = 127; //level for given newspaper
 	ArticleListWrapper article_list_wrapper_; //saving requested article list
+	timed_article_map time_sorted_articles;
 };
 
 using news_database = std::unordered_map<pk_t, NewspaperEntry>;

@@ -506,7 +506,6 @@ private:
 	std::unordered_multimap<hash_t, Margin> margins_added_; //multimap of Article -> Margins, that this peer added, or requested to add
 	std::unordered_map<pk_t, Article> article_headers_only; //only for article headers, so it won't interfere with regular ones
 	std::unordered_map<pk_t, NewspaperEntry> newspapers_awaiting_confirmation; //newspaper that we want to add, but that haven't yet confirmed their existence
-	
 
 	//journalist part
 	reader_database readers_; //list of article readers

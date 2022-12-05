@@ -99,6 +99,15 @@ using user_container_citer = user_container::const_iterator;
 using user_level_map = std::unordered_map<pk_t, PeerInfo>;
 using user_level_map_citer = user_level_map::const_iterator;
 
+using my_timepoint = std::chrono::time_point<std::chrono::system_clock>;
+
+using timestamp_t = std::uint64_t;
+using timed_article_map = std::map<timestamp_t, pk_t>;
+using timed_article_map_iter = timed_article_map::iterator;
+using timed_article_map_citer = timed_article_map::const_iterator;
+using timed_article_map_pair = std::pair<timed_article_map_iter, timed_article_map_iter>;
+using timed_article_map_cpair = std::pair<timed_article_map_citer, timed_article_map_citer>;
+
 using optional_my_string = std::optional<my_string>;
 
 using my_clock = std::chrono::system_clock;

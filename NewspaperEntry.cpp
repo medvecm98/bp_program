@@ -11,7 +11,7 @@ NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& seria
 	news_name_(serialized_ne.entry().news_name()) 
 {
 	for(const np2ps::SerializedArticle& gpb_articles : serialized_ne.articles()) {
-		_articles.emplace(gpb_articles.article().main_hash(), Article(gpb_articles));
+		add_article(gpb_articles.article().main_hash(), Article(gpb_articles));
 	}
 }
 
@@ -25,6 +25,7 @@ NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& ser
 }
 
 void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
+	time_sorted_articles.emplace(article_hash, article.get_creation_time());
 	_articles.insert_or_assign(article_hash, article);
 }
 
@@ -60,4 +61,18 @@ article_data_vec NewspaperEntry::get_articles_for_time_span(my_clock::time_point
 		}
 	}
 	return rv;
+}
+
+timed_article_map_pair NewspaperEntry::get_newest_articles(std::size_t count) {
+	timed_article_map_iter bit = time_sorted_articles.begin();
+	timed_article_map_iter eit = time_sorted_articles.end();
+	timed_article_map_iter it = bit;
+	std::size_t i = 0;
+
+	while (it != eit && i < count) {
+		i++;
+		it++;
+	}
+
+	return { bit, it };
 }
