@@ -169,6 +169,10 @@ public:
 	void generate_article_list(pk_t destination) {
 		getting_article_list.insert(destination);
 		emit check_selected_item();
+
+		auto& news = get_news_db();
+		const user_container& news_friends = news[destination].get_friends();
+
 		networking_->enroll_message_to_be_sent(
 			MFW::ReqArticleListFactory(
 				MFW::ArticleListFactory(

@@ -21,12 +21,13 @@ public:
 	explicit NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
 	void add_article(hash_t article_hash, Article&& article);
 	timed_article_map_pair get_newest_articles(std::size_t count);
-	timed_article_map_pair get_newest_articles(QDate date, std::size_t count);
+	timed_article_map_pair get_newest_articles_from_date(QDate date, std::size_t count);
 	bool remove_article(hash_t article_hash);
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
 	database_iterator_t get_iterator_database();
 	database_iterator_t get_iterator_database_end();
 	article_data_vec get_articles_for_time_span(my_clock::time_point time_span_begin, my_clock::time_point time_span_end);
+	const user_container& get_friends();
 
 	user_container_citer get_first_authority() const {
 		return _authorities.cbegin();
@@ -82,6 +83,7 @@ private:
 	level_t level_ = 127; //level for given newspaper
 	ArticleListWrapper article_list_wrapper_; //saving requested article list
 	timed_article_map time_sorted_articles;
+	user_container friends_; //friends, that can share the articles with you
 };
 
 using news_database = std::unordered_map<pk_t, NewspaperEntry>;

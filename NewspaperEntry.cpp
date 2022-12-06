@@ -79,7 +79,7 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(std::size_t count) {
 
 /** Get `count` newest articles from start of given day.
 */
-timed_article_map_pair NewspaperEntry::get_newest_articles(QDate date, std::size_t count) {
+timed_article_map_pair NewspaperEntry::get_newest_articles_from_date(QDate date, std::size_t count) {
 	QDateTime date_time = date.startOfDay(Qt::LocalTime);
 	std::int64_t epoch = date_time.toMSecsSinceEpoch();
 
@@ -89,23 +89,17 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(QDate date, std::size
 	std::size_t i = 0;
 
 	while (it != eit && i < count) {
-		i++;
+		if (it->first <= epoch) {
+			if (i == 0)
+				bit = it;
+			i++;
+		}
 		it++;
 	}
 
 	return { bit, it };
 }
 
-timed_article_map_pair NewspaperEntry::get_newest_articles(QDate date, std::size_t count) {
-	timed_article_map_iter bit = time_sorted_articles.begin();
-	timed_article_map_iter eit = time_sorted_articles.end();
-	timed_article_map_iter it = bit;
-	std::size_t i = 0;
-
-	while (it != eit && i < count) {
-		i++;
-		it++;
-	}
-
-	return { bit, it };
+const user_container& NewspaperEntry::get_friends() {
+	return friends_;
 }
