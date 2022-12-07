@@ -68,6 +68,31 @@ public:
 		}
 		return std::move(msg);
 	}
+
+	/**
+	 * @brief Factory for Article message with request context.
+	 * 
+	 * @tparam CategoryContainer Type of container containing categories.
+	 * @param msg Barebones Article message, with only mandatory fields filled.
+	 * @param categories Container of categories.
+	 * @return unique_ptr_message 
+	 */
+	template <typename CategoryContainer>
+	static unique_ptr_message ReqArticleListFactory(unique_ptr_message&& msg, pk_t newspaper_id, int count, const CategoryContainer& categories) {
+		msg->mutable_article_list()->set_all_articles(true);
+
+		msg->set_msg_ctx(np2ps::REQUEST);
+		
+		for (auto &&cat : categories) {
+			msg->mutable_article_list()->set_all_articles(false);
+			msg->mutable_article_list()->add_categories(cat);
+		}
+
+		msg->mutable_article_list()->set_newspaper_id(newspaper_id);
+		msg->mutable_article_list()->set_count(count);
+
+		return std::move(msg);
+	}
 	
 	static unique_ptr_message ReqUserIsMemberFactory(unique_ptr_message&& msg, level_t level);
 	static unique_ptr_message ReqCredentialsFactory(unique_ptr_message&& msg, bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
@@ -85,6 +110,8 @@ public:
 		std::shared_ptr<rsa_public_optional> public_key, std::shared_ptr<eax_optional> eax_key);
 
 	static unique_ptr_message ReqArticleHeaderFactory(unique_ptr_message&& msg, Article* article_header);
+
+	static unique_ptr_message ErrorArticleListFactory(unique_ptr_message&& msg, pk_t newspaper_id);
 
 	/* Basic factories: */
 	
@@ -125,6 +152,7 @@ public:
 	static unique_ptr_message SetMessageContextResponse(unique_ptr_message&& msg);
 	static unique_ptr_message SetMessageContextOneWay(unique_ptr_message&& msg);
 	static unique_ptr_message SetMessageContextError(unique_ptr_message&& msg);
+	static void SetMessageContextError(unique_ptr_message& msg);
 };
 
 

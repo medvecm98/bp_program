@@ -28,6 +28,7 @@ public:
 	database_iterator_t get_iterator_database_end();
 	article_data_vec get_articles_for_time_span(my_clock::time_point time_span_begin, my_clock::time_point time_span_end);
 	const user_container& get_friends();
+	void remove_friend(pk_t id);
 
 	user_container_citer get_first_authority() const {
 		return _authorities.cbegin();

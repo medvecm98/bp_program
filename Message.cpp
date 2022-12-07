@@ -274,6 +274,12 @@ unique_ptr_message MFW::UpdateSeqNumber(unique_ptr_message&& msg, unsigned int s
 	return std::move(msg);
 }
 
+unique_ptr_message MFW::ErrorArticleListFactory(unique_ptr_message&& msg, pk_t newspaper_id) {
+	MFW::SetMessageContextError(msg);
+	msg->mutable_article_list()->set_newspaper_id(newspaper_id);
+	return std::move(msg);
+}
+
 unique_ptr_message MFW::SetMessageContextRequest(unique_ptr_message&& msg) {
 	msg->set_msg_ctx(np2ps::REQUEST);
 	return std::move(msg);
@@ -292,4 +298,8 @@ unique_ptr_message MFW::SetMessageContextOneWay(unique_ptr_message&& msg) {
 unique_ptr_message MFW::SetMessageContextError(unique_ptr_message&& msg) {
 	msg->set_msg_ctx(np2ps::ERROR);
 	return std::move(msg);
+}
+
+void MFW::SetMessageContextError(unique_ptr_message& msg) {
+	msg->set_msg_ctx(np2ps::ERROR);
 }

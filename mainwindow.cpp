@@ -154,7 +154,7 @@ void MainWindow::on_pushButton_article_list_released()
 		return;
 	}
 
-	ctx->p.generate_article_list(ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong()); //request the article list of the newspaper
+	ctx->p.generate_article_list_message(ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong()); //request the article list of the newspaper
 }
 
 

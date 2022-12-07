@@ -116,15 +116,42 @@ public:
 	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string& newspaper_ip);
 	size_t list_all_articles_from_news(article_container& articles, const std::set<category_t>& categories);
 	size_t list_all_articles_from_news(article_container& articles);
+	size_t list_all_articles_from_news(article_container& articles, pk_t newspaper_id);
 	size_t list_all_articles_by_me(article_container& articles, const std::set<category_t>& categories, pk_t news_id = 0);
 	size_t list_all_articles_by_me(article_container& articles, pk_t news_id = 0);
 	article_optional find_article(hash_t article_hash);
 	optional_author_peers find_article_in_article_categories_db(hash_t article_hash);
 	optional_author_peers find_article_in_article_categories_db(hash_t article_hash, category_container categories);
+
+	NewspaperEntry& get_news(pk_t news_id);
+
 	void handle_requests(unique_ptr_message message);
 	void handle_responses(unique_ptr_message message);
 	void handle_one_way(unique_ptr_message message);
 	void handle_error(unique_ptr_message message);
+
+	void handle_article_all_request(unique_ptr_message message);
+	void handle_article_header_request(unique_ptr_message message);
+	void handle_article_list_request(unique_ptr_message message);
+	void handle_article_data_update_request(unique_ptr_message message);
+	void handle_update_margin_request(unique_ptr_message message);
+	void handle_credentials_request(unique_ptr_message message);
+
+	void handle_article_all_response(unique_ptr_message message);
+	void handle_article_list_response(unique_ptr_message message);
+	void handle_credentials_response(unique_ptr_message message);
+	void handle_public_key_response(unique_ptr_message message);
+	void handle_symmetric_key_response(unique_ptr_message message);
+	void handle_update_margin_response(unique_ptr_message message);
+
+	void handle_article_solicitation_one_way(unique_ptr_message message);
+	void handle_symmetric_key_one_way(unique_ptr_message message);
+	void handle_public_key_one_way(unique_ptr_message message);
+
+	void handle_article_solicitation_error(unique_ptr_message message);
+	void handle_article_header_error(unique_ptr_message message);
+	void handle_article_list_error(unique_ptr_message message);
+
 	void generate_article_all_message(pk_t destination, hash_t article_hash);
 	void generate_article_header_message(pk_t destination, hash_t article_hash);
 	void send_stun_binding_request();
@@ -164,24 +191,40 @@ public:
 	/**
 	 * @brief Generator for article list message.
 	 * 
-	 * @param destination ID of newspaper which article list we want.
+	 * @param newspaper_id ID of newspaper which article list we want.
 	 */
-	void generate_article_list(pk_t destination) {
-		getting_article_list.insert(destination);
+	void generate_article_list_message(pk_t newspaper_id) {
+		getting_article_list.insert(newspaper_id);
 		emit check_selected_item();
 
 		auto& news = get_news_db();
-		const user_container& news_friends = news[destination].get_friends();
+		const user_container& news_friends = news[newspaper_id].get_friends();
 
 		networking_->enroll_message_to_be_sent(
 			MFW::ReqArticleListFactory(
 				MFW::ArticleListFactory(
 					public_identifier_,
-					destination
+					newspaper_id
 				),
+				newspaper_id,
+				10,
 				std::vector<my_string>()
 			)
 		);
+
+		for (auto&& user : news_friends) {
+			networking_->enroll_message_to_be_sent(
+				MFW::ReqArticleListFactory(
+					MFW::ArticleListFactory(
+						public_identifier_,
+						user
+					),
+					newspaper_id,
+					10,
+					std::vector<my_string>()
+				)
+			);	
+		}
 	}
 	
 	/**
@@ -192,7 +235,7 @@ public:
 	 * @param categories Categories we want.
 	 */
 	template<typename Container>
-	void generate_article_list(pk_t destination, const Container& categories) {
+	void generate_article_list_message(pk_t destination, const Container& categories) {
 		networking_->enroll_message_to_be_sent(
 			MFW::ReqArticleListFactory<Container>(
 				MFW::ArticleListFactory(

@@ -102,3 +102,37 @@ public:
 private:
     std::string message;
 };
+
+class unsupported_message_type_in_context : public std::exception {
+public:
+    unsupported_message_type_in_context(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    unsupported_message_type_in_context(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};
+
+class unknown_newspaper_error : public std::exception {
+public:
+    unknown_newspaper_error(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    unknown_newspaper_error(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};

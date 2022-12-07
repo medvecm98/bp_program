@@ -103,3 +103,10 @@ timed_article_map_pair NewspaperEntry::get_newest_articles_from_date(QDate date,
 const user_container& NewspaperEntry::get_friends() {
 	return friends_;
 }
+
+void NewspaperEntry::remove_friend(pk_t id) {
+	auto it = friends_.find(id);
+	if (it != friends_.end()) {
+		friends_.erase(it);
+	}
+}
