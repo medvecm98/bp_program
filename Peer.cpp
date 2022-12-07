@@ -138,19 +138,60 @@ size_t Peer::list_all_articles_from_news(article_container &articles) {
  * @param articles Where to put the articles.
  * @return How many articles were found.
  */
-size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newspaper_id) {
+size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newspaper_id, std::int16_t count) {
 	size_t article_counter = 0;
 	
 	auto& news = get_news(newspaper_id);
-	auto bit = news.get_iterator_database();
-	auto eit = news.get_iterator_database_end();
-
-	for (; bit != eit; bit++) {
-		articles.insert(&bit->second);
-		article_counter++;
+	if (count > 0) {
+		auto& [bit, eit] = news.get_newest_articles(count); 
+		while (bit != eit) {
+			Article& article = news.get_article(bit->second);
+			articles.emplace(&article);
+		}
+		return 1;
 	}
+	else {
+		auto bit = news.get_iterator_database();
+		auto eit = news.get_iterator_database_end();
 
-	return article_counter;
+		for (; bit != eit; bit++) {
+			articles.insert(&bit->second);
+			article_counter++;
+		}
+
+		return article_counter;
+	}
+}
+
+/**
+ * List of all articles that given news have.
+ * Chief editors only.
+ * @param articles Where to put the articles.
+ * @return How many articles were found.
+ */
+size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newspaper_id, std::int16_t count, QDate date) {
+	size_t article_counter = 0;
+	
+	auto& news = get_news(newspaper_id);
+	auto& [bit, eit] = news.get_newest_articles(date, count); 
+	if (count > 0) {
+		while (bit != eit) {
+			Article& article = news.get_article(bit->second);
+			articles.emplace(&article);
+		}
+		return 1;
+	}
+	else {
+		auto bit = news.get_iterator_database();
+		auto eit = news.get_iterator_database_end();
+
+		for (; bit != eit; bit++) {
+			articles.insert(&bit->second);
+			article_counter++;
+		}
+
+		return article_counter;
+	}
 }
 
 //TODO: try to implement this as extensible as possible, e. g. using POLICIES

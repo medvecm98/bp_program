@@ -116,7 +116,7 @@ public:
 	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string& newspaper_ip);
 	size_t list_all_articles_from_news(article_container& articles, const std::set<category_t>& categories);
 	size_t list_all_articles_from_news(article_container& articles);
-	size_t list_all_articles_from_news(article_container& articles, pk_t newspaper_id);
+	size_t list_all_articles_from_news(article_container& articles, pk_t newspaper_id, int count);
 	size_t list_all_articles_by_me(article_container& articles, const std::set<category_t>& categories, pk_t news_id = 0);
 	size_t list_all_articles_by_me(article_container& articles, pk_t news_id = 0);
 	article_optional find_article(hash_t article_hash);

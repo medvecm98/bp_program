@@ -66,6 +66,11 @@ article_data_vec NewspaperEntry::get_articles_for_time_span(my_clock::time_point
 timed_article_map_pair NewspaperEntry::get_newest_articles(std::size_t count) {
 	timed_article_map_iter bit = time_sorted_articles.begin();
 	timed_article_map_iter eit = time_sorted_articles.end();
+
+	if (count <= 0) {
+		return { bit, eit };
+	}
+
 	timed_article_map_iter it = bit;
 	std::size_t i = 0;
 
@@ -88,10 +93,14 @@ timed_article_map_pair NewspaperEntry::get_newest_articles_from_date(QDate date,
 	timed_article_map_iter it = bit;
 	std::size_t i = 0;
 
-	while (it != eit && i < count) {
+	while (it != eit && i < count) { //TODO: fix the i < count
 		if (it->first <= epoch) {
-			if (i == 0)
+			if (i == 0) {
 				bit = it;
+				if (count <= 0) {
+					return { bit, eit }
+				}
+			}
 			i++;
 		}
 		it++;
@@ -109,4 +118,12 @@ void NewspaperEntry::remove_friend(pk_t id) {
 	if (it != friends_.end()) {
 		friends_.erase(it);
 	}
+}
+
+Article& NewspaperEntry::get_article(hash_t id) {
+	auto it = _articles.find(id);
+	if (it != _articles.end()) {
+		return _articles[id];
+	}
+	throw article_not_found_database("Article not found in user database.");
 }
