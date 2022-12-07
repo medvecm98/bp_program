@@ -136,3 +136,20 @@ public:
 private:
     std::string message;
 };
+
+class article_not_found_database : public std::exception {
+public:
+    article_not_found_database(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    article_not_found_database(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};

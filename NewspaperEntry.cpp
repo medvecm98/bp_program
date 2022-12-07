@@ -98,7 +98,7 @@ timed_article_map_pair NewspaperEntry::get_newest_articles_from_date(QDate date,
 			if (i == 0) {
 				bit = it;
 				if (count <= 0) {
-					return { bit, eit }
+					return { bit, eit };
 				}
 			}
 			i++;

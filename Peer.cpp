@@ -138,7 +138,7 @@ size_t Peer::list_all_articles_from_news(article_container &articles) {
  * @param articles Where to put the articles.
  * @return How many articles were found.
  */
-size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newspaper_id, std::int16_t count) {
+size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newspaper_id, int count) {
 	size_t article_counter = 0;
 	
 	auto& news = get_news(newspaper_id);
@@ -169,7 +169,7 @@ size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newsp
  * @param articles Where to put the articles.
  * @return How many articles were found.
  */
-size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newspaper_id, std::int16_t count, QDate date) {
+size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newspaper_id, int count, QDate date) {
 	size_t article_counter = 0;
 	
 	auto& news = get_news(newspaper_id);
