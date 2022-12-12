@@ -15,13 +15,6 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="1" column="1">
-     <widget class="QPushButton" name="pushButton_testPeer2">
-      <property name="text">
-       <string>Test Peer 2 create</string>
-      </property>
-     </widget>
-    </item>
     <item row="0" column="0" colspan="2">
      <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,2">
       <item>
@@ -309,6 +302,20 @@
       </property>
      </widget>
     </item>
+    <item row="2" column="1">
+     <widget class="QPushButton" name="pushButton_load">
+      <property name="text">
+       <string>Load</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QPushButton" name="pushButton_testPeer2">
+      <property name="text">
+       <string>Test Peer 2 create</string>
+      </property>
+     </widget>
+    </item>
     <item row="2" column="0">
      <widget class="QPushButton" name="pushButton_save">
       <property name="text">
@@ -316,10 +323,10 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="1">
-     <widget class="QPushButton" name="pushButton_load">
+    <item row="3" column="0">
+     <widget class="QPushButton" name="pushButton_loadFromFile">
       <property name="text">
-       <string>Load</string>
+       <string>Load from file</string>
       </property>
      </widget>
     </item>

@@ -1301,5 +1301,13 @@ void Peer::handle_newspaper_entry_error(shared_ptr_message message) {
 }
 
 void Peer::add_new_newspaper_from_file(const std::string& path) {
-	news_.emplace(path);
+	NewspaperEntry news(path);
+	pk_t news_id = news.get_id();
+	news_.insert({ news_id, std::move(news) });
+	emit got_newspaper_confirmation(news_id);
+}
+
+void Peer::add_new_newspaper_pk(pk_t id) {
+	news_.insert({ id, std::move(NewspaperEntry(id)) });
+	emit got_newspaper_confirmation(id);
 }

@@ -1,5 +1,7 @@
 #include "NewspaperEntry.h"
 
+NewspaperEntry::NewspaperEntry(pk_t id) : news_id_(id) {}
+
 NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name) {
 	_authorities.insert(first_key);
 	news_id_ = id;

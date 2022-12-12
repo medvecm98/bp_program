@@ -43,7 +43,7 @@ public:
 		if (public_id == 0)
 			public_identifier_ = (std::uint64_t)prng.GenerateWord32() << 32 | (std::uint64_t)prng.GenerateWord32();
 		else
-			public_identifier_ = 123;
+			public_identifier_ = public_id;
 		std::cout << "Public ID: " << public_identifier_ << std::endl;
 
 		CryptoPP::RSA::PrivateKey private_key_new;
@@ -118,6 +118,7 @@ public:
 	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, pk_t sender);
 	void add_new_newspaper(pk_t destination, pk_t news_id, my_string news_name);
 	void add_new_newspaper_from_file(const std::string& path);
+	void add_new_newspaper_pk(pk_t pid);
 	size_t list_all_articles_from_news(article_container& articles, const std::set<category_t>& categories);
 	size_t list_all_articles_from_news(article_container& articles);
 	size_t list_all_articles_from_news(article_container& articles, pk_t newspaper_id, int count);
@@ -476,6 +477,20 @@ public slots:
 
 	void newspaper_identified(pk_t newspaper_key, my_string newspaper_name, std::string newspaper_ip_domain);
 
+	void slot_add_new_newspaper_from_file(QString path) {
+		add_new_newspaper_from_file(path.toStdString());
+	}
+
+	void slot_add_new_newspaper_pk(QString id_qstring) {
+		bool ok;
+		pk_t id = id_qstring.toULongLong(&ok);
+		if (ok) {
+			add_new_newspaper_pk(id);
+		}
+		else {
+			throw new other_error("Invalid form od ID inserted.");
+		}
+	}
 
 signals:
 	/**

@@ -17,6 +17,7 @@ class NewspaperEntry {
 public:
 	NewspaperEntry() = default;
 	NewspaperEntry(pk_t first_key, pk_t id, const my_string& name);
+	explicit NewspaperEntry(pk_t id);
 	explicit NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne);
 	explicit NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
 	explicit NewspaperEntry(const std::string& path);

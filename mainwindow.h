@@ -156,6 +156,9 @@ public slots:
 	void check_selected_item();
 
 private slots:
+    void on_pushButton_loadFromFile_clicked();
+
+private slots:
     void on_pushButton_load_clicked();
 
 private slots:
@@ -287,7 +290,9 @@ signals:
 	 */
 	void add_margin(article_ptr article);
 
-	
+	void signal_add_new_newspaper_from_file(QString path);
+
+	void signal_add_new_newspaper_pk(QString id_qstring);
 
 private:
 	/**

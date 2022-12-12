@@ -23,7 +23,7 @@ void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramCon
 	std::ifstream file(path.c_str());
 	std::string line;
 	ctx->p.peer_init("Test Peer", "Newspaper Test Peer");
-	int counter = 1;
+	int counter = ctx->p.get_public_key() * 10;
 	while (std::getline(file, line)) {
 		std::string article_file_path(line);
 		Article a;
@@ -54,7 +54,12 @@ int main(int argc, char *argv[]) {
 
 		if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
 			if (path_string[0] == '_') {
-				ctx = std::make_shared<ProgramContext>(123);
+				pk_t custom_id = 123;
+				if (QCoreApplication::arguments().size() > 2) {
+					QString custom_id_string = QCoreApplication::arguments().at(2);
+					custom_id = custom_id_string.toULongLong();
+				}
+				ctx = std::make_shared<ProgramContext>(custom_id);
 				load_articles_from_file(path_string, ctx);
 			}
 			else {
@@ -79,6 +84,8 @@ int main(int argc, char *argv[]) {
 	QObject::connect(&w, &MainWindow::start_server, ctx->p.get_networking()->get_peer_receiver(), &PeerReceiver::start_server);
 	QObject::connect(&w, &MainWindow::start_server, ctx->p.get_networking()->get_stun_server(), &StunServer::start_server);
 	QObject::connect(&ctx->p, &Peer::check_selected_item, &w, &MainWindow::check_selected_item);
+	QObject::connect(&ctx->p, &Peer::slot_add_new_newspaper_from_file, &w, &MainWindow::signal_add_new_newspaper_from_file);
+	QObject::connect(&ctx->p, &Peer::slot_add_new_newspaper_pk, &w, &MainWindow::signal_add_new_newspaper_pk);
 
 	QObject::connect(f, &Form::enable_print_peer, &w, &MainWindow::enable_print_peer);
 	QObject::connect(f, &Form::enable_add_article, &w, &MainWindow::enable_add_article);

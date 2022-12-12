@@ -507,7 +507,7 @@ void MainWindow::on_pushButton_save_clicked()
     np2ps::Peer serialized_peer;
     ctx->p.serialize(&serialized_peer);
 
-	QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"), "/", tr("NP2PS archive (*.npps)"));
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"), QDir::homePath(), tr("NP2PS archive (*.nppsa)"));
 
     std::ofstream file(fileName.toStdString());
     serialized_peer.SerializeToOstream(&file);
@@ -516,4 +516,10 @@ void MainWindow::on_pushButton_save_clicked()
 void MainWindow::on_pushButton_load_clicked()
 {
     std::filesystem::remove("./archive.txt");
+}
+
+void MainWindow::on_pushButton_loadFromFile_clicked()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Newspaper File"), QDir::homePath(), tr("NP2PS newspaper (*.nppsn)"));
+    emit signal_add_new_newspaper_from_file(fileName);
 }
