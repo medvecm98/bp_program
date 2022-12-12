@@ -117,6 +117,7 @@ public:
 	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string& newspaper_ip);
 	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, pk_t sender);
 	void add_new_newspaper(pk_t destination, pk_t news_id, my_string news_name);
+	void add_new_newspaper_from_file(const std::string& path);
 	size_t list_all_articles_from_news(article_container& articles, const std::set<category_t>& categories);
 	size_t list_all_articles_from_news(article_container& articles);
 	size_t list_all_articles_from_news(article_container& articles, pk_t newspaper_id, int count);
@@ -131,38 +132,38 @@ public:
 
 	/* message context handlers */
 
-	void handle_requests(unique_ptr_message message);
-	void handle_responses(unique_ptr_message message);
-	void handle_one_way(unique_ptr_message message);
-	void handle_error(unique_ptr_message message);
+	void handle_requests(shared_ptr_message message);
+	void handle_responses(shared_ptr_message message);
+	void handle_one_way(shared_ptr_message message);
+	void handle_error(shared_ptr_message message);
 
 	/* message type (and context) handlers */
 
-	void handle_article_all_request(unique_ptr_message message);
-	void handle_article_header_request(unique_ptr_message message);
-	void handle_article_list_request(unique_ptr_message message);
-	void handle_article_data_update_request(unique_ptr_message message);
-	void handle_update_margin_request(unique_ptr_message message);
-	void handle_credentials_request(unique_ptr_message message);
-	void handle_newspaper_entry_request(unique_ptr_message message);
+	void handle_article_all_request(shared_ptr_message message);
+	void handle_article_header_request(shared_ptr_message message);
+	void handle_article_list_request(shared_ptr_message message);
+	void handle_article_data_update_request(shared_ptr_message message);
+	void handle_update_margin_request(shared_ptr_message message);
+	void handle_credentials_request(shared_ptr_message message);
+	void handle_newspaper_entry_request(shared_ptr_message message);
 
-	void handle_article_all_response(unique_ptr_message message);
-	void handle_article_list_response(unique_ptr_message message);
-	void handle_credentials_response(unique_ptr_message message);
-	void handle_public_key_response(unique_ptr_message message);
-	void handle_symmetric_key_response(unique_ptr_message message);
-	void handle_update_margin_response(unique_ptr_message message);
-	void handle_newspaper_entry_response(unique_ptr_message message);
+	void handle_article_all_response(shared_ptr_message message);
+	void handle_article_list_response(shared_ptr_message message);
+	void handle_credentials_response(shared_ptr_message message);
+	void handle_public_key_response(shared_ptr_message message);
+	void handle_symmetric_key_response(shared_ptr_message message);
+	void handle_update_margin_response(shared_ptr_message message);
+	void handle_newspaper_entry_response(shared_ptr_message message);
 
-	void handle_article_solicitation_one_way(unique_ptr_message message);
-	void handle_symmetric_key_one_way(unique_ptr_message message);
-	void handle_public_key_one_way(unique_ptr_message message);
+	void handle_article_solicitation_one_way(shared_ptr_message message);
+	void handle_symmetric_key_one_way(shared_ptr_message message);
+	void handle_public_key_one_way(shared_ptr_message message);
 
-	void handle_article_solicitation_error(unique_ptr_message message);
-	void handle_article_header_error(unique_ptr_message message);
-	void handle_article_list_error(unique_ptr_message message);
-	void handle_article_all_error(unique_ptr_message message);
-	void handle_newspaper_entry_error(unique_ptr_message message);
+	void handle_article_solicitation_error(shared_ptr_message message);
+	void handle_article_header_error(shared_ptr_message message);
+	void handle_article_list_error(shared_ptr_message message);
+	void handle_article_all_error(shared_ptr_message message);
+	void handle_newspaper_entry_error(shared_ptr_message message);
 
 	/* generators */
 
@@ -467,7 +468,7 @@ public:
 	}
 
 public slots:
-	void handle_message(unique_ptr_message message);
+	void handle_message(shared_ptr_message message);
 
 	void allocate_on_stun_server(pk_t target);
 

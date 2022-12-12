@@ -2,7 +2,7 @@
 
 using MFW = MessageFactoryWrapper;
 
-unique_ptr_message MFW::ArticleDataChangeFactory(pk_t from, pk_t to, hash_t article_hash, bool download) {
+shared_ptr_message MFW::ArticleDataChangeFactory(pk_t from, pk_t to, hash_t article_hash, bool download) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -19,7 +19,7 @@ unique_ptr_message MFW::ArticleDataChangeFactory(pk_t from, pk_t to, hash_t arti
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::ArticleDownloadFactory(pk_t from, pk_t to, hash_t article_hash, level_t level) {
+shared_ptr_message MFW::ArticleDownloadFactory(pk_t from, pk_t to, hash_t article_hash, level_t level) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -31,7 +31,7 @@ unique_ptr_message MFW::ArticleDownloadFactory(pk_t from, pk_t to, hash_t articl
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::ArticleHeaderFactory(pk_t from, pk_t to, hash_t article_hash) {
+shared_ptr_message MFW::ArticleHeaderFactory(pk_t from, pk_t to, hash_t article_hash) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -42,7 +42,7 @@ unique_ptr_message MFW::ArticleHeaderFactory(pk_t from, pk_t to, hash_t article_
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::ArticleListFactory(pk_t from, pk_t to) {
+shared_ptr_message MFW::ArticleListFactory(pk_t from, pk_t to) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -51,7 +51,7 @@ unique_ptr_message MFW::ArticleListFactory(pk_t from, pk_t to) {
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::UserIsMemberFactory(pk_t from, pk_t to, pk_t user_pk) {
+shared_ptr_message MFW::UserIsMemberFactory(pk_t from, pk_t to, pk_t user_pk) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -62,7 +62,7 @@ unique_ptr_message MFW::UserIsMemberFactory(pk_t from, pk_t to, pk_t user_pk) {
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::update_margin_factory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margins) {
+shared_ptr_message MFW::update_margin_factory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margins) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -81,7 +81,7 @@ unique_ptr_message MFW::update_margin_factory(pk_t from, pk_t to, hash_t article
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::UpdateMarginFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin) {
+shared_ptr_message MFW::UpdateMarginFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin) {
 	auto msg = update_margin_factory(from, to, article_hash, margin);
 
 	msg->mutable_update_margin()->set_m_action(np2ps::ADD);
@@ -89,13 +89,13 @@ unique_ptr_message MFW::UpdateMarginFactory(pk_t from, pk_t to, hash_t article_h
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::UpdateMarginAddFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin) {
+shared_ptr_message MFW::UpdateMarginAddFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin) {
 	auto msg = update_margin_factory(from, to, article_hash, margin);
 
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::UpdateMarginRemoveFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin) {
+shared_ptr_message MFW::UpdateMarginRemoveFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin) {
 	auto msg = update_margin_factory(from, to, article_hash, margin);
 
 	msg->mutable_update_margin()->set_m_action(np2ps::REMOVE);
@@ -103,7 +103,7 @@ unique_ptr_message MFW::UpdateMarginRemoveFactory(pk_t from, pk_t to, hash_t art
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::UpdateMarginUpdateFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin) {
+shared_ptr_message MFW::UpdateMarginUpdateFactory(pk_t from, pk_t to, hash_t article_hash, margin_vector& margin) {
 	auto msg = update_margin_factory(from, to, article_hash, margin);
 
 	msg->mutable_update_margin()->set_m_action(np2ps::UPDATE);
@@ -111,7 +111,7 @@ unique_ptr_message MFW::UpdateMarginUpdateFactory(pk_t from, pk_t to, hash_t art
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::UpdateArticleFactory(pk_t from, pk_t to, hash_t article_hash) {
+shared_ptr_message MFW::UpdateArticleFactory(pk_t from, pk_t to, hash_t article_hash) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -122,7 +122,7 @@ unique_ptr_message MFW::UpdateArticleFactory(pk_t from, pk_t to, hash_t article_
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::CredentialsFactory(pk_t from, pk_t to) {
+shared_ptr_message MFW::CredentialsFactory(pk_t from, pk_t to) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -132,13 +132,13 @@ unique_ptr_message MFW::CredentialsFactory(pk_t from, pk_t to) {
 }
 
 /* Requests: */
-unique_ptr_message MFW::ReqUserIsMemberFactory(unique_ptr_message&& msg, level_t level) { 
+shared_ptr_message MFW::ReqUserIsMemberFactory(shared_ptr_message&& msg, level_t level) { 
 	msg->mutable_user_is_member()->set_level(level);
 	msg->set_msg_ctx(np2ps::REQUEST);
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::ReqCredentialsFactory(unique_ptr_message&& msg, bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
+shared_ptr_message MFW::ReqCredentialsFactory(shared_ptr_message&& msg, bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
 	string_ptr_optional ip4, string_ptr_optional ip6, rsa_public_ptr_optional public_key, eax_ptr_optional eax_key) {
 
 		msg->set_msg_ctx(np2ps::REQUEST);
@@ -173,7 +173,7 @@ unique_ptr_message MFW::ReqCredentialsFactory(unique_ptr_message&& msg, bool req
 
 
 
-unique_ptr_message MFW::RespArticleDownloadFactory(unique_ptr_message&& msg, article_ptr article_header, std::string&& article) { 
+shared_ptr_message MFW::RespArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header, std::string&& article) { 
 	auto header_ptr = msg->mutable_article_all()->mutable_header();
 	msg->set_msg_ctx(np2ps::RESPONSE);
 	article_header->network_serialize_article(header_ptr);
@@ -184,7 +184,7 @@ unique_ptr_message MFW::RespArticleDownloadFactory(unique_ptr_message&& msg, art
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::RespArticleHeaderFactory(unique_ptr_message&& msg, article_ptr article_header) {
+shared_ptr_message MFW::RespArticleHeaderFactory(shared_ptr_message&& msg, article_ptr article_header) {
 	auto header_ptr = msg->mutable_article_header()->mutable_article();
 	article_header->network_serialize_article(header_ptr);
 	msg->set_msg_ctx(np2ps::RESPONSE);
@@ -192,7 +192,7 @@ unique_ptr_message MFW::RespArticleHeaderFactory(unique_ptr_message&& msg, artic
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::ReqArticleHeaderFactory(unique_ptr_message&& msg, Article* article_header) {
+shared_ptr_message MFW::ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header) {
 	auto header_ptr = msg->mutable_article_header()->mutable_article();
 	article_header->network_serialize_article(header_ptr);
 	msg->set_msg_ctx(np2ps::REQUEST);
@@ -200,7 +200,7 @@ unique_ptr_message MFW::ReqArticleHeaderFactory(unique_ptr_message&& msg, Articl
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::RespArticleListFactory(unique_ptr_message&& msg, article_container& articles) { 
+shared_ptr_message MFW::RespArticleListFactory(shared_ptr_message&& msg, article_container& articles) { 
 	for(auto&& article : articles) {
 		auto a = msg->mutable_article_list()->add_response();
 		article->network_serialize_article(a);
@@ -209,14 +209,14 @@ unique_ptr_message MFW::RespArticleListFactory(unique_ptr_message&& msg, article
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::RespUserIsMemberFactory(unique_ptr_message&& msg, bool is_member, level_t req_level) { 
+shared_ptr_message MFW::RespUserIsMemberFactory(shared_ptr_message&& msg, bool is_member, level_t req_level) { 
 	msg->mutable_user_is_member()->set_is_member(is_member);
 	msg->mutable_user_is_member()->set_level(req_level);
 	msg->set_msg_ctx(np2ps::RESPONSE);
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::RespCredentialsFactory(unique_ptr_message&& msg, QString ip4, QString ip6, 
+shared_ptr_message MFW::RespCredentialsFactory(shared_ptr_message&& msg, QString ip4, QString ip6, 
 	std::shared_ptr<rsa_public_optional> public_key, std::shared_ptr<eax_optional> eax_key) {
 		msg->set_msg_ctx(np2ps::RESPONSE);
 		if (!ip4.isEmpty()) {
@@ -254,7 +254,7 @@ unique_ptr_message MFW::RespCredentialsFactory(unique_ptr_message&& msg, QString
 		return std::move(msg);
 	}
 
-unique_ptr_message MFW::PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::PublicKey& key) {
+shared_ptr_message MFW::PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::PublicKey& key) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
@@ -269,48 +269,48 @@ unique_ptr_message MFW::PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::Publ
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::UpdateSeqNumber(unique_ptr_message&& msg, unsigned int seq) {
+shared_ptr_message MFW::UpdateSeqNumber(shared_ptr_message&& msg, unsigned int seq) {
 	msg->set_seq(seq);
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::ErrorArticleListFactory(unique_ptr_message&& msg, pk_t newspaper_id) {
+shared_ptr_message MFW::ErrorArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id) {
 	MFW::SetMessageContextError(msg);
 	msg->mutable_article_list()->set_newspaper_id(newspaper_id);
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::SetMessageContextRequest(unique_ptr_message&& msg) {
+shared_ptr_message MFW::SetMessageContextRequest(shared_ptr_message&& msg) {
 	msg->set_msg_ctx(np2ps::REQUEST);
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::SetMessageContextResponse(unique_ptr_message&& msg) {
+shared_ptr_message MFW::SetMessageContextResponse(shared_ptr_message&& msg) {
 	msg->set_msg_ctx(np2ps::RESPONSE);
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::SetMessageContextOneWay(unique_ptr_message&& msg) {
+shared_ptr_message MFW::SetMessageContextOneWay(shared_ptr_message&& msg) {
 	msg->set_msg_ctx(np2ps::ONE_WAY);
 	return std::move(msg);
 }
 
-unique_ptr_message MFW::SetMessageContextError(unique_ptr_message&& msg) {
+shared_ptr_message MFW::SetMessageContextError(shared_ptr_message&& msg) {
 	msg->set_msg_ctx(np2ps::ERROR);
 	return std::move(msg);
 }
 
-void MFW::SetMessageContextError(unique_ptr_message& msg) {
+void MFW::SetMessageContextError(shared_ptr_message& msg) {
 	msg->set_msg_ctx(np2ps::ERROR);
 }
 
-unique_ptr_message MFW::RespNewspaperEntryFactory(unique_ptr_message&& msg, NewspaperEntry& news) {
+shared_ptr_message MFW::RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news) {
 	news.network_serialize_entry(msg->mutable_newspaper_entry());
 	msg->set_msg_ctx(np2ps::RESPONSE);
 	return msg;
 }
 
-unique_ptr_message MFW::NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id) {
+shared_ptr_message MFW::NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 

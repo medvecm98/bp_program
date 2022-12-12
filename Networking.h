@@ -27,9 +27,9 @@
 
 using reader_database = std::unordered_multimap<hash_t, PeerInfo*>;
 using MFW = MessageFactoryWrapper;
-using msg_queue = std::queue< unique_ptr_message>;
+using msg_queue = std::queue< shared_ptr_message>;
 using msg_queue_ptr = std::shared_ptr< msg_queue>;
-using msg_map = std::unordered_map< std::size_t, unique_ptr_message>;
+using msg_map = std::unordered_map< std::size_t, shared_ptr_message>;
 
 class StunClient;
 class StunServer;
@@ -178,7 +178,7 @@ public:
 	 * @param msg Message to send.
 	 * @param ipw IpWrapper of the receiver of the message.
 	 */
-	void message_send(unique_ptr_message msg, IpWrapper& ipw);
+	void message_send(shared_ptr_message msg, IpWrapper& ipw);
 
 	/**
 	 * @brief Sends given NP2PS message.
@@ -194,7 +194,7 @@ public:
 	 * @param ipw IpWrapper of the receiver of the message.
 	 * @param relay Should the message be relayed?
 	 */
-	void message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrapper ipw, bool relay);
+	void message_send(QTcpSocket* socket, shared_ptr_message msg, IpWrapper ipw, bool relay);
 
 	/**
 	 * @brief Tries to connect to receiver.
@@ -205,7 +205,7 @@ public:
 	 * @param msg Message to send.
 	 * @param ipw IpWrapper of the receiver.
 	 */
-	void try_connect(unique_ptr_message msg, IpWrapper& ipw);
+	void try_connect(shared_ptr_message msg, IpWrapper& ipw);
 
 public slots:
 	/**
@@ -242,7 +242,7 @@ private:
 	networking_ptr networking_;
 
 	/* Message and IpWrapper when waiting to be connected. */
-	unique_ptr_message message_waiting_for_connection;
+	shared_ptr_message message_waiting_for_connection;
 	IpWrapper ipw_waiting_for_connection;
 };
 
@@ -298,7 +298,7 @@ public:
 	 * @param message Message to send.
 	 * @return true Always.
 	 */
-	bool enroll_message_to_be_sent(unique_ptr_message message);
+	bool enroll_message_to_be_sent(shared_ptr_message message);
 
 	/**
 	 * @brief Initializes PeerSender and PeerReceiver.
@@ -316,7 +316,7 @@ public:
 	 * 
 	 * @param msg Just received message to process.
 	 */
-	void add_to_received(unique_ptr_message msg) {
+	void add_to_received(shared_ptr_message msg) {
 		emit new_message_received(msg);
 	}
 
@@ -428,9 +428,9 @@ public:
 
 	IpMap ip_map_; //map of all IPs, ports and RSA public keys
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles; //articles waiting to be found in the network
-	std::unordered_multimap<pk_t, unique_ptr_message> waiting_symmetrich_exchange; //messages waiting to be sent while symmetric key is exchanged
+	std::unordered_multimap<pk_t, shared_ptr_message> waiting_symmetrich_exchange; //messages waiting to be sent while symmetric key is exchanged
 	user_level_map* user_map;
-	std::map<pk_t, unique_ptr_message> waiting_symmetric_key_messages;
+	std::map<pk_t, shared_ptr_message> waiting_symmetric_key_messages;
 	std::map<quint32, std::string> newspapers_awaiting_identification;
 
 public slots:
@@ -448,7 +448,7 @@ public slots:
 	 * 
 	 * @param msg Pointer to message to send.
 	 */
-	void send_message(unique_ptr_message);
+	void send_message(shared_ptr_message);
 
 	/**
 	 * @brief Decrypts all symmetric messages by given sender.
@@ -479,13 +479,13 @@ signals:
 	 * @brief Emitted, when new message was received and read.
 	 * 
 	 */
-	void new_message_enrolled(unique_ptr_message);
+	void new_message_enrolled(shared_ptr_message);
 
 	/**
 	 * @brief Emitted, when new message was received.
 	 * 
 	 */
-	void new_message_received(unique_ptr_message);
+	void new_message_received(shared_ptr_message);
 
 	/**
 	 * @brief Emitted, when newspaper identified themselves.
@@ -511,7 +511,7 @@ private:
 	user_container* journalists_;
 
 	encrypted_message_map waiting_decrypt; //<pk_t of other holder of symmetric key, message>
-	std::unordered_multimap<pk_t, unique_ptr_message> waiting_ip; //<pk_t of receiver, message to send to receiver>
+	std::unordered_multimap<pk_t, shared_ptr_message> waiting_ip; //<pk_t of receiver, message to send to receiver>
 	CryptoPP::AutoSeededRandomPool prng_;
 	bool sender_receiver_initialized;
 	std::shared_ptr<PeerSender> sender_;

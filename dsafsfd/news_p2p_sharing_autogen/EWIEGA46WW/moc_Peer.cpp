@@ -51,7 +51,7 @@ QT_MOC_LITERAL(15, 213, 23), // "symmetric_key_exchanged"
 QT_MOC_LITERAL(16, 237, 10), // "other_peer"
 QT_MOC_LITERAL(17, 248, 19), // "check_selected_item"
 QT_MOC_LITERAL(18, 268, 14), // "handle_message"
-QT_MOC_LITERAL(19, 283, 18), // "unique_ptr_message"
+QT_MOC_LITERAL(19, 283, 18), // "shared_ptr_message"
 QT_MOC_LITERAL(20, 302, 7), // "message"
 QT_MOC_LITERAL(21, 310, 23), // "allocate_on_stun_server"
 QT_MOC_LITERAL(22, 334, 6), // "target"
@@ -73,7 +73,7 @@ QT_MOC_LITERAL(30, 435, 19) // "newspaper_ip_domain"
     "message_seq_number\0is_member\0"
     "symmetric_key_exchanged\0other_peer\0"
     "check_selected_item\0handle_message\0"
-    "unique_ptr_message\0message\0"
+    "shared_ptr_message\0message\0"
     "allocate_on_stun_server\0target\0"
     "newspaper_confirm\0pid\0newspaper_identified\0"
     "newspaper_key\0my_string\0newspaper_name\0"
@@ -140,7 +140,7 @@ void Peer::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void *
         case 4: _t->user_is_member_verification((*reinterpret_cast< seq_t(*)>(_a[1])),(*reinterpret_cast< bool(*)>(_a[2]))); break;
         case 5: _t->symmetric_key_exchanged((*reinterpret_cast< pk_t(*)>(_a[1]))); break;
         case 6: _t->check_selected_item(); break;
-        case 7: _t->handle_message((*reinterpret_cast< unique_ptr_message(*)>(_a[1]))); break;
+        case 7: _t->handle_message((*reinterpret_cast< shared_ptr_message(*)>(_a[1]))); break;
         case 8: _t->allocate_on_stun_server((*reinterpret_cast< pk_t(*)>(_a[1]))); break;
         case 9: _t->newspaper_confirm((*reinterpret_cast< pk_t(*)>(_a[1]))); break;
         case 10: _t->newspaper_identified((*reinterpret_cast< pk_t(*)>(_a[1])),(*reinterpret_cast< my_string(*)>(_a[2])),(*reinterpret_cast< std::string(*)>(_a[3]))); break;

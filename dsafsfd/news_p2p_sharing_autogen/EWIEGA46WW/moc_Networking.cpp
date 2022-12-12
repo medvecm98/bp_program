@@ -296,7 +296,7 @@ static const qt_meta_stringdata_Networking_t qt_meta_stringdata_Networking = {
 QT_MOC_LITERAL(0, 0, 10), // "Networking"
 QT_MOC_LITERAL(1, 11, 20), // "new_message_enrolled"
 QT_MOC_LITERAL(2, 32, 0), // ""
-QT_MOC_LITERAL(3, 33, 18), // "unique_ptr_message"
+QT_MOC_LITERAL(3, 33, 18), // "shared_ptr_message"
 QT_MOC_LITERAL(4, 52, 20), // "new_message_received"
 QT_MOC_LITERAL(5, 73, 20), // "newspaper_identified"
 QT_MOC_LITERAL(6, 94, 4), // "pk_t"
@@ -317,7 +317,7 @@ QT_MOC_LITERAL(20, 315, 31) // "peer_process_disconnected_users"
 
     },
     "Networking\0new_message_enrolled\0\0"
-    "unique_ptr_message\0new_message_received\0"
+    "shared_ptr_message\0new_message_received\0"
     "newspaper_identified\0pk_t\0id\0my_string\0"
     "newspaper_name\0std::string\0"
     "newspaper_ip_domain\0got_network_interfaces\0"
@@ -374,11 +374,11 @@ void Networking::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         auto *_t = static_cast<Networking *>(_o);
         Q_UNUSED(_t)
         switch (_id) {
-        case 0: _t->new_message_enrolled((*reinterpret_cast< unique_ptr_message(*)>(_a[1]))); break;
-        case 1: _t->new_message_received((*reinterpret_cast< unique_ptr_message(*)>(_a[1]))); break;
+        case 0: _t->new_message_enrolled((*reinterpret_cast< shared_ptr_message(*)>(_a[1]))); break;
+        case 1: _t->new_message_received((*reinterpret_cast< shared_ptr_message(*)>(_a[1]))); break;
         case 2: _t->newspaper_identified((*reinterpret_cast< pk_t(*)>(_a[1])),(*reinterpret_cast< my_string(*)>(_a[2])),(*reinterpret_cast< std::string(*)>(_a[3]))); break;
         case 3: _t->got_network_interfaces((*reinterpret_cast< address_vec_ptr(*)>(_a[1]))); break;
-        case 4: _t->send_message((*reinterpret_cast< unique_ptr_message(*)>(_a[1]))); break;
+        case 4: _t->send_message((*reinterpret_cast< shared_ptr_message(*)>(_a[1]))); break;
         case 5: _t->decrypt_encrypted_messages((*reinterpret_cast< pk_t(*)>(_a[1]))); break;
         case 6: _t->symmetric_exchanged((*reinterpret_cast< pk_t(*)>(_a[1]))); break;
         case 7: _t->peer_process_disconnected_users(); break;
@@ -387,14 +387,14 @@ void Networking::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
     } else if (_c == QMetaObject::IndexOfMethod) {
         int *result = reinterpret_cast<int *>(_a[0]);
         {
-            using _t = void (Networking::*)(unique_ptr_message );
+            using _t = void (Networking::*)(shared_ptr_message );
             if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&Networking::new_message_enrolled)) {
                 *result = 0;
                 return;
             }
         }
         {
-            using _t = void (Networking::*)(unique_ptr_message );
+            using _t = void (Networking::*)(shared_ptr_message );
             if (*reinterpret_cast<_t *>(_a[1]) == static_cast<_t>(&Networking::new_message_received)) {
                 *result = 1;
                 return;
@@ -460,14 +460,14 @@ int Networking::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void Networking::new_message_enrolled(unique_ptr_message _t1)
+void Networking::new_message_enrolled(shared_ptr_message _t1)
 {
     void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))) };
     QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 
 // SIGNAL 1
-void Networking::new_message_received(unique_ptr_message _t1)
+void Networking::new_message_received(shared_ptr_message _t1)
 {
     void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))) };
     QMetaObject::activate(this, &staticMetaObject, 1, _a);

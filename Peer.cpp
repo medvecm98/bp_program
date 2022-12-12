@@ -357,7 +357,7 @@ void Peer::create_margin_request(pk_t to, hash_t article_hash) {
  * 
  * @param article_hash Shared pointer to message which needs to be handled.
  */
-void Peer::handle_message(unique_ptr_message message) {
+void Peer::handle_message(shared_ptr_message message) {
 	if (message->msg_ctx() == np2ps::REQUEST) {
 		handle_requests( std::move( message));
 	}
@@ -383,7 +383,7 @@ void Peer::handle_message(unique_ptr_message message) {
  * 
  * @param message Shared pointer to message (request) which needs to be handled. 
  */
-void Peer::handle_requests(unique_ptr_message message) {
+void Peer::handle_requests(shared_ptr_message message) {
 	auto type = message->msg_type();
 
 	if (type == np2ps::ARTICLE_ALL) {
@@ -420,7 +420,7 @@ void Peer::handle_requests(unique_ptr_message message) {
  * 
  * @param message Shared pointer to message (request) which needs to be handled. 
  */
-void Peer::handle_responses(unique_ptr_message message) {
+void Peer::handle_responses(shared_ptr_message message) {
 	auto type = message->msg_type();
 
 	if (type == np2ps::ARTICLE_ALL) {
@@ -569,7 +569,7 @@ void Peer::generate_article_list_message(pk_t newspaper_id) {
  * 
  * @param msg Shared pointer to `one way` message.
  */
-void Peer::handle_one_way(unique_ptr_message msg) {
+void Peer::handle_one_way(shared_ptr_message msg) {
 	auto type = msg->msg_type();
 	if (type == np2ps::ARTICLE_SOLICITATION) {
 		handle_article_solicitation_one_way(msg);
@@ -590,7 +590,7 @@ void Peer::handle_one_way(unique_ptr_message msg) {
  * 
  * @param msg Shared pointer to the message.
  */
-void Peer::handle_error(unique_ptr_message msg) {
+void Peer::handle_error(shared_ptr_message msg) {
 	auto type = msg->msg_type();
 	if (type == np2ps::ARTICLE_SOLICITATION) { //possible owner did not have the article
 		handle_article_solicitation_error(msg);
@@ -611,7 +611,7 @@ NewspaperEntry& Peer::get_news(pk_t newspaper_id) {
 	throw unknown_newspaper_error("Requested newspaper are not in database.");
 }
 
-void Peer::handle_article_all_request(unique_ptr_message message) {
+void Peer::handle_article_all_request(shared_ptr_message message) {
 	auto article = find_article(message->article_all().article_hash());
 
 	if (article.has_value()) { //at least article header is in database
@@ -620,7 +620,7 @@ void Peer::handle_article_all_request(unique_ptr_message message) {
 
 			article_whole = article.value()->read_contents();
 
-			unique_ptr_message article_msg = MFW::RespArticleDownloadFactory(
+			shared_ptr_message article_msg = MFW::RespArticleDownloadFactory(
 				MFW::ArticleDownloadFactory(
 					public_identifier_, 
 					message->from(), 
@@ -730,7 +730,7 @@ void Peer::handle_article_all_request(unique_ptr_message message) {
 	}
 }
 
-void Peer::handle_article_header_request(unique_ptr_message message) {
+void Peer::handle_article_header_request(shared_ptr_message message) {
 	if (message->has_article_header() && message->article_header().has_article()) {
 		hash_t recv_article_hash = message->article_header().article_hash();
 		if (journalists_.find(message->article_header().article().author_id()) != journalists_.end()) { //check if sender is a journalist for this newspaper
@@ -760,7 +760,7 @@ void Peer::handle_article_header_request(unique_ptr_message message) {
 	}
 }
 
-void Peer::handle_article_list_request(unique_ptr_message message) {
+void Peer::handle_article_list_request(shared_ptr_message message) {
 	auto req_news_id = message->article_list().newspaper_id();
 
 	try {
@@ -792,7 +792,7 @@ void Peer::handle_article_list_request(unique_ptr_message message) {
 	}
 }
 
-void Peer::handle_article_data_update_request(unique_ptr_message message) {
+void Peer::handle_article_data_update_request(shared_ptr_message message) {
 	//reporter part
 	if (find_article(message->article_data_update().article_pk()).has_value()) {
 		if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
@@ -836,7 +836,7 @@ void Peer::handle_article_data_update_request(unique_ptr_message message) {
 	}
 }
 
-void Peer::handle_update_margin_request(unique_ptr_message message) {
+void Peer::handle_update_margin_request(shared_ptr_message message) {
 	auto article = find_article(message->update_margin().article_pk());
 
 	auto [margin_begin, margin_end] = article.value()->get_range_iterators(public_identifier_);
@@ -858,7 +858,7 @@ void Peer::handle_update_margin_request(unique_ptr_message message) {
 	);
 }
 
-void Peer::handle_credentials_request(unique_ptr_message message) {
+void Peer::handle_credentials_request(shared_ptr_message message) {
 	QString resp_ip4, resp_ip6;
 	std::shared_ptr<rsa_public_optional> resp_rsa_public;
 	std::shared_ptr<eax_optional> resp_eax;
@@ -903,7 +903,7 @@ void Peer::handle_credentials_request(unique_ptr_message message) {
 }
 
 
-void Peer::handle_article_all_response(unique_ptr_message message) {
+void Peer::handle_article_all_response(shared_ptr_message message) {
 	if (message->has_article_all() && message->article_all().has_header() && message->article_all().has_article_actual()) {
 		hash_t recv_article_id = message->article_all().article_hash();
 		auto article_opt = find_article(recv_article_id);
@@ -991,7 +991,7 @@ void Peer::handle_article_all_response(unique_ptr_message message) {
 	}
 }
 
-void Peer::handle_article_list_response(unique_ptr_message message) {
+void Peer::handle_article_list_response(shared_ptr_message message) {
 	auto list_size = message->article_list().response_size();
 	if (list_size != 0) {
 		pk_t list_news_id = message->article_list().response().begin()->news_id();
@@ -1029,7 +1029,7 @@ void Peer::handle_article_list_response(unique_ptr_message message) {
 	emit check_selected_item();
 }
 
-void Peer::handle_credentials_response(unique_ptr_message message) {
+void Peer::handle_credentials_response(shared_ptr_message message) {
 	if (message->credentials().req_ipv4()) {
 		if (message->credentials().req_ipv6()) {
 			networking_->ip_map_.update_ip((pk_t)message->from(), QHostAddress(QString(message->credentials().ipv4().c_str())), QHostAddress(QString(message->credentials().ipv6().c_str())));
@@ -1048,7 +1048,7 @@ void Peer::handle_credentials_response(unique_ptr_message message) {
 	}
 }
 
-void Peer::handle_public_key_response(unique_ptr_message message) {
+void Peer::handle_public_key_response(shared_ptr_message message) {
 	networking_->ip_map_.update_rsa_public((pk_t)message->from(), message->public_key().key());
 	if (newspapers_awaiting_confirmation.find((pk_t)message->from()) != newspapers_awaiting_confirmation.end()) {
 		news_.insert({message->from(), newspapers_awaiting_confirmation[(pk_t)message->from()]});
@@ -1057,11 +1057,11 @@ void Peer::handle_public_key_response(unique_ptr_message message) {
 	}
 }
 
-void Peer::handle_symmetric_key_response(unique_ptr_message message) {
+void Peer::handle_symmetric_key_response(shared_ptr_message message) {
 	emit symmetric_key_exchanged(message->from());
 }
 
-void Peer::handle_update_margin_response(unique_ptr_message message) {
+void Peer::handle_update_margin_response(shared_ptr_message message) {
 	auto article = find_article(message->update_margin().article_pk());
 	for (int i = 0; i < message->update_margin().margin().margins_size(); i++) {
 		article.value()->add_margin(message->from(), Margin(
@@ -1073,7 +1073,7 @@ void Peer::handle_update_margin_response(unique_ptr_message message) {
 }
 
 
-void Peer::handle_article_solicitation_one_way(unique_ptr_message msg) {
+void Peer::handle_article_solicitation_one_way(shared_ptr_message msg) {
 	auto check_for_existence = networking_->soliciting_articles.find(msg->article_sol().article_hash()); //check if this article is in fact in solicitation
 	if (check_for_existence == networking_->soliciting_articles.end()) {
 		std::vector<pk_t> potential_owners;
@@ -1088,7 +1088,7 @@ void Peer::handle_article_solicitation_one_way(unique_ptr_message msg) {
 	generate_article_all_message(destination, msg->article_sol().article_hash()); //send him article all message
 }
 
-void Peer::handle_symmetric_key_one_way(unique_ptr_message msg) {
+void Peer::handle_symmetric_key_one_way(shared_ptr_message msg) {
 	CryptoPP::AutoSeededRandomPool rng;
 	std::string key_str = msg->symmetric_key().key();
 	std::string signature_str = msg->symmetric_key().signature();
@@ -1130,7 +1130,7 @@ void Peer::handle_symmetric_key_one_way(unique_ptr_message msg) {
 	}
 
 	//send response that symmetric key was received and processed
-	unique_ptr_message _msg = std::make_shared<proto_message>();
+	shared_ptr_message _msg = std::make_shared<proto_message>();
 	_msg->set_from(public_identifier_);
 	_msg->set_to(msg->from());
 	_msg->set_msg_ctx(np2ps::RESPONSE);
@@ -1141,7 +1141,7 @@ void Peer::handle_symmetric_key_one_way(unique_ptr_message msg) {
 	);
 }
 
-void Peer::handle_public_key_one_way(unique_ptr_message msg) {
+void Peer::handle_public_key_one_way(shared_ptr_message msg) {
 	networking_->ip_map_.update_rsa_public((pk_t)msg->from(), msg->public_key().key());
 	user_map.insert({(pk_t)msg->from(), PeerInfo((pk_t)msg->from())});
 	
@@ -1157,7 +1157,7 @@ void Peer::handle_public_key_one_way(unique_ptr_message msg) {
 }
 
 
-void Peer::handle_article_solicitation_error(unique_ptr_message msg) {
+void Peer::handle_article_solicitation_error(shared_ptr_message msg) {
 	auto check_for_existence = networking_->soliciting_articles.find(msg->article_sol().article_hash());
 	if (check_for_existence != networking_->soliciting_articles.end()) {
 		auto destination = networking_->soliciting_articles[msg->article_sol().article_hash()].back(); //get next owner
@@ -1170,11 +1170,11 @@ void Peer::handle_article_solicitation_error(unique_ptr_message msg) {
 	}
 }
 
-void Peer::handle_article_header_error(unique_ptr_message msg) {
+void Peer::handle_article_header_error(shared_ptr_message msg) {
 	std::cout << "Article " << msg->article_header().article_hash() << " failed to upload" << std::endl;
 }
 
-void Peer::handle_article_list_error(unique_ptr_message msg) {
+void Peer::handle_article_list_error(shared_ptr_message msg) {
 	auto& news = get_news(msg->article_list().newspaper_id());
 	news.remove_friend(msg->from());
 }
@@ -1225,7 +1225,7 @@ void Peer::upload_external_article(Article a) {
 	);
 }
 
-void Peer::handle_article_all_error(unique_ptr_message message) {
+void Peer::handle_article_all_error(shared_ptr_message message) {
 	auto article_id = message->article_all().header().main_hash();
 	auto news_id = message->article_all().header().news_id();
 
@@ -1249,7 +1249,7 @@ void Peer::generate_newspaper_entry_request(pk_t destination, pk_t newspaper_id)
 	);
 }
 
-void Peer::handle_newspaper_entry_request(unique_ptr_message message) {
+void Peer::handle_newspaper_entry_request(shared_ptr_message message) {
 	std::uint64_t news_id = message->newspaper_entry().entry().news_id();
 
 	try {
@@ -1278,7 +1278,7 @@ void Peer::handle_newspaper_entry_request(unique_ptr_message message) {
 	}
 }
 
-void Peer::handle_newspaper_entry_response(unique_ptr_message message) {
+void Peer::handle_newspaper_entry_response(shared_ptr_message message) {
 	pk_t news_id = message->newspaper_entry().entry().news_id();
 	try {
 		auto& news = get_news(news_id);
@@ -1290,6 +1290,16 @@ void Peer::handle_newspaper_entry_response(unique_ptr_message message) {
 
 }
 
-void Peer::handle_newspaper_entry_error(unique_ptr_message message) {
-	
+void Peer::handle_newspaper_entry_error(shared_ptr_message message) {
+	pk_t news_id = message->newspaper_entry().entry().news_id();
+	try {
+		auto& news = get_news(news_id);
+		news.remove_friend(message->from());
+	}
+	catch (unknown_newspaper_error& e) {
+	}
+}
+
+void Peer::add_new_newspaper_from_file(const std::string& path) {
+	news_.emplace(path);
 }

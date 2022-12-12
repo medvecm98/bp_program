@@ -45,7 +45,7 @@ void send_message_using_socket(QTcpSocket* tcp_socket, QByteArray& block) {
 	
 }
 
-bool Networking::enroll_message_to_be_sent(unique_ptr_message message) {
+bool Networking::enroll_message_to_be_sent(shared_ptr_message message) {
 	emit new_message_enrolled(std::move(message));
     return true;
 }
@@ -122,12 +122,12 @@ void Networking::sign_and_encrypt_key(QDataStream& output, CryptoPP::SecByteBloc
 	output << send_msg_str_arr;
 }
 
-void Networking::send_message(unique_ptr_message msg) {
+void Networking::send_message(shared_ptr_message msg) {
 	
 
     auto ip_map_iter = ip_map_.get_wrapper_for_pk(msg->to());
 	if (ip_map_iter != ip_map_.get_map_end()) {
-		std::cout << "User found in IP MAP database; Networking::send_message(unique_ptr_message msg)" << std::endl;
+		std::cout << "User found in IP MAP database; Networking::send_message(shared_ptr_message msg)" << std::endl;
 		if (msg->msg_type() == np2ps::PUBLIC_KEY) {// I'm requesting public key
 			std::cout << "	PUBLIC_KEY type of message" << std::endl;
 			IpWrapper& ipw = ip_map_iter->second;
@@ -274,7 +274,7 @@ void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlo
 
 	//deserialize
 
-	unique_ptr_message m = std::make_shared<proto_message>();
+	shared_ptr_message m = std::make_shared<proto_message>();
 	m->ParseFromString(dec_msg);
 	if (m->msg_ctx() == np2ps::REQUEST) {
 		seq_t rv = m->seq();
@@ -423,7 +423,7 @@ PeerSender::PeerSender(networking_ptr net) {
 	QObject::connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &PeerSender::display_error);
 }
 
-void PeerSender::try_connect(unique_ptr_message msg, IpWrapper& ipw) {
+void PeerSender::try_connect(shared_ptr_message msg, IpWrapper& ipw) {
 	if (ipw.np2ps_tcp_socket_ && ipw.np2ps_tcp_socket_->isValid()) { //try, if connection isn't already established
 		message_send(ipw.np2ps_tcp_socket_, msg, ipw, false);
 	}
@@ -483,7 +483,7 @@ void PeerSender::handle_connection_error() {
 	}
 }
 
-void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrapper ipw, bool relay = false) {
+void PeerSender::message_send(QTcpSocket* socket, shared_ptr_message msg, IpWrapper ipw, bool relay = false) {
 	//serialize message
     std::string serialized_msg, encrypted_msg;
 	msg->SerializeToString(&serialized_msg);
@@ -561,7 +561,7 @@ void PeerSender::message_send(QTcpSocket* socket, unique_ptr_message msg, IpWrap
 		send_message_using_turn(networking_, length_plus_msg_block, msg->to(), ipw);
 }
 
-void PeerSender::message_send(unique_ptr_message msg, IpWrapper& ipw) {
+void PeerSender::message_send(shared_ptr_message msg, IpWrapper& ipw) {
 	try_connect(msg, ipw);
 }
 
