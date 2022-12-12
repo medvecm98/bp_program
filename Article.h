@@ -367,11 +367,11 @@ public:
 
 	std::string get_crypto_hash();
 
-	std::uint64_t get_creation_time() {
+	std::uint64_t creation_time() {
 		return creation_time_;
 	}
 
-	std::uint64_t get_modification_time() {
+	std::uint64_t modification_time() {
 		return modification_time_;
 	}
 
@@ -401,6 +401,29 @@ public:
 
 	void local_serialize_article(np2ps::SerializedArticle* art);
 
+	bool is_header_only() {
+		return !article_present_;
+	}
+
+	user_container& readers() {
+		return readers_;
+	}
+
+	void remove_reader(pk_t id) {
+		auto it = readers_.find(id);
+		if (it != readers_.end()) {
+			readers_.erase(id);	
+		}
+	}
+
+	void add_reader(pk_t id) {
+		readers_.emplace(id);
+	}
+
+	std::size_t readers_count() {
+		return readers_.size();
+	}
+
 private:
 	my_string _author_name; //network, local
 	pk_t _author_id; //network, local
@@ -420,6 +443,7 @@ private:
 	std::uint64_t creation_time_; //network, local
 	std::uint64_t modification_time_; //network, local
 	my_timepoint creation_time_timepoint_; //network, local
+	user_container readers_; //local, TODO: implement
 };
 
 using article_ptr = Article*;

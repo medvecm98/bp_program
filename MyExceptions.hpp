@@ -153,3 +153,20 @@ public:
 private:
     std::string message;
 };
+
+class other_error : public std::exception {
+public:
+    other_error(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    other_error(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};

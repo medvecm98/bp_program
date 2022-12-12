@@ -19,17 +19,21 @@ public:
 	NewspaperEntry(pk_t first_key, pk_t id, const my_string& name);
 	explicit NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne);
 	explicit NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
+	explicit NewspaperEntry(const std::string& path);
 	void add_article(hash_t article_hash, Article&& article);
-	timed_article_map_pair get_newest_articles(std::size_t count);
-	timed_article_map_pair get_newest_articles_from_date(QDate date, std::size_t count);
+	timed_article_map_pair get_newest_articles(int count);
+	timed_article_map_pair get_newest_articles(QDate date, int count);
 	bool remove_article(hash_t article_hash);
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
 	database_iterator_t get_iterator_database();
 	database_iterator_t get_iterator_database_end();
 	article_data_vec get_articles_for_time_span(my_clock::time_point time_span_begin, my_clock::time_point time_span_end);
+	void add_friend(pk_t id);
 	const user_container& get_friends();
+	std::size_t friend_count() const;
 	void remove_friend(pk_t id);
 	Article& get_article(hash_t id);
+	void deserialize(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
 
 	user_container_citer get_first_authority() const {
 		return _authorities.cbegin();
@@ -58,22 +62,32 @@ public:
 		std::cout << "serializing newspaper\n";
 		entry->set_news_name(news_name_);
 		entry->set_news_id(news_id_);
-		//TODO: entry->set_authorities();
 	}
 
 	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne) {
 		serialize_entry(nserialized_ne->mutable_entry());
+		// for (auto& [hash, art] : _articles) {
+		// 	np2ps::Article* pa = nserialized_ne->add_articles();
+		// 	art.network_serialize_article(pa);
+		// }
+	}
+
+	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) {
+		serialize_entry(lserialized_ne->mutable_entry());
 		for (auto& [hash, art] : _articles) {
-			np2ps::Article* pa = nserialized_ne->add_articles();
-			art.network_serialize_article(pa);
+			np2ps::SerializedArticle* pa = lserialized_ne->add_articles();
+			art.local_serialize_article(pa);
+		}
+		for (auto&& f : friends_) {
+			lserialized_ne->add_friends(f);
 		}
 	}
 
-	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* nserialized_ne) {
-		serialize_entry(nserialized_ne->mutable_entry());
-		for (auto& [hash, art] : _articles) {
-			np2ps::SerializedArticle* pa = nserialized_ne->add_articles();
-			art.local_serialize_article(pa);
+	void fill_time_sorted_articles() {
+		if (time_sorted_articles.empty()) {
+			for (auto&& article : _articles) {
+				time_sorted_articles.emplace(article.first, article.second.creation_time());
+			}
 		}
 	}
 

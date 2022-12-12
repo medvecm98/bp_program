@@ -35,8 +35,22 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 	newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name));
 }
 
+/**
+ * Adds new newspaper to the collection.
+ * @param newspaper_key Public key of newspaper.
+ * @param sender Sender of this NewspaperEntry.
+ */
+void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, pk_t sender) {
+	networking_->get_stun_client()->identify(newspaper_key, sender);
+	NewspaperEntry ne(newspaper_key, newspaper_key, newspaper_name);
+	ne.add_friend(sender);
+	newspapers_awaiting_confirmation.emplace(newspaper_key, std::move(ne));
+}
+
 void Peer::newspaper_confirm(pk_t pid) {
 	auto ne = newspapers_awaiting_confirmation.find(pid);
+	if (ne == newspapers_awaiting_confirmation.end()) //no newspaper were awaiting confirmation with this pid
+		return;
 	news_.emplace(pid, ne->second);
 	newspapers_awaiting_confirmation.erase(ne);
 	emit got_newspaper_confirmation(pid);
@@ -143,7 +157,7 @@ size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newsp
 	
 	auto& news = get_news(newspaper_id);
 	if (count > 0) {
-		auto& [bit, eit] = news.get_newest_articles(count); 
+		auto [bit, eit] = news.get_newest_articles(count); 
 		while (bit != eit) {
 			Article& article = news.get_article(bit->second);
 			articles.emplace(&article);
@@ -173,8 +187,8 @@ size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newsp
 	size_t article_counter = 0;
 	
 	auto& news = get_news(newspaper_id);
-	auto& [bit, eit] = news.get_newest_articles(date, count); 
 	if (count > 0) {
+		auto [bit, eit] = news.get_newest_articles(date, count); 
 		while (bit != eit) {
 			Article& article = news.get_article(bit->second);
 			articles.emplace(&article);
@@ -390,6 +404,9 @@ void Peer::handle_requests(unique_ptr_message message) {
 	else if (type == np2ps::CREDENTIALS) {
 		handle_credentials_request(message);
 	}
+	else if (type == np2ps::NEWSPAPER_ENTRY) {
+		handle_newspaper_entry_request(message);
+	}
 	else {
 		throw unsupported_message_type_in_context("Peer received a message type that is unsupported in given context");
 	}
@@ -445,25 +462,44 @@ pk_t Peer::check_destination_valid(pk_t destination, pk_t newspaper) {
  * 
  * Generator for `np2ps::ARTICLE_ALL`. Will send the message via network.
  * 
- * @param destination Who is the receiver of the message.
+ * @param news_id ID of newspaper this Article belongs to.
  * @param article_hash Article hash of desired article.
  */
-void Peer::generate_article_all_message(pk_t destination, hash_t article_hash) {
+void Peer::generate_article_all_message(pk_t news_id, hash_t article_hash) {
 	downloading_articles.insert(article_hash);
 	emit check_selected_item();
+
+	/* Ask author */
+
+	auto& news = get_news(news_id);
+	auto& article = news.get_article(article_hash);
 	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextRequest(
 			MFW::ArticleDownloadFactory(
 				public_identifier_,
-				destination,
+				article.author_id(),
 				article_hash,
-				(article_headers_only.find(article_hash) != article_headers_only.end()) 
-					&& (news_.find(article_headers_only[article_hash].news_id()) != news_.end()) 
-					? news_[article_headers_only[article_hash].news_id()].level() 
-					: 127
+				255
 			)
 		)
 	);
+
+	/* Ask article readers, if any */
+
+	if (article.readers_count() > 0) {
+		for (auto&& reader_id : article.readers()) {
+			networking_->enroll_message_to_be_sent(
+				MFW::SetMessageContextRequest(
+					MFW::ArticleDownloadFactory(
+						public_identifier_,
+						reader_id,
+						article_hash,
+						255
+					)
+				)
+			);
+		}
+	}
 }
 
 /**
@@ -485,6 +521,45 @@ void Peer::generate_article_header_message(pk_t destination, hash_t article_hash
 		)
 	);
 }
+
+/**
+	 * @brief Generator for article list message.
+	 * 
+	 * @param newspaper_id ID of newspaper which article list we want.
+	 */
+void Peer::generate_article_list_message(pk_t newspaper_id) {
+		getting_article_list.insert(newspaper_id);
+		emit check_selected_item();
+
+		auto& news = get_news_db();
+		const user_container& news_friends = news[newspaper_id].get_friends();
+
+		networking_->enroll_message_to_be_sent(
+			MFW::ReqArticleListFactory(
+				MFW::ArticleListFactory(
+					public_identifier_,
+					newspaper_id
+				),
+				newspaper_id,
+				10,
+				std::vector<my_string>()
+			)
+		);
+
+		for (auto&& user : news_friends) { //send the same request to all the friends
+			networking_->enroll_message_to_be_sent(
+				MFW::ReqArticleListFactory(
+					MFW::ArticleListFactory(
+						public_identifier_,
+						user
+					),
+					newspaper_id,
+					10,
+					std::vector<my_string>()
+				)
+			);	
+		}
+	}
 
 /**
  * @brief Handler for messages of context "one way".
@@ -523,6 +598,9 @@ void Peer::handle_error(unique_ptr_message msg) {
 	else if (type == np2ps::ARTICLE_HEADER) {
 		handle_article_header_error(msg);
 	}
+	else if (type == np2ps::ARTICLE_ALL) {
+		handle_article_all_error(msg);
+	}
 }
 
 NewspaperEntry& Peer::get_news(pk_t newspaper_id) {
@@ -535,84 +613,116 @@ NewspaperEntry& Peer::get_news(pk_t newspaper_id) {
 
 void Peer::handle_article_all_request(unique_ptr_message message) {
 	auto article = find_article(message->article_all().article_hash());
-	if (article.has_value() && article.value()->article_present()) {
-		std::string article_whole;
 
-		article_whole = article.value()->read_contents();
+	if (article.has_value()) { //at least article header is in database
+		if (article.value()->article_present()) { //whole article is present in the database
+			std::string article_whole;
 
-		unique_ptr_message article_msg = MFW::RespArticleDownloadFactory(
-			MFW::ArticleDownloadFactory(
-				public_identifier_, 
-				message->from(), 
-				article.value()->main_hash(), 
-				255),
-			article.value(), 
-			std::move(article_whole)
-		);
-		
-		bool found_in_readers = false;
-		auto [bit, eit] = readers_.equal_range(message->article_all().article_hash());
-		for (; bit != eit; bit++) {
-			if (bit->second->peer_key == message->from()) {
-				found_in_readers = true;
-				break;
+			article_whole = article.value()->read_contents();
+
+			unique_ptr_message article_msg = MFW::RespArticleDownloadFactory(
+				MFW::ArticleDownloadFactory(
+					public_identifier_, 
+					message->from(), 
+					article.value()->main_hash(), 
+					255),
+				article.value(), 
+				std::move(article_whole)
+			);
+
+			article.value()->add_reader(message->to());
+			
+			bool found_in_readers = false;
+			auto [bit, eit] = readers_.equal_range(message->article_all().article_hash());
+			for (; bit != eit; bit++) {
+				if (bit->second->peer_key == message->from()) {
+					found_in_readers = true;
+					break;
+				}
 			}
-		}
-		if (!found_in_readers) {
-			readers_.emplace(message->article_all().article_hash(), &user_map[message->from()]);
-		}
+			if (!found_in_readers) {
+				readers_.emplace(message->article_all().article_hash(), &user_map[message->from()]);
+			}
 
-		//send message
-		networking_->enroll_message_to_be_sent(article_msg);
+			//send message
+			networking_->enroll_message_to_be_sent(article_msg);
+		}
+		else { //only article header is present in article database
+			networking_->enroll_message_to_be_sent(
+				MFW::SetMessageContextError(
+					MFW::ArticleDownloadFactory(
+						message->from(),
+						public_identifier_,
+						article.value()->main_hash(),
+						255
+					)
+				)
+			);
+		}
 	}
 	else {
 		//article not found in database
-
-		std::vector<pk_t> article_peers;
-		auto [readers_begin, readers_end] = readers_.equal_range(message->article_all().article_hash());
-		if (readers_begin != readers_end) { //at least one reader exists
-			for (; readers_begin != readers_end; readers_begin++) {
-				article_peers.push_back(readers_begin->second->peer_key);
-			}
-			networking_->enroll_message_to_be_sent(
-				MFW::SetMessageContextOneWay(
-					MFW::ArticleSolicitationFactory(
-						public_identifier_,
-						message->from(),
-						message->article_all().article_hash(),
-						article_peers,
-						message->article_all().level()
+		if (message->article_all().header().author_id() == public_identifier_ || 
+			message->article_all().header().news_id() == public_identifier_) 
+		{ //if we are requested as an author of a chief editor
+			std::vector<pk_t> article_peers;
+			auto [readers_begin, readers_end] = readers_.equal_range(message->article_all().article_hash());
+			if (readers_begin != readers_end) { //at least one reader exists
+				for (; readers_begin != readers_end; readers_begin++) {
+					article_peers.push_back(readers_begin->second->peer_key);
+				}
+				networking_->enroll_message_to_be_sent(
+					MFW::SetMessageContextOneWay(
+						MFW::ArticleSolicitationFactory(
+							public_identifier_,
+							message->from(),
+							message->article_all().article_hash(),
+							article_peers,
+							message->article_all().level()
+						)
 					)
-				)
-			);
-		}
-		else if (!journalists_.empty()) { //there are some journalists present
-			//TODO: redo if ArtileReaders and such are properly implemented
-
-			for (auto&& journalist : journalists_) {
-				article_peers.push_back(journalist);
+				);
 			}
-			networking_->enroll_message_to_be_sent(
-				MFW::SetMessageContextOneWay(
-					MFW::ArticleSolicitationFactory(
-						public_identifier_,
-						message->from(),
-						message->article_all().article_hash(),
-						article_peers,
-						message->article_all().level()
+			else if (!journalists_.empty()) { //there are some journalists present
+				//TODO: redo if ArtileReaders and such are properly implemented
+
+				for (auto&& journalist : journalists_) {
+					article_peers.push_back(journalist);
+				}
+				networking_->enroll_message_to_be_sent(
+					MFW::SetMessageContextOneWay(
+						MFW::ArticleSolicitationFactory(
+							public_identifier_,
+							message->from(),
+							message->article_all().article_hash(),
+							article_peers,
+							message->article_all().level()
+						)
 					)
-				)
-			);
+				);
+			}
+			else {
+				networking_->enroll_message_to_be_sent(
+					MFW::SetMessageContextError(
+						MFW::ArticleSolicitationFactory(
+							public_identifier_,
+							message->from(),
+							message->article_all().article_hash(),
+							std::vector<pk_t>(),
+							0
+						)
+					)
+				);
+			}
 		}
-		else {
+		else { //only article header is present in article database
 			networking_->enroll_message_to_be_sent(
 				MFW::SetMessageContextError(
-					MFW::ArticleSolicitationFactory(
-						public_identifier_,
+					MFW::ArticleDownloadFactory(
 						message->from(),
-						message->article_all().article_hash(),
-						std::vector<pk_t>(),
-						0
+						public_identifier_,
+						article.value()->main_hash(),
+						255
 					)
 				)
 			);
@@ -799,20 +909,48 @@ void Peer::handle_article_all_response(unique_ptr_message message) {
 		auto article_opt = find_article(recv_article_id);
 
 		if (article_opt.has_value()) {
+
+			/* Article (header) found in database */
+			/* Verify article */
+
 			if (article_opt.value()->verify(message->article_all().article_actual())) {
+
+				/* Successful verification */
+
 				std::cout << "Article verification succeded for " << recv_article_id << std::endl;
-				article_opt.value()->set_path(message->article_all().article_actual());
+				if (article_opt.value()->is_header_only()) {
+
+					/* Article in database contains only the header */
+
+					article_opt.value()->set_path(message->article_all().article_actual());
+				}
+				else if (article_opt.value()->modification_time() <= message->article_all().header().modification_time()) {
+
+					/* Received article is newer than one in database */
+
+					get_news(message->article_all().header().news_id()).remove_article(message->article_all().header().main_hash());
+					Article recv_article(message->article_all().header(), message->article_all().article_actual());
+					enroll_new_article(recv_article, false);
+				}
 			}
 			else {
+
+				/* Failed verification */
+
 				std::cout << "Article verification failed for: " << recv_article_id << std::endl;
 
 				if (networking_->soliciting_articles.find(recv_article_id) != networking_->soliciting_articles.end()) {
-					//try another peer when this one failed
+
+					/* try another peer when this one failed */
+
 					auto destination = networking_->soliciting_articles[recv_article_id].back();
 					networking_->soliciting_articles[recv_article_id].pop_back();
 					generate_article_all_message(destination, recv_article_id);
 				}
 				else {
+
+					/* Article is not soliciting, it can't be downloaded. */
+
 					if (downloading_articles.find(recv_article_id) != downloading_articles.end()) {
 						downloading_articles.erase(recv_article_id);
 						emit check_selected_item();
@@ -823,11 +961,19 @@ void Peer::handle_article_all_response(unique_ptr_message message) {
 			}
 		}
 		else {
+
+			/* Article not found in database. */
+
 			Article recv_article(message->article_all().header(), message->article_all().article_actual());
 			enroll_new_article(recv_article, false);
 		}
+
+		/* Article is now downloaded. */
+
 		downloading_articles.erase(recv_article_id);
 		emit check_selected_item();
+
+
 		if (networking_->soliciting_articles.find(recv_article_id) != networking_->soliciting_articles.end()) { //remote the article from soliticing articles, since we got an answer
 			networking_->soliciting_articles.erase(recv_article_id);
 		}
@@ -851,8 +997,27 @@ void Peer::handle_article_list_response(unique_ptr_message message) {
 		pk_t list_news_id = message->article_list().response().begin()->news_id();
 
 		for (auto it = message->article_list().response().begin(); it != message->article_list().response().end(); it++) {
-			auto a = Article(*it);
-			news_[list_news_id].add_article(a.main_hash(), std::move(a));
+			auto& news = get_news(list_news_id);
+
+			auto add_to_news = [&](){
+				auto a = Article(*it);
+				a.add_reader(message->from());
+				news.add_article(a.main_hash(), std::move(a));
+			};
+
+			try { //try finding received article from article list in article database
+				auto& present_article = news.get_article(it->main_hash());
+				if (present_article.modification_time() >= it->modification_time()) { //if received article is newer, replace it
+					news.remove_article(it->main_hash());
+					add_to_news();
+				}
+				else {
+					present_article.add_reader(message->from());
+				}
+			}
+			catch (article_not_found_database& e) { //if it wasn't found, add it
+				add_to_news();
+			}
 		}
 
 		emit new_article_list(list_news_id);
@@ -1058,4 +1223,73 @@ void Peer::upload_external_article(Article a) {
 			&a
 		)
 	);
+}
+
+void Peer::handle_article_all_error(unique_ptr_message message) {
+	auto article_id = message->article_all().header().main_hash();
+	auto news_id = message->article_all().header().news_id();
+
+	auto& news = get_news(news_id);
+	auto& article = news.get_article(article_id);
+
+	/* Remove the reader, since he doesn't have the requested article. */
+
+	article.remove_reader(message->from());
+}
+
+void Peer::generate_newspaper_entry_request(pk_t destination, pk_t newspaper_id) {
+	networking_->enroll_message_to_be_sent(
+		MFW::SetMessageContextRequest(
+			MFW::NewspaperEntryFactory(
+				public_identifier_,
+				destination,
+				newspaper_id
+			)
+		)
+	);
+}
+
+void Peer::handle_newspaper_entry_request(unique_ptr_message message) {
+	std::uint64_t news_id = message->newspaper_entry().entry().news_id();
+
+	try {
+		auto& news = get_news(news_id);
+		networking_->enroll_message_to_be_sent(
+			MFW::RespNewspaperEntryFactory(
+				MFW::NewspaperEntryFactory(
+					public_identifier_,
+					message->to(),
+					news_id
+				),
+				news
+			)
+		);
+	}
+	catch (unknown_newspaper_error& e) {
+		networking_->enroll_message_to_be_sent(
+			MFW::SetMessageContextError(
+				MFW::NewspaperEntryFactory(
+					public_identifier_,
+					message->from(),
+					news_id
+				)
+			)
+		);
+	}
+}
+
+void Peer::handle_newspaper_entry_response(unique_ptr_message message) {
+	pk_t news_id = message->newspaper_entry().entry().news_id();
+	try {
+		auto& news = get_news(news_id);
+		news.deserialize(message->newspaper_entry());
+	}
+	catch (unknown_newspaper_error& e) {
+		add_new_newspaper(news_id, message->newspaper_entry().entry().news_name(), message->from());
+	}
+
+}
+
+void Peer::handle_newspaper_entry_error(unique_ptr_message message) {
+	
 }

@@ -83,9 +83,10 @@ public:
 						 &(*networking_), &Networking::symmetric_exchanged);
 
 		QObject::connect(networking_->get_stun_client().get(), &StunClient::confirmed_newspaper,
-							this, &Peer::newspaper_confirm);
+						 this, &Peer::newspaper_confirm);
 
-		QObject::connect(networking_.get(), &Networking::newspaper_identified, this, &Peer::newspaper_identified);
+		QObject::connect(networking_.get(), &Networking::newspaper_identified, 
+						 this, &Peer::newspaper_identified);
 	}
 
 	/**
@@ -114,9 +115,12 @@ public:
 	void load_ip_authorities(pk_t newspaper_key); //to load the IPs of authorities
 	void enroll_new_article(Article article, bool header_only); //add new article to list of category -> article
 	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string& newspaper_ip);
+	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, pk_t sender);
+	void add_new_newspaper(pk_t destination, pk_t news_id, my_string news_name);
 	size_t list_all_articles_from_news(article_container& articles, const std::set<category_t>& categories);
 	size_t list_all_articles_from_news(article_container& articles);
 	size_t list_all_articles_from_news(article_container& articles, pk_t newspaper_id, int count);
+	size_t list_all_articles_from_news(article_container& articles, pk_t newspaper_id, int count, QDate date);
 	size_t list_all_articles_by_me(article_container& articles, const std::set<category_t>& categories, pk_t news_id = 0);
 	size_t list_all_articles_by_me(article_container& articles, pk_t news_id = 0);
 	article_optional find_article(hash_t article_hash);
@@ -125,10 +129,14 @@ public:
 
 	NewspaperEntry& get_news(pk_t news_id);
 
+	/* message context handlers */
+
 	void handle_requests(unique_ptr_message message);
 	void handle_responses(unique_ptr_message message);
 	void handle_one_way(unique_ptr_message message);
 	void handle_error(unique_ptr_message message);
+
+	/* message type (and context) handlers */
 
 	void handle_article_all_request(unique_ptr_message message);
 	void handle_article_header_request(unique_ptr_message message);
@@ -136,6 +144,7 @@ public:
 	void handle_article_data_update_request(unique_ptr_message message);
 	void handle_update_margin_request(unique_ptr_message message);
 	void handle_credentials_request(unique_ptr_message message);
+	void handle_newspaper_entry_request(unique_ptr_message message);
 
 	void handle_article_all_response(unique_ptr_message message);
 	void handle_article_list_response(unique_ptr_message message);
@@ -143,6 +152,7 @@ public:
 	void handle_public_key_response(unique_ptr_message message);
 	void handle_symmetric_key_response(unique_ptr_message message);
 	void handle_update_margin_response(unique_ptr_message message);
+	void handle_newspaper_entry_response(unique_ptr_message message);
 
 	void handle_article_solicitation_one_way(unique_ptr_message message);
 	void handle_symmetric_key_one_way(unique_ptr_message message);
@@ -151,9 +161,16 @@ public:
 	void handle_article_solicitation_error(unique_ptr_message message);
 	void handle_article_header_error(unique_ptr_message message);
 	void handle_article_list_error(unique_ptr_message message);
+	void handle_article_all_error(unique_ptr_message message);
+	void handle_newspaper_entry_error(unique_ptr_message message);
+
+	/* generators */
 
 	void generate_article_all_message(pk_t destination, hash_t article_hash);
 	void generate_article_header_message(pk_t destination, hash_t article_hash);
+	void generate_article_list_message(pk_t newspaper_id);
+	void generate_newspaper_entry_request(pk_t destination, pk_t newspaper_id);
+
 	void send_stun_binding_request();
 	void removed_external_article(hash_t article, pk_t to);
 
@@ -188,44 +205,7 @@ public:
 
 	void init_newspaper(my_string name);
 
-	/**
-	 * @brief Generator for article list message.
-	 * 
-	 * @param newspaper_id ID of newspaper which article list we want.
-	 */
-	void generate_article_list_message(pk_t newspaper_id) {
-		getting_article_list.insert(newspaper_id);
-		emit check_selected_item();
-
-		auto& news = get_news_db();
-		const user_container& news_friends = news[newspaper_id].get_friends();
-
-		networking_->enroll_message_to_be_sent(
-			MFW::ReqArticleListFactory(
-				MFW::ArticleListFactory(
-					public_identifier_,
-					newspaper_id
-				),
-				newspaper_id,
-				10,
-				std::vector<my_string>()
-			)
-		);
-
-		for (auto&& user : news_friends) {
-			networking_->enroll_message_to_be_sent(
-				MFW::ReqArticleListFactory(
-					MFW::ArticleListFactory(
-						public_identifier_,
-						user
-					),
-					newspaper_id,
-					10,
-					std::vector<my_string>()
-				)
-			);	
-		}
-	}
+	
 	
 	/**
 	 * @brief Generator for article list message, with support for categories.

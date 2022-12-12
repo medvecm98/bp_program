@@ -6,7 +6,6 @@ import "articles.proto";
 message NewspaperEntry {
     uint64 news_id = 1;
     string news_name = 2;
-    repeated uint64 authorities = 4;
 }
 
 message NetworkSerializedNewspaperEntry {
@@ -17,4 +16,5 @@ message NetworkSerializedNewspaperEntry {
 message LocalSerializedNewspaperEntry {
     NewspaperEntry entry = 1;
     repeated SerializedArticle articles = 2;
+    repeated uint64 friends = 3;
 }

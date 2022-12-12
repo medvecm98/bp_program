@@ -291,6 +291,7 @@ void StunClient::process_response_success_identify(stun_header_ptr stun_message)
         emit networking_->newspaper_identified(ria->get_public_identifier(), name, ip);
     }
 
+    emit confirmed_newspaper(pia->get_public_identifier());
 }
 
 void StunClient::process_response_error_identify(stun_header_ptr stun_message) {
@@ -396,7 +397,18 @@ void StunClient::identify(pk_t who) {
         }
     }
     else {
-        std::cout << "Failed to connect to peer " << who << std::endl;
+        std::cout << "Failed to connect to peer " << who << " when attempting to establish STUN connection." << std::endl;
+    }
+}
+
+void StunClient::identify(pk_t who, pk_t where) {
+    auto msg = std::make_shared<StunMessageHeader>();
+    create_request_identify(msg, who);
+    if (networking_->ip_map_.get_wrapper_for_pk(where) != networking_->ip_map_.get_map_end()) {
+        send_stun_message(msg, where);
+    }
+    else {
+        std::cout << "Failed to connect to peer " << where << " when attempting to establish STUN connection." << std::endl;
     }
 }
 

@@ -303,3 +303,20 @@ unique_ptr_message MFW::SetMessageContextError(unique_ptr_message&& msg) {
 void MFW::SetMessageContextError(unique_ptr_message& msg) {
 	msg->set_msg_ctx(np2ps::ERROR);
 }
+
+unique_ptr_message MFW::RespNewspaperEntryFactory(unique_ptr_message&& msg, NewspaperEntry& news) {
+	news.network_serialize_entry(msg->mutable_newspaper_entry());
+	msg->set_msg_ctx(np2ps::RESPONSE);
+	return msg;
+}
+
+unique_ptr_message MFW::NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id) {
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
+	msg->set_msg_type(np2ps::NEWSPAPER_ENTRY);
+
+	msg->mutable_newspaper_entry()->mutable_entry()->set_news_id(newspaper_id);
+
+	return msg;
+}

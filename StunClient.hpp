@@ -54,6 +54,14 @@ public:
     void identify(pk_t who);
 
     /**
+     * @brief Identify given peer.
+     * 
+     * @param who Whom to identify.
+     * @param where Where to ask.
+     */
+    void identify(pk_t who, pk_t where);
+
+    /**
      * @brief Identify given peer with provided IP address.
      * 
      * Only to be used when contacting new newspaper.

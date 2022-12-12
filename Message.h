@@ -5,6 +5,7 @@
 
 #include "GlobalUsing.h"
 #include "Article.h"
+#include "NewspaperEntry.h"
 #include "IpWrapper.h"
 //#include "Networking.h"
 #include "protobuf_source/messages.pb.h"
@@ -108,6 +109,7 @@ public:
 	//static unique_ptr_message RespNewPublicKeyFactory(unique_ptr_message&& msg, const CryptoPP::RSA::PublicKey& public_key);
 	static unique_ptr_message RespCredentialsFactory(unique_ptr_message&& msg, QString ip4, QString ip6, 
 		std::shared_ptr<rsa_public_optional> public_key, std::shared_ptr<eax_optional> eax_key);
+	static unique_ptr_message RespNewspaperEntryFactory(unique_ptr_message&& msg, NewspaperEntry& news);
 
 	static unique_ptr_message ReqArticleHeaderFactory(unique_ptr_message&& msg, Article* article_header);
 
@@ -127,6 +129,7 @@ public:
 	static unique_ptr_message UpdateArticleFactory(pk_t from, pk_t to, hash_t article_hash);
 	static unique_ptr_message CredentialsFactory(pk_t from, pk_t to);
 	static unique_ptr_message PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::PublicKey& key);
+	static unique_ptr_message NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id);
 
 	template<typename PeerContainer>
 	static unique_ptr_message ArticleSolicitationFactory(pk_t from, pk_t to, hash_t article_hash, const PeerContainer& peers, std::int32_t level = 127) {
