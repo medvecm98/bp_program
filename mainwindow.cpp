@@ -33,8 +33,9 @@ void MainWindow::on_pushButton_print_peer_released()
 }
 
 void MainWindow::newspaper_added_to_db(pk_t news_id) {
-	auto name = ctx->p.get_news_db()[news_id].get_name().c_str();
-	auto id = ctx->p.get_news_db()[news_id].get_id();
+	auto& news = ctx->p.get_news(news_id);
+	auto name = news.get_name().c_str();
+	auto id = news.get_id();
 	generate_article_list();
 }
 

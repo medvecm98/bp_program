@@ -38,6 +38,11 @@ bool IpMap::add_to_map(pk_t pk, IpWrapper&& ip) {
 	return map_.emplace(pk, ip).second;
 }
 
+bool IpMap::add_to_map(pk_t id, QHostAddress& ip, std::uint16_t port) {
+	IpWrapper ipw(ip, port);
+	return map_.emplace(id, std::move(ipw)).second;
+}
+
 void IpMap::remove_from_map(pk_t pk) {
 	map_.erase(pk);
 }

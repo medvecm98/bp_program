@@ -1301,10 +1301,35 @@ void Peer::handle_newspaper_entry_error(shared_ptr_message message) {
 }
 
 void Peer::add_new_newspaper_from_file(const std::string& path) {
-	NewspaperEntry news(path);
-	pk_t news_id = news.get_id();
-	news_.insert({ news_id, std::move(news) });
-	emit got_newspaper_confirmation(news_id);
+	NewspaperEntry news;
+
+	pk_t news_id;
+	std::ifstream file(path);
+	std::string line;
+	if (std::getline(file, line)) {
+		news_id = std::stoll(line);
+	}
+	else {
+		throw other_error("Empty newspaper file.");
+	}
+	while (std::getline(file, line)) {
+		std::stringstream ss(line);
+		std::string ip, port, pk;
+		if (!std::getline(ss, ip, ':') ||
+		    !std::getline(ss, port, ':') ||
+		    !std::getline(ss, pk)) 
+		{
+			throw other_error("Invalid newspaper file format.");
+		}
+		else {
+			QHostAddress ip(ip);
+			pk_t id = std::stoll(pk);
+			networking_->enroll_new_peer(ip, id);
+			news_.insert({ news_id, std::move(news) });
+			emit got_newspaper_confirmation(news_id);
+		}
+	}
+
 }
 
 void Peer::add_new_newspaper_pk(pk_t id) {

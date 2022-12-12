@@ -30,23 +30,7 @@ NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& ser
 }
 
 NewspaperEntry::NewspaperEntry(const std::string& path) {
-	std::ifstream file(path);
-	std::string line;
-	if (std::getline(file, line)) {
-		news_id_ = std::stoll(line);
-	}
-	else {
-		throw other_error("Empty newspaper file.");
-	}
-	while (std::getline(file, line)) {
-		std::stringstream ss(line);
-		std::string ip, port, pk;
-		if (!std::getline(ss, ip, ':') ||
-		    !std::getline(ss, port, ':') ||
-		    !std::getline(ss, pk)) {
-				throw other_error("Invalid newspaper file format.");
-			}
-	}
+	
 }
 
 void NewspaperEntry::deserialize(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne) {

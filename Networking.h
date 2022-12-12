@@ -426,6 +426,10 @@ public:
 		return stun_server.get();
 	}
 
+	void enroll_new_peer(QHostAddress ip, pk_t id) {
+		ip_map_.add_to_map(id, ip, PORT);
+	}
+
 	IpMap ip_map_; //map of all IPs, ports and RSA public keys
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles; //articles waiting to be found in the network
 	std::unordered_multimap<pk_t, shared_ptr_message> waiting_symmetrich_exchange; //messages waiting to be sent while symmetric key is exchanged

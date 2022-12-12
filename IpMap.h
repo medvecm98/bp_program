@@ -32,6 +32,8 @@ public:
 	 */
 	bool add_to_map(pk_t id, IpWrapper&& ip);
 
+	bool add_to_map(pk_t id, QHostAddress& ip, std::uint16_t port);
+
 	/**
 	 * @brief Removes the IpWrapper and thus all the infromation for the peer.
 	 * 
