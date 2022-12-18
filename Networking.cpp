@@ -123,29 +123,32 @@ void Networking::sign_and_encrypt_key(QDataStream& output, CryptoPP::SecByteBloc
 }
 
 void Networking::send_message(shared_ptr_message msg) {
-	
-
-    auto ip_map_iter = ip_map_.get_wrapper_for_pk(msg->to());
-	if (ip_map_iter != ip_map_.get_map_end()) {
-		std::cout << "User found in IP MAP database; Networking::send_message(shared_ptr_message msg)" << std::endl;
-		if (msg->msg_type() == np2ps::PUBLIC_KEY) {// I'm requesting public key
-			std::cout << "	PUBLIC_KEY type of message" << std::endl;
-			IpWrapper& ipw = ip_map_iter->second;
-			sender_->message_send(std::move(msg), ipw);
-			return;
+	try {
+		auto ip_map_iter = ip_map_.get_wrapper_for_pk(msg->to());
+		if (ip_map_iter != ip_map_.get_map_end()) {
+			std::cout << "User found in IP MAP database; Networking::send_message(shared_ptr_message msg)" << std::endl;
+			if (msg->msg_type() == np2ps::PUBLIC_KEY) {// I'm requesting public key
+				std::cout << "	PUBLIC_KEY type of message" << std::endl;
+				IpWrapper& ipw = ip_map_iter->second;
+				sender_->message_send(std::move(msg), ipw);
+				return;
+			}
+			else if (ip_map_iter->second.key_pair.first.has_value()) { // I have public key
+				std::cout << "	Public key found, and user is in database" << std::endl;
+				IpWrapper& ipw = ip_map_iter->second;
+				sender_->message_send(std::move(msg), ipw);
+				return;
+			}
 		}
-		else if (ip_map_iter->second.key_pair.first.has_value()) { // I have public key
-			std::cout << "	Public key found, and user is in database" << std::endl;
-			IpWrapper& ipw = ip_map_iter->second;
-			sender_->message_send(std::move(msg), ipw);
-			return;
-		}
+		//user was not found in IpMap and we need its IP and RSA public
+		
+		std::cout << "requesting IP and public key for pid: " << msg->to() << std::endl;
+		stun_client->identify(msg->to()); //use STUN for IP and RSA public
+		waiting_ip.emplace(msg->to(), msg); //store message for later, when IP and RSA will arrive
 	}
-	//user was not found in IpMap and we need its IP and RSA public
-	
-	std::cout << "requesting IP and public key for pid: " << msg->to() << std::endl;
-	stun_client->identify(msg->to()); //use STUN for IP and RSA public
-	waiting_ip.emplace(msg->to(), msg); //store message for later, when IP and RSA will arrive
+	catch (user_not_found_in_database& e) {
+		std::cout << "User " << msg->to() << " was not found in IPMap" << std::endl;
+	}
 	
 }
 

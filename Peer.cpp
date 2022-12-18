@@ -603,6 +603,10 @@ void Peer::handle_error(shared_ptr_message msg) {
 	}
 }
 
+news_database& Peer::get_news() {
+	return news_;
+}
+
 NewspaperEntry& Peer::get_news(pk_t newspaper_id) {
 	if (news_.find(newspaper_id) != news_.end()) {
 		return news_.at(newspaper_id);
@@ -1301,8 +1305,6 @@ void Peer::handle_newspaper_entry_error(shared_ptr_message message) {
 }
 
 void Peer::add_new_newspaper_from_file(const std::string& path) {
-	NewspaperEntry news;
-
 	pk_t news_id;
 	std::ifstream file(path);
 	std::string line;
@@ -1312,6 +1314,7 @@ void Peer::add_new_newspaper_from_file(const std::string& path) {
 	else {
 		throw other_error("Empty newspaper file.");
 	}
+	NewspaperEntry news(news_id);
 	while (std::getline(file, line)) {
 		std::stringstream ss(line);
 		std::string ip, port, pk;
@@ -1322,17 +1325,32 @@ void Peer::add_new_newspaper_from_file(const std::string& path) {
 			throw other_error("Invalid newspaper file format.");
 		}
 		else {
-			QHostAddress ip(ip);
 			pk_t id = std::stoll(pk);
+			news.add_friend(id);
 			networking_->enroll_new_peer(ip, id);
-			news_.insert({ news_id, std::move(news) });
-			emit got_newspaper_confirmation(news_id);
 		}
 	}
-
+	news_.insert({ news_id, std::move(news) });
+	emit got_newspaper_confirmation(news_id);
 }
 
 void Peer::add_new_newspaper_pk(pk_t id) {
 	news_.insert({ id, std::move(NewspaperEntry(id)) });
 	emit got_newspaper_confirmation(id);
+}
+
+void Peer::print_contents() {
+	std::cout << "public_identifier_ " << public_identifier_ << std::endl;
+	std::cout << "name_ " << name_ << std::endl;
+	std::cout << "newspaper_id_ " << newspaper_id_ << std::endl;
+	std::cout << "newspaper_name_ " << newspaper_name_ << std::endl;
+	std::cout << "news_ count: " << news_.size() << std::endl;
+	std::cout << "Reader count: " << readers_.size() << std::endl;
+	std::cout << "User count: " << user_map.size() << std::endl;
+	for (auto&& n : news_) {
+		std::cout << "news: " << (n.second.get_name().empty() ? "EMPTY" : n.second.get_name()) << "; " << n.second.get_id() << std::endl;
+		for (auto&& f : n.second.get_friends()) {
+			std::cout << "  friend: " << f << std::endl;
+		}
+	}
 }

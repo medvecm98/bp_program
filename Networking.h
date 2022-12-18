@@ -426,8 +426,9 @@ public:
 		return stun_server.get();
 	}
 
-	void enroll_new_peer(QHostAddress ip, pk_t id) {
-		ip_map_.add_to_map(id, ip, PORT);
+	void enroll_new_peer(std::string ip, pk_t id) {
+		QHostAddress ip4(QString::fromStdString(ip));
+		ip_map_.add_to_map(id, ip4, PORT);
 	}
 
 	IpMap ip_map_; //map of all IPs, ports and RSA public keys

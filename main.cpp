@@ -84,8 +84,8 @@ int main(int argc, char *argv[]) {
 	QObject::connect(&w, &MainWindow::start_server, ctx->p.get_networking()->get_peer_receiver(), &PeerReceiver::start_server);
 	QObject::connect(&w, &MainWindow::start_server, ctx->p.get_networking()->get_stun_server(), &StunServer::start_server);
 	QObject::connect(&ctx->p, &Peer::check_selected_item, &w, &MainWindow::check_selected_item);
-	QObject::connect(&ctx->p, &Peer::slot_add_new_newspaper_from_file, &w, &MainWindow::signal_add_new_newspaper_from_file);
-	QObject::connect(&ctx->p, &Peer::slot_add_new_newspaper_pk, &w, &MainWindow::signal_add_new_newspaper_pk);
+	QObject::connect(&w, &MainWindow::signal_add_new_newspaper_from_file, &ctx->p, &Peer::slot_add_new_newspaper_from_file);
+	QObject::connect(&w, &MainWindow::signal_add_new_newspaper_pk, &ctx->p, &Peer::slot_add_new_newspaper_pk);
 
 	QObject::connect(f, &Form::enable_print_peer, &w, &MainWindow::enable_print_peer);
 	QObject::connect(f, &Form::enable_add_article, &w, &MainWindow::enable_add_article);

@@ -129,6 +129,7 @@ public:
 	optional_author_peers find_article_in_article_categories_db(hash_t article_hash);
 	optional_author_peers find_article_in_article_categories_db(hash_t article_hash, category_container categories);
 
+	news_database& get_news();
 	NewspaperEntry& get_news(pk_t news_id);
 
 	/* message context handlers */
@@ -376,21 +377,17 @@ public:
 		return name_;
 	}
 
+	my_string name() {
+		return name_;
+	}
+
 	/**
 	 * @brief Print Peer contents to standart output.
 	 * 
 	 * For debugging only.
 	 * 
 	 */
-	void print_contents() {
-		std::cout << "public_identifier_ " << public_identifier_ << std::endl;
-		std::cout << "name_ " << name_ << std::endl;
-		std::cout << "newspaper_id_ " << newspaper_id_ << std::endl;
-		std::cout << "newspaper_name_ " << newspaper_name_ << std::endl;
-		std::cout << "news_ count: " << news_.size() << std::endl;
-		std::cout << "Reader count: " << readers_.size() << std::endl;
-		std::cout << "User count: " << user_map.size() << std::endl;
-	}
+	void print_contents();
 
 	/**
 	 * @brief News database getter.
