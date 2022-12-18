@@ -219,6 +219,14 @@ ip_map::iterator IpMap::get_wrapper_for_pk(pk_t pk) {
 	throw user_not_found_in_database("IpWrapper for given user was not found.");
 }
 
+IpWrapper& IpMap::get_wrapper_ref(pk_t id) {
+	auto find_result = map_.find(id);
+	if (find_result != map_.end()) {
+		return find_result->second;
+	}
+	throw user_not_found_in_database("IpWrapper for given user was not found.");
+}
+
 void IpMap::set_tcp_socket(pk_t pk, QTcpSocket* tcp_socket_) {
 	if (map_.find(pk) == map_.end()) {
 		return;

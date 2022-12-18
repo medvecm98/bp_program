@@ -1312,7 +1312,7 @@ void Peer::add_new_newspaper_from_file(const std::string& path) {
 		news_id = std::stoll(line);
 	}
 	else {
-		throw other_error("Empty newspaper file.");
+		return; //throw other_error("Empty newspaper file.");
 	}
 	NewspaperEntry news(news_id);
 	while (std::getline(file, line)) {

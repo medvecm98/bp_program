@@ -170,3 +170,37 @@ public:
 private:
     std::string message;
 };
+
+class no_rsa_key_found : public std::exception {
+public:
+    no_rsa_key_found(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    no_rsa_key_found(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};
+
+class no_eax_key_found : public std::exception {
+public:
+    no_eax_key_found(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    no_eax_key_found(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};
