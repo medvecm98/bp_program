@@ -159,6 +159,28 @@ struct IpWrapper {
 		relay_flag = false;
 	}
 
+	bool has_rsa() {
+		return key_pair.first.has_value();
+	}
+
+	bool has_eax() {
+		return key_pair.second.has_value();
+	}
+
+	CryptoPP::RSA::PublicKey& get_rsa() {
+		if (has_rsa()) {
+			return key_pair.first.value();
+		}
+		throw no_rsa_key_found("RSA key was not found.");
+	}
+
+	CryptoPP::SecByteBlock& get_eax() {
+		if (has_eax()) {
+			return key_pair.second.value();
+		}
+		throw no_eax_key_found("EAX key was not found.");
+	}
+
 	void serialize_wrapper(np2ps::IpWrapper* wrapper) {
 		wrapper->set_ipv4(ipv4.toIPv4Address());
 		wrapper->set_port(port);

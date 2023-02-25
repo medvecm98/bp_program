@@ -249,6 +249,8 @@ public:
 	 */
 	ip_map::iterator get_wrapper_for_pk(pk_t id);
 
+	IpWrapper& get_wrapper_ref(pk_t id);
+
 	/**
 	 * @brief Scans all enrolled sockets and remove those peers, who are 
 	 * comlpetely disconnected.
