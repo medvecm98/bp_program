@@ -18,6 +18,7 @@ enum MessageType {
 	SYMMETRIC_KEY = 110; // done
 	PUBLIC_KEY = 120;   //done
 	NEWSPAPER_ENTRY = 130;
+	NEWSPAPER_LIST = 140;
 }
 
 enum MessageContext {
@@ -58,6 +59,7 @@ message Message {
 		SymmetricKey symmetric_key = 210;
 		PublicKey public_key = 220;
 		NetworkSerializedNewspaperEntry newspaper_entry = 230;
+		NewspaperList newspaper_list = 240;
 	}
 }
 

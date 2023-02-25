@@ -43,11 +43,11 @@ public:
 		return _authorities.size();
 	}
 
-	pk_t get_id() {
+	pk_t get_id() const {
 		return news_id_;
 	}
 
-	const my_string& get_name() {
+	const my_string& get_name() const {
 		return news_name_;
 	}
 

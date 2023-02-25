@@ -114,6 +114,7 @@ public:
 	static shared_ptr_message ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header);
 
 	static shared_ptr_message ErrorArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id);
+	static shared_ptr_message RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news);
 
 	/* Basic factories: */
 	
@@ -130,6 +131,7 @@ public:
 	static shared_ptr_message CredentialsFactory(pk_t from, pk_t to);
 	static shared_ptr_message PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::PublicKey& key);
 	static shared_ptr_message NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id);
+	static shared_ptr_message NewspaperListFactory(pk_t from, pk_t to);
 
 	template<typename PeerContainer>
 	static shared_ptr_message ArticleSolicitationFactory(pk_t from, pk_t to, hash_t article_hash, const PeerContainer& peers, std::int32_t level = 127) {

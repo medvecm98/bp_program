@@ -148,6 +148,7 @@ public:
 	void handle_update_margin_request(shared_ptr_message message);
 	void handle_credentials_request(shared_ptr_message message);
 	void handle_newspaper_entry_request(shared_ptr_message message);
+	void handle_newspaper_list_request(shared_ptr_message message);
 
 	void handle_article_all_response(shared_ptr_message message);
 	void handle_article_list_response(shared_ptr_message message);
@@ -156,6 +157,7 @@ public:
 	void handle_symmetric_key_response(shared_ptr_message message);
 	void handle_update_margin_response(shared_ptr_message message);
 	void handle_newspaper_entry_response(shared_ptr_message message);
+	void handle_newspaper_list_response(shared_ptr_message message);
 
 	void handle_article_solicitation_one_way(shared_ptr_message message);
 	void handle_symmetric_key_one_way(shared_ptr_message message);
@@ -173,6 +175,7 @@ public:
 	void generate_article_header_message(pk_t destination, hash_t article_hash);
 	void generate_article_list_message(pk_t newspaper_id);
 	void generate_newspaper_entry_request(pk_t destination, pk_t newspaper_id);
+	void generate_newspaper_list_request(pk_t destination);
 
 	void send_stun_binding_request();
 	void removed_external_article(hash_t article, pk_t to);
@@ -465,6 +468,10 @@ public:
 		}
 	}
 
+	bool find_news(pk_t news_id) {
+		return news_.find(news_id) != news_.end(); 
+	}
+
 public slots:
 	void handle_message(shared_ptr_message message);
 
@@ -560,6 +567,7 @@ private:
 	pk_t newspaper_id_; //public identifier of my newspaper
 	user_container authorities_; //list of authorities
 	user_container journalists_; //list of journalists
+	user_container friends_; //list of friends
 	std::unordered_set<hash_t> downloading_articles;
 	std::unordered_set<pk_t> getting_article_list;
 

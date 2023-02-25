@@ -407,6 +407,9 @@ void Peer::handle_requests(shared_ptr_message message) {
 	else if (type == np2ps::NEWSPAPER_ENTRY) {
 		handle_newspaper_entry_request(message);
 	}
+	else if (type == np2ps::NEWSPAPER_LIST) {
+		
+	}
 	else {
 		throw unsupported_message_type_in_context("Peer received a message type that is unsupported in given context");
 	}
@@ -1304,6 +1307,18 @@ void Peer::handle_newspaper_entry_error(shared_ptr_message message) {
 	}
 }
 
+void Peer::handle_newspaper_list_request(shared_ptr_message message) {
+	networking_->enroll_message_to_be_sent(
+		MFW::RespNewspaperListFactory(
+			MFW::NewspaperListFactory(
+				get_public_key(),
+				message->from()
+			),
+			get_news()
+		)
+	);
+}
+
 void Peer::add_new_newspaper_from_file(const std::string& path) {
 	pk_t news_id;
 	std::ifstream file(path);
@@ -1351,6 +1366,29 @@ void Peer::print_contents() {
 		std::cout << "news: " << (n.second.get_name().empty() ? "EMPTY" : n.second.get_name()) << "; " << n.second.get_id() << std::endl;
 		for (auto&& f : n.second.get_friends()) {
 			std::cout << "  friend: " << f << std::endl;
+		}
+	}
+}
+
+void Peer::generate_newspaper_list_request(pk_t destination) {
+	networking_->enroll_message_to_be_sent(
+		MFW::SetMessageContextRequest(
+			MFW::NewspaperListFactory(
+				get_public_key(),
+				destination
+			)
+		)
+	);
+}
+
+void Peer::handle_newspaper_list_response(shared_ptr_message message) {
+	if (!message->has_newspaper_list()) {
+		throw malformed_message_context_or_type("Message has not newspaper list.");
+	}
+
+	for (auto it = message->newspaper_list().news().begin(); it != message->newspaper_list().news().end(); it++) {
+		if (!find_news(it->news_id())) {
+			news_.emplace();
 		}
 	}
 }

@@ -154,6 +154,24 @@ private:
     std::string message;
 };
 
+class malformed_message_context_or_type : public std::exception {
+public:
+    malformed_message_context_or_type(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    malformed_message_context_or_type(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};
+
+
 class other_error : public std::exception {
 public:
     other_error(const char* what_arg) throw() : std::exception() {

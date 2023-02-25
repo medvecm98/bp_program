@@ -18,3 +18,7 @@ message LocalSerializedNewspaperEntry {
     repeated SerializedArticle articles = 2;
     repeated uint64 friends = 3;
 }
+
+message NewspaperList {
+    repeated NewspaperEntry news = 1;
+}

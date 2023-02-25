@@ -320,3 +320,24 @@ shared_ptr_message MFW::NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper
 
 	return msg;
 }
+
+shared_ptr_message MFW::NewspaperListFactory(pk_t from, pk_t to) {
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
+	msg->set_msg_type(np2ps::NEWSPAPER_LIST);
+
+	return msg;	
+}
+
+shared_ptr_message MFW::RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news) {
+	msg->set_msg_ctx(np2ps::RESPONSE);
+
+	for (auto&& one_news : news) {
+		auto news_gpb = msg->mutable_newspaper_list()->add_news();
+		news_gpb->set_news_id(one_news.second.get_id());
+		news_gpb->set_news_name(one_news.second.get_name());
+	}
+
+	return msg;
+}
