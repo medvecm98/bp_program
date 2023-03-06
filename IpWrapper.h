@@ -167,6 +167,14 @@ struct IpWrapper {
 		return key_pair.second.has_value();
 	}
 
+	bool has_ipv4() {
+		return !ipv4.isNull();
+	}
+
+	bool has_stun_ipv4() {
+		return !stun_address.isNull();
+	}
+
 	CryptoPP::RSA::PublicKey& get_rsa() {
 		if (has_rsa()) {
 			return key_pair.first.value();

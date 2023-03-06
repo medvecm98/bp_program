@@ -243,7 +243,7 @@ private:
 
 	/* Message and IpWrapper when waiting to be connected. */
 	shared_ptr_message message_waiting_for_connection;
-	IpWrapper ipw_waiting_for_connection;
+	IpWrapper connectee_waiting_for_connection;
 };
 
 
@@ -308,6 +308,10 @@ public:
 	 * @param nd Pointer to peer news database.
 	 */
 	void init_sender_receiver(news_database* nd);
+
+	IpMap& ip_map() {
+		return ip_map_;
+	}
 
 	/**
 	 * @brief Emits `new_message_received`.
@@ -430,6 +434,16 @@ public:
 		QHostAddress ip4(QString::fromStdString(ip));
 		ip_map_.add_to_map(id, ip4, PORT);
 	}
+
+	void start_servers_with_first_ip();
+
+	void add_to_ip_map(pk_t id, QHostAddress&& address);
+
+	std::shared_ptr<eax_optional> get_or_create_eax(shared_ptr_message msg);
+	IpWrapper& save_symmetric_key(pk_t save_to, CryptoPP::SecByteBlock&& aes_key);
+
+	QByteArray generate_symmetric_key_message(shared_ptr_message msg);
+	CryptoPP::SecByteBlock generate_symmetric_key();
 
 	IpMap ip_map_; //map of all IPs, ports and RSA public keys
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles; //articles waiting to be found in the network

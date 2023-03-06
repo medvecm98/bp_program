@@ -158,5 +158,5 @@ std::uint32_t XorMappedAddressAttribute::get_address() {
 }
 
 Q_IPV6ADDR XorMappedAddressAttribute::get_address_6() {
-    
+    throw unsupported_feature("IPv6 for XorMappedAddressAttribute is unsupported.");
 }

@@ -125,5 +125,5 @@ std::uint32_t XorRelayedAddressAttribute::get_address() {
 }
 
 Q_IPV6ADDR XorRelayedAddressAttribute::get_address_6() {
-    
+    throw unsupported_feature("IPv6 for XorRelayedAddressAttribute is unsupported.");
 }

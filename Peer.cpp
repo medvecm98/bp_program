@@ -408,7 +408,7 @@ void Peer::handle_requests(shared_ptr_message message) {
 		handle_newspaper_entry_request(message);
 	}
 	else if (type == np2ps::NEWSPAPER_LIST) {
-		
+		handle_newspaper_list_request(message);
 	}
 	else {
 		throw unsupported_message_type_in_context("Peer received a message type that is unsupported in given context");
@@ -893,9 +893,11 @@ void Peer::handle_credentials_request(shared_ptr_message message) {
 		else if (networking_->ip_map_.have_rsa_public(requested_credentials))
 			resp_rsa_public = networking_->ip_map_.get_rsa_public(requested_credentials);
 	}
-	if (!req_my_credentials && message->credentials().req_eax_key()) {
-		if (networking_->ip_map_.have_eax(message->from()))
-			resp_eax = networking_->ip_map_.get_eax(message->from());
+	if (message->credentials().req_eax_key()) {
+		if (networking_->ip_map_.have_eax(message->from())) {
+			networking_->generate_symmetric_key();
+		}
+		resp_eax = networking_->ip_map_.get_eax(message->from());
 	}
 
 	networking_->enroll_message_to_be_sent(
@@ -1354,6 +1356,9 @@ void Peer::add_new_newspaper_pk(pk_t id) {
 	emit got_newspaper_confirmation(id);
 }
 
+/**
+ * For debugging purposes only.
+*/
 void Peer::print_contents() {
 	std::cout << "public_identifier_ " << public_identifier_ << std::endl;
 	std::cout << "name_ " << name_ << std::endl;
@@ -1370,6 +1375,12 @@ void Peer::print_contents() {
 	}
 }
 
+void Peer::generate_newspaper_list_request() {
+	for (pk_t global_friend : get_friends()) {
+		generate_newspaper_list_request(global_friend);
+	}
+}
+
 void Peer::generate_newspaper_list_request(pk_t destination) {
 	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextRequest(
@@ -1383,12 +1394,294 @@ void Peer::generate_newspaper_list_request(pk_t destination) {
 
 void Peer::handle_newspaper_list_response(shared_ptr_message message) {
 	if (!message->has_newspaper_list()) {
-		throw malformed_message_context_or_type("Message has not newspaper list.");
+		throw malformed_message_context_or_type("Message does not contain newspaper list.");
 	}
 
 	for (auto it = message->newspaper_list().news().begin(); it != message->newspaper_list().news().end(); it++) {
 		if (!find_news(it->news_id())) {
-			news_.emplace();
+			add_new_newspaper(it->news_id(), it->news_name(), message->from());
 		}
 	}
+}
+
+/**
+ * @brief Set the name of the peer.
+ * 
+ * @param name Desired name, which will be set.
+ */
+void Peer::set_name(const my_string& name) {
+	name_ = name;
+}
+
+/**
+ * @brief Get ID of my news.
+ * 
+ * @return pk_t ID of my news
+ */
+pk_t Peer::get_my_news_id() {
+	return newspaper_id_;
+}
+
+/**
+ * @brief Set the ip of the peer.
+ * 
+ * @param ip Desired IP to be set.
+ */
+void Peer::set_my_ip(QString ip) {
+	networking_->ip_map_.my_ip.ipv4 = QHostAddress(ip);
+}
+
+/**
+ * @brief Generator for article list message, with support for categories.
+ * 
+ * @tparam Container Category container type.
+ * @param destination ID of newspaper which article list we want.
+ * @param categories Categories we want.
+ */
+template<typename Container>
+void Peer::generate_article_list_message(pk_t destination, const Container& categories) {
+	networking_->enroll_message_to_be_sent(
+		MFW::ReqArticleListFactory<Container>(
+			MFW::ArticleListFactory(
+				public_identifier_,
+				destination
+			),
+			categories
+		)
+	);
+}
+
+/**
+ * @brief Generator for add margin message.
+ * 
+ * For one margin.
+ * 
+ * @param article_hash Article hash of article, to which we want to add the margin.
+ * @param type Type of the margin.
+ * @param content Content of the margin.
+ */
+void Peer::add_margin(hash_t article_hash, my_string type, my_string content) {
+	article_optional article = find_article(article_hash);
+	article.value()->add_margin(public_identifier_, Margin(type, content, public_identifier_));
+}
+
+/**
+ * @brief Generator for add margin message.
+ * 
+ * For multiple margins.
+ * 
+ * @param article_hash Article hash of article, to which we want to add the margins.
+ * @param vm Margin vector containing the margins.
+ */
+void Peer::add_margin(hash_t article_hash, margin_vector& vm) {
+	auto article = find_article(article_hash);
+	if (article.has_value()) {
+		auto author = article.value()->author_id();
+		networking_->enroll_message_to_be_sent(
+			MFW::SetMessageContextRequest(
+				MFW::UpdateMarginAddFactory(
+					public_identifier_,
+					author,
+					article_hash,
+					vm
+				)
+			)
+		);
+	}
+	else {
+		throw other_error("Can't add margin to article that is not in DB.");
+	}
+}
+
+/**
+ * @brief Updates existing margin in given article.
+ * 
+ * For one margin only.
+ * 
+ * @param article_hash Article hash of article, where we want to update the margins.
+ * @param id ID of margin we want to update.
+ * @param type Type we want to set.
+ * @param content Content we want to set.
+ */
+void Peer::update_margin(hash_t article_hash, unsigned int id, my_string type, my_string content) {
+	auto article = find_article(article_hash);
+	if (article.has_value()) {
+		auto author = article.value()->author_id();
+		std::vector<Margin> vm = { Margin(type, content, id) };
+		
+		auto [marginb, margine] = margins_added_.equal_range(article_hash);
+
+		for (; marginb != margine; marginb++) {
+			//update our margin database first
+			if (marginb->second.id == id) {
+				marginb->second.type += ' ' + type;
+				marginb->second.content += ' ' + content;
+				break;
+			}
+		}
+
+		networking_->enroll_message_to_be_sent(
+			MFW::SetMessageContextRequest(
+				MFW::UpdateMarginUpdateFactory(
+					public_identifier_,
+					author,
+					article_hash,
+					vm
+				)
+			)
+		);
+	}
+	else {
+		throw other_error("Can't update margin of article that is not in DB.");
+	}
+}
+
+/**
+ * @brief Removes existing margin in given article.
+ * 
+ * @param article_hash Article hash of article, where we want to remove the margin.
+ * @param id ID of margin to remove.
+ */
+void Peer::remove_margin(hash_t article_hash, unsigned int id) {
+	auto article = find_article(article_hash);
+	if (article.has_value()) {
+		auto author = article.value()->author_id();
+		Margin m;
+		m.id = id;
+		
+		auto [marginb, margine] = margins_added_.equal_range(article_hash);
+
+		for (; marginb != margine; marginb++) {
+			if (marginb->second.id == id) {
+				m.type = marginb->second.type;
+				m.content = marginb->second.content;
+				margins_added_.erase(marginb);
+				break;
+			}
+		}
+
+		std::vector<Margin> vm = {m};
+
+		networking_->enroll_message_to_be_sent(
+			MFW::SetMessageContextRequest(
+				MFW::UpdateMarginRemoveFactory(
+					public_identifier_,
+					author,
+					article_hash,
+					vm
+				)
+			)
+		);
+	}
+	else {
+		throw other_error("Can't update margin of article that is not in DB.");
+	}
+}
+
+/**
+ * @brief Public identifier getter.
+ * 
+ * @return pk_t Public identifier.
+ */
+pk_t Peer::get_public_key() {
+	return public_identifier_;
+}
+
+/**
+ * @brief Name getter.
+ * 
+ * @return my_string Name
+ */
+my_string Peer::get_name() {
+	return name_;
+}
+
+my_string Peer::name() {
+	return name_;
+}
+
+/**
+ * @brief News database getter.
+ * 
+ * Returns non-const reference to newspaper database.
+ * Use with caution.
+ * 
+ * @return news_database& Reference to requested news.
+ */
+news_database& Peer::get_news_db() {
+	return news_;
+}
+
+/**
+ * @brief News name getter. 
+ * 
+ * @return std::string News name.
+ */
+std::string Peer::get_my_news_name() {
+	return newspaper_name_;
+}
+
+void Peer::networking_init_sender_receiver() {
+	networking_->init_sender_receiver(&news_);
+}
+
+void Peer::stun_allocate() {
+	//networking_->get_stun_client()->allocate_request();
+}
+
+void Peer::add_journalist(pk_t j) {
+	journalists_.insert(j);
+}
+void Peer::remove_journalist(pk_t j) {
+	journalists_.erase(j);
+}
+Networking* Peer::get_networking() {
+	return networking_.get();
+}
+
+std::unordered_set<hash_t>& Peer::get_downloading_articles() {
+	return downloading_articles;
+}
+
+std::unordered_set<hash_t>& Peer::get_getting_article_list() {
+	return getting_article_list;
+}
+
+/**
+ * @brief Removes reader for given article.
+ */
+void Peer::remove_reader(hash_t article, pk_t reader) {
+	auto [ait, eit] = readers_.equal_range(article);
+	for (; ait != eit; ait++) {
+		if (ait->second->peer_key == reader) {
+			readers_.erase(ait);
+			break;
+		}
+	}
+}
+
+void Peer::serialize(np2ps::Peer* p) {
+	p->set_name(name_);
+	p->set_public_identifier(public_identifier_);
+	auto ip_map_gpb = p->mutable_ip_map();
+	networking_->ip_map_.serialize_ip_map(ip_map_gpb);
+	for (auto&& newspapers : news_) {
+		auto ne_gpb = p->add_news();
+		NewspaperEntry& ne = newspapers.second;
+		ne.local_serialize_entry(ne_gpb);
+	}
+}
+
+bool Peer::find_news(pk_t news_id) {
+	return news_.find(news_id) != news_.end(); 
+}
+
+user_container& Peer::get_friends() {
+	return friends_;
+}
+
+bool Peer::add_friend(pk_t id, const std::string& ip) {
+	return friends_.emplace(id).second;
+	// Networking* networking = get_networking();
+	// return true;
 }

@@ -222,3 +222,20 @@ public:
 private:
     std::string message;
 };
+
+class unsupported_feature : public std::exception {
+public:
+    unsupported_feature(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    unsupported_feature(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};

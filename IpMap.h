@@ -31,7 +31,7 @@ public:
 	 * @return false If insertion did not took place.
 	 */
 	bool add_to_map(pk_t id, IpWrapper&& ip);
-
+	bool add_to_map(pk_t id, const IpWrapper& ip);
 	bool add_to_map(pk_t id, QHostAddress& ip, std::uint16_t port);
 
 	/**

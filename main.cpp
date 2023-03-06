@@ -24,8 +24,12 @@ void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramCon
 	std::string line;
 	ctx->p.peer_init("Test Peer", "Newspaper Test Peer");
 	int counter = ctx->p.get_public_key() * 10;
-	while (std::getline(file, line)) {
+	while (std::getline(file, line)) { // loads articles from file, line after line
 		std::string article_file_path(line);
+		if (!std::filesystem::is_regular_file(std::filesystem::path(article_file_path))) {
+			std::cout << "Invalid file: " << article_file_path << std::endl;
+			continue;
+		}
 		Article a;
 		std::vector<std::string> v;
 		a.initialize_article(v, article_file_path, ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id()), counter++);
@@ -53,7 +57,7 @@ int main(int argc, char *argv[]) {
 		std::filesystem::path path(path_string);
 
 		if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
-			if (path_string[0] == '_') {
+			if (path.filename().string()[0] == '_') { // create new peer, for testing purposes
 				pk_t custom_id = 123;
 				if (QCoreApplication::arguments().size() > 2) {
 					QString custom_id_string = QCoreApplication::arguments().at(2);
@@ -62,7 +66,7 @@ int main(int argc, char *argv[]) {
 				ctx = std::make_shared<ProgramContext>(custom_id);
 				load_articles_from_file(path_string, ctx);
 			}
-			else {
+			else { // load peer from save file
 				np2ps::Peer serialized_peer;
 				std::ifstream ifile(path_string);
 				serialized_peer.ParseFromIstream(&ifile);

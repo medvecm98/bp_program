@@ -100,6 +100,7 @@ public:
 		networking_->init_sender_receiver(&news_);
 		networking_->set_peer_public_id(public_identifier_);
 		networking_->set_maps(&user_map, &news_, &readers_, &journalists_);
+		networking_->start_servers_with_first_ip();
 	}
 
 	void peer_init(const std::string& peer_name) {
@@ -175,6 +176,7 @@ public:
 	void generate_article_header_message(pk_t destination, hash_t article_hash);
 	void generate_article_list_message(pk_t newspaper_id);
 	void generate_newspaper_entry_request(pk_t destination, pk_t newspaper_id);
+	void generate_newspaper_list_request();
 	void generate_newspaper_list_request(pk_t destination);
 
 	void send_stun_binding_request();
@@ -182,295 +184,53 @@ public:
 
 	pk_t check_destination_valid(pk_t destination, pk_t newspaper);
 
-	/**
-	 * @brief Set the name of the peer.
-	 * 
-	 * @param name Desired name, which will be set.
-	 */
-	void set_name(const my_string& name) {
-		name_ = name;
-	}
+	void set_name(const my_string& name);
+	pk_t get_my_news_id();
 
-	/**
-	 * @brief Get ID of my news.
-	 * 
-	 * @return pk_t ID of my news
-	 */
-	pk_t get_my_news_id() {
-		return newspaper_id_;
-	}
-
-	/**
-	 * @brief Set the ip of the peer.
-	 * 
-	 * @param ip Desired IP to be set.
-	 */
-	void set_my_ip(QString ip) {
-		networking_->ip_map_.my_ip.ipv4 = QHostAddress(ip);
-	}
+	void set_my_ip(QString ip);
 
 	void init_newspaper(my_string name);
 
-	
-	
-	/**
-	 * @brief Generator for article list message, with support for categories.
-	 * 
-	 * @tparam Container Category container type.
-	 * @param destination ID of newspaper which article list we want.
-	 * @param categories Categories we want.
-	 */
 	template<typename Container>
-	void generate_article_list_message(pk_t destination, const Container& categories) {
-		networking_->enroll_message_to_be_sent(
-			MFW::ReqArticleListFactory<Container>(
-				MFW::ArticleListFactory(
-					public_identifier_,
-					destination
-				),
-				categories
-			)
-		);
-	}
+	void generate_article_list_message(pk_t destination, const Container& categories);
 
-	/**
-	 * @brief Generator for add margin message.
-	 * 
-	 * For one margin.
-	 * 
-	 * @param article_hash Article hash of article, to which we want to add the margin.
-	 * @param type Type of the margin.
-	 * @param content Content of the margin.
-	 */
-	void add_margin(hash_t article_hash, my_string type, my_string content) {
-		article_optional article = find_article(article_hash);
-		article.value()->add_margin(public_identifier_, Margin(type, content, public_identifier_));
-	}
-
-	/**
-	 * @brief Generator for add margin message.
-	 * 
-	 * For multiple margins.
-	 * 
-	 * @param article_hash Article hash of article, to which we want to add the margins.
-	 * @param vm Margin vector containing the margins.
-	 */
-	void add_margin(hash_t article_hash, margin_vector& vm) {
-		auto article = find_article(article_hash);
-		if (article.has_value()) {
-			auto author = article.value()->author_id();
-			networking_->enroll_message_to_be_sent(
-				MFW::SetMessageContextRequest(
-					MFW::UpdateMarginAddFactory(
-						public_identifier_,
-						author,
-						article_hash,
-						vm
-					)
-				)
-			);
-		}
-		else {
-			//TODO: log error
-		}
-	}
-
-	/**
-	 * @brief Updates existing margin in given article.
-	 * 
-	 * For one margin only.
-	 * 
-	 * @param article_hash Article hash of article, where we want to update the margins.
-	 * @param id ID of margin we want to update.
-	 * @param type Type we want to set.
-	 * @param content Content we want to set.
-	 */
-	void update_margin(hash_t article_hash, unsigned int id, my_string type, my_string content) {
-		auto article = find_article(article_hash);
-		if (article.has_value()) {
-			auto author = article.value()->author_id();
-			std::vector<Margin> vm = { Margin(type, content, id) };
-			
-			auto [marginb, margine] = margins_added_.equal_range(article_hash);
-
-			for (; marginb != margine; marginb++) {
-				//update our margin database first
-				if (marginb->second.id == id) {
-					marginb->second.type += ' ' + type;
-					marginb->second.content += ' ' + content;
-					break;
-				}
-			}
-
-			networking_->enroll_message_to_be_sent(
-				MFW::SetMessageContextRequest(
-					MFW::UpdateMarginUpdateFactory(
-						public_identifier_,
-						author,
-						article_hash,
-						vm
-					)
-				)
-			);
-		}
-		else {
-			//TODO: log error
-		}
-	}
-
-	/**
-	 * @brief Removes existing margin in given article.
-	 * 
-	 * @param article_hash Article hash of article, where we want to remove the margin.
-	 * @param id ID of margin to remove.
-	 */
-	void remove_margin(hash_t article_hash, unsigned int id) {
-		auto article = find_article(article_hash);
-		if (article.has_value()) {
-			auto author = article.value()->author_id();
-			Margin m;
-			m.id = id;
-			
-			auto [marginb, margine] = margins_added_.equal_range(article_hash);
-
-			for (; marginb != margine; marginb++) {
-				if (marginb->second.id == id) {
-					m.type = marginb->second.type;
-					m.content = marginb->second.content;
-					margins_added_.erase(marginb);
-					break;
-				}
-			}
-
-			std::vector<Margin> vm = {m};
-
-			networking_->enroll_message_to_be_sent(
-				MFW::SetMessageContextRequest(
-					MFW::UpdateMarginRemoveFactory(
-						public_identifier_,
-						author,
-						article_hash,
-						vm
-					)
-				)
-			);
-		}
-		else {
-			//TODO: log error
-		}
-	}
+	void add_margin(hash_t article_hash, my_string type, my_string content);
+	void add_margin(hash_t article_hash, margin_vector& vm);
+	void update_margin(hash_t article_hash, unsigned int id, my_string type, my_string content);
+	void remove_margin(hash_t article_hash, unsigned int id);
 
 	void create_margin_request(pk_t, hash_t);
 
-	/**
-	 * @brief Public identifier getter.
-	 * 
-	 * @return pk_t Public identifier.
-	 */
-	pk_t get_public_key() {
-		return public_identifier_;
-	}
+	pk_t get_public_key();
+	my_string get_name();
 
-	/**
-	 * @brief Name getter.
-	 * 
-	 * @return my_string Name
-	 */
-	my_string get_name() {
-		return name_;
-	}
+	my_string name();
 
-	my_string name() {
-		return name_;
-	}
-
-	/**
-	 * @brief Print Peer contents to standart output.
-	 * 
-	 * For debugging only.
-	 * 
-	 */
 	void print_contents();
 
-	/**
-	 * @brief News database getter.
-	 * 
-	 * Returns non-const reference to newspaper database.
-	 * Use with caution.
-	 * 
-	 * @return news_database& Reference to requested news.
-	 */
-	news_database& get_news_db() {
-		return news_;
-	}
-	
-	/**
-	 * @brief News name getter. 
-	 * 
-	 * @return std::string News name.
-	 */
-	std::string get_my_news_name() {
-		return newspaper_name_;
-	}
+	news_database& get_news_db();
+	std::string get_my_news_name();
 
-	void networking_init_sender_receiver() {
-		networking_->init_sender_receiver(&news_);
-	}
+	void networking_init_sender_receiver();
 
-	void stun_allocate() {
-		//networking_->get_stun_client()->allocate_request();
-	}
-
+	void stun_allocate();
 	bool remove_article(hash_t hash);
 	bool remove_article(hash_t hash, pk_t& newspaper_id);
 	void identify_newspaper(QHostAddress address, const std::string& newspaper_name);
 	void upload_external_article(Article a);
-	void add_journalist(pk_t j) {
-		journalists_.insert(j);
-	}
-	void remove_journalist(pk_t j) {
-		journalists_.erase(j);
-	}
-	Networking* get_networking() {
-		return networking_.get();
-	}
+	void add_journalist(pk_t j);
+	void remove_journalist(pk_t j);
+	Networking* get_networking();
 
-	std::unordered_set<hash_t>& get_downloading_articles() {
-		return downloading_articles;
-	}
+	std::unordered_set<hash_t>& get_downloading_articles();
 
-	std::unordered_set<hash_t>& get_getting_article_list() {
-		return getting_article_list;
-	}
+	std::unordered_set<hash_t>& get_getting_article_list();
 
-	/**
-	 * @brief Removes reader for given article.
-	 */
-	void remove_reader(hash_t article, pk_t reader) {
-		auto [ait, eit] = readers_.equal_range(article);
-		for (; ait != eit; ait++) {
-			if (ait->second->peer_key == reader) {
-				readers_.erase(ait);
-				break;
-			}
-		}
-	}
-
-	void serialize(np2ps::Peer* p) {
-		p->set_name(name_);
-		p->set_public_identifier(public_identifier_);
-		auto ip_map_gpb = p->mutable_ip_map();
-		networking_->ip_map_.serialize_ip_map(ip_map_gpb);
-		for (auto&& newspapers : news_) {
-			auto ne_gpb = p->add_news();
-			NewspaperEntry& ne = newspapers.second;
-			ne.local_serialize_entry(ne_gpb);
-		}
-	}
-
-	bool find_news(pk_t news_id) {
-		return news_.find(news_id) != news_.end(); 
-	}
+	void remove_reader(hash_t article, pk_t reader);
+	void serialize(np2ps::Peer* p);
+	bool find_news(pk_t news_id);
+	user_container& get_friends();
+	bool add_friend(pk_t id, const std::string& ip);
 
 public slots:
 	void handle_message(shared_ptr_message message);
@@ -549,6 +309,7 @@ private:
 	my_string name_; //name of my peer
 	std::shared_ptr<Networking> networking_; //networking, for handling sending and receiving
 	news_database news_; //list of all downloaded articles, mapped by their Newspapers
+	user_container friends_; //friends, sharing their newspaper entries with you
 
 	std::unordered_multimap<hash_t, Margin> margins_added_; //multimap of Article -> Margins, that this peer added, or requested to add
 	std::unordered_map<pk_t, Article> article_headers_only; //only for article headers, so it won't interfere with regular ones
@@ -567,7 +328,6 @@ private:
 	pk_t newspaper_id_; //public identifier of my newspaper
 	user_container authorities_; //list of authorities
 	user_container journalists_; //list of journalists
-	user_container friends_; //list of friends
 	std::unordered_set<hash_t> downloading_articles;
 	std::unordered_set<pk_t> getting_article_list;
 
