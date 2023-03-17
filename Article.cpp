@@ -241,22 +241,29 @@ void Article::calculate_crypto_hash() {
 	file.open(QIODevice::ReadOnly); //opens the file
 	QTextStream text_stream(&file);
 	QString line, contents;
+	
 	if (!text_stream.atEnd()) {
 		line = text_stream.readLine();
 		contents.append(line);
 		contents.append('\n');
 	}
+
 	while (!text_stream.atEnd()) { 
 		line = text_stream.readLine();
 		contents.append(line); //loads the article line by line
 		contents.append('\n');
 	}
 
-
-
 	if (article_present()) {
 		CryptoPP::SHA3_256 hash;
-		CryptoPP::StringSource(contents.toStdString().c_str(), true, new CryptoPP::HashFilter(hash, new CryptoPP::StringSink(crypto_hash_)));
+		CryptoPP::StringSource(
+			contents.toStdString().c_str(),
+			true,
+			new CryptoPP::HashFilter(
+				hash,
+				new CryptoPP::StringSink(crypto_hash_)
+			)
+		);
 	}
 }
 
