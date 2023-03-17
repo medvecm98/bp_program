@@ -159,3 +159,97 @@ Article& NewspaperEntry::get_article(hash_t id) {
 std::size_t NewspaperEntry::friend_count() const {
 	return friends_.size();
 }
+
+user_container_citer NewspaperEntry::get_first_authority() const {
+	return _authorities.cbegin();
+}
+std::size_t NewspaperEntry::get_authority_count() const {
+	return _authorities.size();
+}
+
+pk_t NewspaperEntry::get_id() const {
+	return news_id_;
+}
+
+const my_string& NewspaperEntry::get_name() const {
+	return news_name_;
+}
+
+level_t NewspaperEntry::level() {
+	return level_;
+}
+
+ArticleListWrapper& NewspaperEntry::get_list_of_articles() {
+	return article_list_wrapper_;
+};
+
+void NewspaperEntry::serialize_entry(np2ps::NewspaperEntry* entry) {
+	std::cout << "serializing newspaper\n";
+	entry->set_news_name(news_name_);
+	entry->set_news_id(news_id_);
+}
+
+void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne) {
+	serialize_entry(nserialized_ne->mutable_entry());
+	// for (auto& [hash, art] : _articles) {
+	// 	np2ps::Article* pa = nserialized_ne->add_articles();
+	// 	art.network_serialize_article(pa);
+	// }
+}
+
+void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) {
+	serialize_entry(lserialized_ne->mutable_entry());
+	for (auto& [hash, art] : _articles) {
+		np2ps::SerializedArticle* pa = lserialized_ne->add_articles();
+		art.local_serialize_article(pa);
+	}
+	for (auto&& f : friends_) {
+		lserialized_ne->add_friends(f);
+	}
+}
+
+void NewspaperEntry::fill_time_sorted_articles() {
+	if (time_sorted_articles.empty()) {
+		for (auto&& article : _articles) {
+			time_sorted_articles.emplace(article.first, article.second.creation_time());
+		}
+	}
+}
+
+bool NewspaperEntry::has_newspaper_public_key() {
+	return newspaper_public_key_.has_value();
+}
+
+void NewspaperEntry::set_newspaper_public_key(CryptoPP::RSA::PublicKey& pk) {
+	newspaper_public_key_ = {pk};
+}
+
+rsa_public_optional NewspaperEntry::get_newspaper_public_key() {
+	return newspaper_public_key_;
+}
+
+CryptoPP::RSA::PublicKey& NewspaperEntry::get_newspaper_public_key_value() {
+	if (newspaper_public_key_.has_value())
+		return newspaper_public_key_.value();
+
+	throw other_error("No key for given newspaper found.");
+}
+
+bool NewspaperEntry::has_newspaper_private_key() {
+	return newspaper_private_key_.has_value();
+}
+
+void NewspaperEntry::set_newspaper_private_key(CryptoPP::RSA::PrivateKey& pk) {
+	newspaper_private_key_ = {pk};
+}
+
+rsa_private_optional NewspaperEntry::get_newspaper_private_key() {
+	return newspaper_private_key_;
+}
+
+CryptoPP::RSA::PrivateKey& NewspaperEntry::get_newspaper_private_key_value() {
+	if (newspaper_private_key_.has_value())
+		return newspaper_private_key_.value();
+
+	throw other_error("No key for given newspaper found.");
+}

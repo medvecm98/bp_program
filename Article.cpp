@@ -309,4 +309,3 @@ void Article::local_serialize_article(np2ps::SerializedArticle* art) {
 	art->set_article_present(article_present_);
 	art->set_notes(_notes);
 }
-

@@ -424,6 +424,8 @@ public:
 		return readers_.size();
 	}
 
+	void sign_hash();
+
 private:
 	my_string _author_name; //network, local
 	pk_t _author_id; //network, local

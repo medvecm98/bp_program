@@ -166,4 +166,11 @@ using optional_my_string = std::optional<my_string>;
 
 using my_clock = std::chrono::system_clock;
 
+//types for map to store keys for given user
+using rsa_public_optional = std::optional< CryptoPP::RSA::PublicKey>;
+using rsa_private_optional = std::optional< CryptoPP::RSA::PrivateKey>;
+using eax_optional = std::optional< CryptoPP::SecByteBlock>;
+using rsa_eax_pair = std::pair< rsa_public_optional, eax_optional>;
+using pk_t_keys_map = std::unordered_map< pk_t, rsa_eax_pair>;
+
 #endif //PROGRAM_GLOBALUSING_H

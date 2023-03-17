@@ -36,61 +36,43 @@ public:
 	Article& get_article(hash_t id);
 	void deserialize(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
 
-	user_container_citer get_first_authority() const {
-		return _authorities.cbegin();
-	}
-	std::size_t get_authority_count() const {
-		return _authorities.size();
-	}
+	user_container_citer get_first_authority();
 
-	pk_t get_id() const {
-		return news_id_;
-	}
+	std::size_t get_authority_count();
 
-	const my_string& get_name() const {
-		return news_name_;
-	}
+	pk_t get_id();
 
-	level_t level() {
-		return level_;
-	}
+	const my_string& get_name();
 
-	ArticleListWrapper& get_list_of_articles() {
-		return article_list_wrapper_;
-	};
+	level_t level();
 
-	void serialize_entry(np2ps::NewspaperEntry* entry) {
-		std::cout << "serializing newspaper\n";
-		entry->set_news_name(news_name_);
-		entry->set_news_id(news_id_);
-	}
+	ArticleListWrapper& get_list_of_articles();
 
-	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne) {
-		serialize_entry(nserialized_ne->mutable_entry());
-		// for (auto& [hash, art] : _articles) {
-		// 	np2ps::Article* pa = nserialized_ne->add_articles();
-		// 	art.network_serialize_article(pa);
-		// }
-	}
+	void serialize_entry(np2ps::NewspaperEntry* entry);
 
-	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) {
-		serialize_entry(lserialized_ne->mutable_entry());
-		for (auto& [hash, art] : _articles) {
-			np2ps::SerializedArticle* pa = lserialized_ne->add_articles();
-			art.local_serialize_article(pa);
-		}
-		for (auto&& f : friends_) {
-			lserialized_ne->add_friends(f);
-		}
-	}
+	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne);
 
-	void fill_time_sorted_articles() {
-		if (time_sorted_articles.empty()) {
-			for (auto&& article : _articles) {
-				time_sorted_articles.emplace(article.first, article.second.creation_time());
-			}
-		}
-	}
+	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) ;
+
+	void fill_time_sorted_articles();
+
+	bool has_newspaper_public_key();
+
+	void set_newspaper_public_key(CryptoPP::RSA::PublicKey& pk) ;
+
+	rsa_public_optional get_newspaper_public_key();
+
+	CryptoPP::RSA::PublicKey& get_newspaper_public_key_value();
+
+	bool has_newspaper_private_key();
+
+	void set_newspaper_private_key(CryptoPP::RSA::PrivateKey& pk);
+
+	rsa_private_optional get_newspaper_private_key() ;
+
+	CryptoPP::RSA::PrivateKey& get_newspaper_private_key_value();
+
+	void sign_article();
 
 private:
 	pk_t news_id_;
@@ -101,6 +83,8 @@ private:
 	ArticleListWrapper article_list_wrapper_; //saving requested article list
 	timed_article_map time_sorted_articles;
 	user_container friends_; //friends, that can share the articles with you
+	rsa_public_optional newspaper_public_key_; //newspaper public key to check article legitimacy
+	rsa_private_optional newspaper_private_key_;
 };
 
 using news_database = std::unordered_map<pk_t, NewspaperEntry>;
