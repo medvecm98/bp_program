@@ -207,6 +207,17 @@ public:
 	 */
 	void try_connect(shared_ptr_message msg, IpWrapper& ipw);
 
+	/**
+	 * @brief Tries to connect to receiver.
+	 * 
+	 * Tries to find active connection to peer at first, then tries to connect
+	 * directly, then it will relay thorugh STUN server.
+	 * 
+	 * @param msg Message to send.
+	 * @param ipw IpWrapper of the receiver.
+	 */
+	void try_connect(QByteArray msg, IpWrapper& ipw);
+
 public slots:
 	/**
 	 * @brief Displats PeerSender socket error.
@@ -345,7 +356,7 @@ public:
 	 * @param sender Sender of the message, creator of the symmetric key.
 	 * @param receiver Receiver of the message.
 	 */	
-	void sign_and_encrypt_key(QDataStream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver);
+	shared_ptr_message sign_and_encrypt_key(CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver);
 
 	/**
 	 * @brief Generates and stores private and public key for Peer.
@@ -442,8 +453,9 @@ public:
 	std::shared_ptr<eax_optional> get_or_create_eax(shared_ptr_message msg);
 	IpWrapper& save_symmetric_key(pk_t save_to, CryptoPP::SecByteBlock&& aes_key);
 
-	QByteArray generate_symmetric_key_message(shared_ptr_message msg);
+	shared_ptr_message generate_symmetric_key_message(shared_ptr_message msg);
 	CryptoPP::SecByteBlock generate_symmetric_key();
+	void identify_peer_save_message(shared_ptr_message);
 
 	IpMap ip_map_; //map of all IPs, ports and RSA public keys
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles; //articles waiting to be found in the network
