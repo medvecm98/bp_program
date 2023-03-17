@@ -63,7 +63,7 @@ void Networking::generate_rsa_key_pair() {
 }
 
 
-void Networking::sign_and_encrypt_key(QDataStream& output, CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver) {
+shared_ptr_message Networking::sign_and_encrypt_key(CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver) {
 	if (!ip_map_.private_rsa.has_value() || !ip_map_.my_ip.key_pair.first.has_value()) {
 		generate_rsa_key_pair(); //generated RSA keys, if they weren't before
 	}
@@ -104,63 +104,69 @@ void Networking::sign_and_encrypt_key(QDataStream& output, CryptoPP::SecByteBloc
 
 	/* creates the message to send */
 
-	np2ps::Message send_msg;
-	send_msg.set_from(sender);
-	send_msg.set_to(receiver);
-	send_msg.set_msg_ctx(np2ps::ONE_WAY);
-	send_msg.set_msg_type(np2ps::SYMMETRIC_KEY);
+	shared_ptr_message send_msg = std::make_shared<np2ps::Message>();
+	send_msg->set_from(sender);
+	send_msg->set_to(receiver);
+	send_msg->set_msg_ctx(np2ps::ONE_WAY);
+	send_msg->set_msg_type(np2ps::SYMMETRIC_KEY);
 
-	send_msg.mutable_symmetric_key()->set_key(encrypted_key);
-	send_msg.mutable_symmetric_key()->set_signature(signature_str);
+	send_msg->mutable_symmetric_key()->set_key(encrypted_key);
+	send_msg->mutable_symmetric_key()->set_signature(signature_str);
 
-	std::string send_msg_str = send_msg.SerializeAsString();
-	quint64 msg_size = send_msg_str.size();
+	return send_msg;
+}
 
-	output << VERSION;
-	output << KEY_MESSAGE;
-	output << msg_size;
-	//output << std::setfill('0') << std::setw(16) << std::hex << send_msg_str.size(); //length of the message
-	QByteArray send_msg_str_arr = QByteArray::fromStdString(send_msg_str); 
-	output << send_msg_str_arr;
+void Networking::identify_peer_save_message(shared_ptr_message msg) {
+	std::cout << "requesting IP and public key for pid: " << msg->to() << std::endl;
+	stun_client->identify(msg->to()); //use STUN for IP and RSA public
+	waiting_ip.emplace(msg->to(), msg); //store message for later, when IP and RSA will arrive
+	std::cout << "User " << msg->to() << " was not found in IPMap" << std::endl;
 }
 
 void Networking::send_message(shared_ptr_message msg) {
 	try {
 		IpWrapper& ipw = ip_map().get_wrapper_ref(msg->to());
+
 		std::cout << "User " << msg->to() << " found in IP MAP database; Networking::send_message(shared_ptr_message msg)" << std::endl;
 
-		if (msg->msg_type() == np2ps::PUBLIC_KEY) {// I'm requesting public key
+		if (!ipw.has_ipv4()) { //no IP
+			identify_peer_save_message(msg);
+			return;
+		}
+
+		if (msg->msg_type() == np2ps::PUBLIC_KEY) {  // I'm requesting public key
 			std::cout << "	PUBLIC_KEY type of message" << std::endl;
 			sender_->message_send(std::move(msg), ipw);
 			return;
 		}
 
-		if (ipw.has_rsa()) { // I have public key
-			std::cout << "	Public key found, and user is in database" << std::endl;
-			sender_->message_send(std::move(msg), ipw);
-			return;
-		}
-		else if (ipw.has_ipv4()) { // I don't have public key, yet user is in DB, with IP
-			/* we need to get user's RSA and EAX */
-			shared_ptr_message credentials_msg = MFW::SetMessageContextRequest(MFW::CredentialsFactory(msg->from(), msg->to()));
+		if (!ipw.has_rsa()) { // no public key
+			shared_ptr_message credentials_msg = 
+				MFW::SetMessageContextRequest(
+					MFW::CredentialsFactory(
+						msg->from(), msg->to()
+					)
+				);
 			waiting_symmetric_key_messages.emplace(msg->to(), msg); //save message for when exchange is finished
 
 			credentials_msg->mutable_credentials()->set_req_eax_key(true);
 			credentials_msg->mutable_credentials()->set_req_rsa_public_key(true);
 
 			sender_->message_send(std::move(msg), ipw);
-		}
-		else {
-			throw other_error("No IP, no nothing...");
+			return;
 		}
 
-		//user was not found in IpMap and we need its IP and RSA public
-		
+		if (!ipw.has_eax()) {
+			shared_ptr_message key_msg = generate_symmetric_key_message(msg);
+			waiting_symmetrich_exchange.emplace(msg->to(), std::move(msg));
+			sender_->message_send(std::move(key_msg), ipw);
+			return;
+		}
+
+		std::cout << "	Message ready to be normally sent." << std::endl;
+		sender_->message_send(std::move(msg), ipw);
 	} catch (user_not_found_in_database& e) {
-		std::cout << "requesting IP and public key for pid: " << msg->to() << std::endl;
-		stun_client->identify(msg->to()); //use STUN for IP and RSA public
-		waiting_ip.emplace(msg->to(), msg); //store message for later, when IP and RSA will arrive
-		std::cout << "User " << msg->to() << " was not found in IPMap" << std::endl;
+		identify_peer_save_message(msg);
 	}
 	
 }
@@ -524,51 +530,49 @@ std::string create_iv_string(CryptoPP::SecByteBlock& iv) {
 	return std::string(reinterpret_cast<const char*>(&iv[0]), iv.size());
 }
 
+void write_normal_message(QDataStream& length_plus_msg, shared_ptr_message msg, 
+						  const std::string& iv_str, const std::string& encrypted_msg) 
+{
+	length_plus_msg << VERSION;
+	length_plus_msg << NORMAL_MESSAGE;
+	length_plus_msg << (quint64)msg->from(); //public identifier won't be encrypted
+	length_plus_msg << (quint64)iv_str.size() << QByteArray::fromStdString(iv_str);
+	length_plus_msg << (quint64)encrypted_msg.size() << QByteArray::fromStdString(encrypted_msg); //initialization vector is written after size, but before message itself
+}
+
+void write_key_message(QDataStream& length_plus_msg, const std::string& serialized_msg) {
+	length_plus_msg << VERSION;
+	length_plus_msg << KEY_MESSAGE;
+	length_plus_msg << (quint64)serialized_msg.size();
+	length_plus_msg << QByteArray::fromStdString(serialized_msg);
+}
+
 void PeerSender::message_send(QTcpSocket* socket, shared_ptr_message msg, IpWrapper ipw, bool relay = false) {
 	//serialize message
-    std::string serialized_msg, encrypted_msg;
+    std::string serialized_msg;
 	msg->SerializeToString(&serialized_msg);
-
-
-	//encrypt message
-	auto& prng = prng_;
-	CryptoPP::SecByteBlock iv(CryptoPP::AES::BLOCKSIZE);
-	prng.GenerateBlock(iv, iv.size());
 
 	QByteArray length_plus_msg_block;
 	QDataStream length_plus_msg(&length_plus_msg_block, QIODevice::ReadWrite);
 	length_plus_msg.setVersion(QDataStream::Qt_5_0);
-	if (msg->msg_type() != np2ps::PUBLIC_KEY) {
-		// check if symmetric key exists for given receiver:
-		if (!ipw.key_pair.second.has_value()) {
-			//...no, and so symmetric key needs to be yet generated
-			QByteArray key_exchange_msg_block = networking_->generate_symmetric_key_message(msg);
+	if (msg->msg_type() == np2ps::PUBLIC_KEY ||
+		msg->msg_type() == np2ps::SYMMETRIC_KEY) 
+	{
+		write_key_message(length_plus_msg, serialized_msg);
+	}
+	else {
+		std::string encrypted_msg;
 
-			if (!relay)
-				send_message_using_socket(socket, key_exchange_msg_block);
-			else
-				send_message_using_turn(networking_, key_exchange_msg_block, msg->to(), ipw);
-
-			networking_->waiting_symmetrich_exchange.insert({msg->to(), std::move(msg)});
-			return;
-		}
+		//encrypt message
+		auto& prng = prng_;
+		CryptoPP::SecByteBlock iv(CryptoPP::AES::BLOCKSIZE);
+		prng.GenerateBlock(iv, iv.size());
 
 		encrypt_message_symmetrically(ipw.key_pair.second, iv, serialized_msg, encrypted_msg);
 
 		//we will create the initialization vector (iv) string
 		std::string iv_str = create_iv_string(iv);
-
-		length_plus_msg << VERSION;
-		length_plus_msg << NORMAL_MESSAGE;
-		length_plus_msg << (quint64)msg->from(); //public identifier won't be encrypted
-		length_plus_msg << (quint64)iv_str.size() << QByteArray::fromStdString(iv_str);
-		length_plus_msg << (quint64)encrypted_msg.size() << QByteArray::fromStdString(encrypted_msg); //initialization vector is written after size, but before message itself
-	}
-	else {
-		length_plus_msg << VERSION;
-		length_plus_msg << KEY_MESSAGE;
-		length_plus_msg << (quint64)serialized_msg.size();
-		length_plus_msg << QByteArray::fromStdString(serialized_msg);
+		write_normal_message(length_plus_msg, msg, iv_str, encrypted_msg);
 	}
 
     //send message
@@ -692,14 +696,10 @@ CryptoPP::SecByteBlock Networking::generate_symmetric_key() {
 /**
  * Generates symmetric key. Returns already-sendable message.
 */
-QByteArray Networking::generate_symmetric_key_message(shared_ptr_message msg) {
+shared_ptr_message Networking::generate_symmetric_key_message(shared_ptr_message msg) {
 	auto wrapper = save_symmetric_key(msg->to(), generate_symmetric_key());
 
-	QByteArray key_exchange_msg_block;
-	QDataStream key_exchange_msg(&key_exchange_msg_block, QIODevice::ReadWrite);
-	key_exchange_msg.setVersion(QDataStream::Qt_5_0);
+	shared_ptr_message key_message = sign_and_encrypt_key(wrapper.get_eax(), msg->from(), msg->to());
 
-	sign_and_encrypt_key(key_exchange_msg, wrapper.get_eax(), msg->from(), msg->to());
-
-	return key_exchange_msg_block;
+	return key_message;
 }
