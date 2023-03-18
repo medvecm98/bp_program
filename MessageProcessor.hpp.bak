@@ -1,9 +1,6 @@
 #ifndef NP2PS_MESSAGE_PROCESSOR
 #define NP2PS_MESSAGE_PROCESSOR
 
-#include "MPCreate.hpp"
-#include "MPProcess.hpp"
-
 /**
  * @brief This was supposed to be a universal message processor.
  * 

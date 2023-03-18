@@ -344,7 +344,7 @@ public:
 	void add_to_messages_to_decrypt(pk_t pk_str, EncryptedMessageWrapper&& emw) {
 		waiting_decrypt.emplace(pk_str, emw);
 	}
-	
+
 	/**
 	 * @brief Signs then encrypts given EAX + AES key.
 	 * 

@@ -1,8 +1,8 @@
 #include "IpMap.h"
 
-user_not_found_in_database create_ip_wrapper_error(pk_t user) {
+user_not_found_in_database create_ip_wrapper_error(pk_t user, const std::string& reason) {
 	std::stringstream ss;
-	ss << "IpWrapper for user " << user << " was not found when checking for EAX existence.";
+	ss << "IpWrapper for user " << user << " was not found when " << reason << ".";
 	return user_not_found_in_database(ss.str().c_str());
 }
 
@@ -106,7 +106,7 @@ bool IpMap::update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6,
 
 bool IpMap::update_rsa_public(pk_t pk, const std::string& rsa) {
 	if (map_.find(pk) == map_.end()) {
-		throw create_ip_wrapper_error(pk);
+		throw create_ip_wrapper_error(pk, "updating for RSA public");
 	}
 	else {
 		map_.at(pk).add_rsa_key(rsa);
@@ -126,7 +126,7 @@ bool IpMap::update_rsa_public(pk_t pk, const CryptoPP::RSA::PublicKey& rsa) {
 
 bool IpMap::update_eax(pk_t pk, const std::string& eax) {
 	if (map_.find(pk) == map_.end()) {
-		throw create_ip_wrapper_error(pk);
+		throw create_ip_wrapper_error(pk, "updating EAX");
 	}
 	else {
 		map_.at(pk).add_eax_key(eax);
@@ -141,7 +141,7 @@ QHostAddress IpMap::get_ip4(pk_t pk) {
 		return it->second.ipv4;
 	}
 
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "getting ipv4");
 }
 
 QHostAddress IpMap::get_ip6(pk_t pk) {
@@ -151,7 +151,7 @@ QHostAddress IpMap::get_ip6(pk_t pk) {
 		return it->second.ipv6;
 	}
 
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "getting ipv6");
 }
 
 std::uint16_t IpMap::get_port(pk_t pk) {
@@ -161,7 +161,7 @@ std::uint16_t IpMap::get_port(pk_t pk) {
 		return it->second.port;
 	}
 
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "getting port");
 }
 
 std::shared_ptr<rsa_public_optional> IpMap::get_rsa_public(pk_t pk) {
@@ -171,7 +171,7 @@ std::shared_ptr<rsa_public_optional> IpMap::get_rsa_public(pk_t pk) {
 		return std::make_shared<rsa_public_optional>(it->second.key_pair.first);
 	}
 
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "getting RSA public");
 }
 
 std::shared_ptr<eax_optional> IpMap::get_eax(pk_t pk) {
@@ -181,7 +181,7 @@ std::shared_ptr<eax_optional> IpMap::get_eax(pk_t pk) {
 		return std::make_shared<eax_optional>(it->second.key_pair.second);
 	}
 
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "getting EAX");
 }
 
 
@@ -191,7 +191,7 @@ bool IpMap::have_ip4(pk_t pk) {
 	if (it != map_.end())
 		return !it->second.ipv4.isNull();
 
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "checking for ipv4");
 }
 
 bool IpMap::have_ip6(pk_t pk) {
@@ -200,7 +200,7 @@ bool IpMap::have_ip6(pk_t pk) {
 	if (it != map_.end())
 		return !it->second.ipv6.isNull();
 
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "checking for ipv6");
 }
 
 bool IpMap::have_rsa_public(pk_t pk) {
@@ -209,7 +209,7 @@ bool IpMap::have_rsa_public(pk_t pk) {
 	if (it != map_.end())
 		return it->second.key_pair.first.has_value();
 
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "checking for RSA public");
 }
 
 bool IpMap::have_eax(pk_t pk) {
@@ -218,7 +218,7 @@ bool IpMap::have_eax(pk_t pk) {
 	if (it != map_.end())
 		return it->second.key_pair.second.has_value();
 	
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "checking for EAX");
 }
 
 ip_map::iterator IpMap::get_wrapper_for_pk(pk_t pk) {
@@ -226,7 +226,7 @@ ip_map::iterator IpMap::get_wrapper_for_pk(pk_t pk) {
 	if (find_result != map_.end()) {
 		return find_result;
 	}
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "getting entire wrapper");
 }
 
 IpWrapper& IpMap::get_wrapper_ref(pk_t id) {
@@ -234,12 +234,12 @@ IpWrapper& IpMap::get_wrapper_ref(pk_t id) {
 	if (find_result != map_.end()) {
 		return find_result->second;
 	}
-	throw create_ip_wrapper_error(id);
+	throw create_ip_wrapper_error(id, "getting wrapper ref");
 }
 
 void IpMap::set_tcp_socket(pk_t pk, QTcpSocket* tcp_socket_) {
 	if (map_.find(pk) == map_.end()) {
-		throw create_ip_wrapper_error(pk);
+		throw create_ip_wrapper_error(pk, "setting TCP socker");
 	}
 	else {
 		map_.at(pk).copy_tcp_socket(tcp_socket_);
@@ -271,13 +271,13 @@ bool IpMap::have_port(pk_t pk) {
 	if (it != map_.end())
 		return it->second.port != 0;
 
-	throw create_ip_wrapper_error(pk);
+	throw create_ip_wrapper_error(pk, "checking for port");
 }
 
 bool IpMap::update_stun_ip(pk_t pid, const QHostAddress& ip, std::uint16_t port) {
 	auto map_it = map_.find(pid);
 	if (map_it == map_.end()) {
-		throw create_ip_wrapper_error(pid);
+		throw create_ip_wrapper_error(pid, "checking for STUN IP");
 	}
 	else {
 		map_it->second.stun_address = ip;

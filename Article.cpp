@@ -316,3 +316,16 @@ void Article::local_serialize_article(np2ps::SerializedArticle* art) {
 	art->set_article_present(article_present_);
 	art->set_notes(_notes);
 }
+
+std::string& Article::get_signature() {
+	if (!signature_.empty()) {
+		return signature_;
+	}
+	else {
+		throw other_error("Missing article signature.");
+	}
+}
+
+void Article::set_signature(std::string signature) {
+	signature_ = signature;
+}

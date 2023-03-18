@@ -34,8 +34,6 @@ void MainWindow::on_pushButton_print_peer_released()
 
 void MainWindow::newspaper_added_to_db(pk_t news_id) {
 	auto& news = ctx->p.get_news(news_id);
-	auto name = news.get_name().c_str();
-	auto id = news.get_id();
 	generate_article_list();
 }
 
@@ -93,7 +91,7 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 					category_found = true; //found category we are looking for in Newspaper tree
 					auto article = news_articles_it;
 					for (; article != news_atricles_it_end; article++) { //traverse thorugh all articles
-						bool article_found = false;
+						bool article_found = false; //(re)sets the flag
 						for (int j = 0; j < requseted_newspaper->child(i)->childCount(); j++) { //traverse thorugh all the children of given category (those are articles)
 							if (requseted_newspaper->child(i)->child(j)->text(2) == QString::number(article->second.main_hash())) { //is the currently iterated article `article` in the Newspaper tree already?
 								article_found = true; //we found the article in the Newspaper tree
@@ -103,7 +101,6 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 							//yes, and so we will add it
 							requseted_newspaper->child(i)->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())})));
 						}
-						article_found = false; //resets the flag
 					}
 				}
 			}

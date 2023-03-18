@@ -4,7 +4,10 @@ project(news_p2p_sharing)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-pedantic -O0 -g)
-
+set(CMAKE_CXX_CLANG_TIDY
+	clang-tidy;
+	-header-filter=${CMAKE_CURRENT_SOURCE_DIR};
+)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -29,11 +32,11 @@ add_executable(news_p2p_sharing main.cpp newarticleform.h newarticleform.cpp new
 	mainwindow.h mainwindow.ui Article.cpp Article.h StringSplitter.h GlobalUsing.h
 	Peer.cpp Peer.h IpWrapper.h IpMap.cpp IpMap.h NewspaperEntry.cpp NewspaperEntry.h Margins.h 
 	Message.cpp Message.h Networking.cpp Networking.h StunServer.hpp StunServer.cpp StunMessages.hpp StunMessages.cpp
-	StunClient.hpp StunClient.cpp XorMappedAddressAttribute.hpp XorMappedAddressAttribute.cpp MessageProcessor.hpp
-	MessageProcessor.cpp ErrorCodeAttribute.hpp ErrorCodeAttribute.cpp UnknownAttributesAttribute.hpp
+	StunClient.hpp StunClient.cpp XorMappedAddressAttribute.hpp XorMappedAddressAttribute.cpp
+	ErrorCodeAttribute.hpp ErrorCodeAttribute.cpp UnknownAttributesAttribute.hpp
 	UnknownAttributesAttribute.cpp TurnAllocation.hpp RequestedTransportAttribute.hpp RequestedTransportAttribute.cpp
 	LifetimeAttribute.hpp LifetimeAttribute.cpp XorRelayedAddress.hpp XorRelayedAddress.cpp 
-	PublicIdentifierAttribute.hpp PublicIdentifierAttribute.cpp MPCreate.hpp MPProcess.hpp StunTags.hpp 
+	PublicIdentifierAttribute.hpp PublicIdentifierAttribute.cpp StunTags.hpp 
 	DataAttribute.hpp DataAttribute.cpp PublicKeyAttribute.hpp PublicKeyAttribute.cpp 
 	RelayedPublicIdentifierAttribute.hpp RelayedPublicIdentifierAttribute.cpp addmargin.h addmargin.cpp addmargin.ui)
 target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art proto_nee proto_per proto_ipm ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}

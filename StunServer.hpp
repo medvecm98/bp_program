@@ -7,7 +7,16 @@
 #include <set>
 
 #include "GlobalUsing.h"
-#include "MessageProcessor.hpp"
+#include "XorMappedAddressAttribute.hpp"
+#include "ErrorCodeAttribute.hpp"
+#include "UnknownAttributesAttribute.hpp"
+#include "TurnAllocation.hpp"
+#include "RequestedTransportAttribute.hpp"
+#include "LifetimeAttribute.hpp"
+#include "XorRelayedAddress.hpp"
+#include "IpMap.h"
+#include "PublicIdentifierAttribute.hpp"
+#include "StunTags.hpp"
 #include "TurnAllocation.hpp"
 #include "Networking.h"
 

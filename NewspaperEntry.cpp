@@ -253,3 +253,25 @@ CryptoPP::RSA::PrivateKey& NewspaperEntry::get_newspaper_private_key_value() {
 
 	throw other_error("No key for given newspaper found.");
 }
+
+void NewspaperEntry::sign_article(hash_t id) {
+	Article& article = get_article(id);
+	if (has_newspaper_private_key()) {
+		auto signature = CryptoUtils::instance().sign_with_keys(
+			get_newspaper_private_key(), article.get_crypto_hash()
+		);
+		article.set_signature(signature);
+	}
+	else {
+		throw other_error("Private key for given newspaper not found.");
+	}
+}
+
+bool NewspaperEntry::verify_article_signature(hash_t id) {
+	auto& article = get_article(id);
+	return CryptoUtils::instance().verify_signature_with_keys(
+		get_newspaper_public_key(),
+		article.get_crypto_hash(),
+		article.get_signature()
+	);
+}

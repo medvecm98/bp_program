@@ -425,6 +425,8 @@ public:
 	}
 
 	void sign_hash();
+	std::string& get_signature();
+	void set_signature(std::string signature);
 
 private:
 	my_string _author_name; //network, local
@@ -446,6 +448,7 @@ private:
 	std::uint64_t modification_time_; //network, local
 	my_timepoint creation_time_timepoint_; //network, local
 	user_container readers_; //local, TODO: implement
+	std::string signature_;
 };
 
 using article_ptr = Article*;

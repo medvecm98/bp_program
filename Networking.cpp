@@ -62,7 +62,6 @@ void Networking::generate_rsa_key_pair() {
 	ip_map_.my_ip.key_pair.first = {public_key};
 }
 
-
 shared_ptr_message Networking::sign_and_encrypt_key(CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver) {
 	if (!ip_map_.private_rsa.has_value() || !ip_map_.my_ip.key_pair.first.has_value()) {
 		generate_rsa_key_pair(); //generated RSA keys, if they weren't before
@@ -94,8 +93,10 @@ shared_ptr_message Networking::sign_and_encrypt_key(CryptoPP::SecByteBlock& key,
 		new CryptoPP::PK_EncryptorFilter(
 			prng_,
 			rsa_encryptor,
-			new CryptoPP::StringSink(
-				encrypted_key
+			new CryptoPP::HexEncoder (
+				new CryptoPP::StringSink(
+					encrypted_key
+				)
 			)
 		)
 	);
@@ -305,7 +306,6 @@ void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlo
 	shared_ptr_message m = std::make_shared<proto_message>();
 	m->ParseFromString(dec_msg);
 	if (m->msg_ctx() == np2ps::REQUEST) {
-		seq_t rv = m->seq();
 		networking->add_to_received(std::move(m)); //message now can be read in GPB format
 		return;
 	}

@@ -52,8 +52,7 @@ void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id)
         QDataStream out_stream(&block, QIODevice::WriteOnly);
         out_stream.setVersion(QDataStream::Qt_5_0);
         stun_message->write_stun_message(out_stream);
-        int b = 0;
-        if ((b = socket->write(block)) == -1)
+        if (socket->write(block) == -1)
             std::cout << "SC: Error occured while writing the block" << std::endl;
 
     }
@@ -98,7 +97,6 @@ void StunClient::host_connected() {
 
     auto mtemp = header_waiting_to_connect;
     auto atemp = address_waiting_to_connect;
-    auto ptemp = port_waiting_to_connect;
 
     if (save_socket) {
         auto pktemp = connecting_to;
@@ -116,8 +114,7 @@ void StunClient::host_connected() {
     QDataStream out_stream(&block, QIODevice::WriteOnly);
     out_stream.setVersion(QDataStream::Qt_5_0);
     mtemp->write_stun_message(out_stream);
-    int b = 0;
-    if ((b = socket->write(block)) == -1)
+    if (socket->write(block) == -1)
         std::cout << "SC: Error occured while writing the block" << std::endl;
 }
 
@@ -129,10 +126,10 @@ void StunClient::host_connected() {
 void StunClient::handle_received_message(stun_header_ptr stun_message_header, QTcpSocket* socket) {
     if (stun_message_header->stun_class == StunClassEnum::response_success) {
         if (stun_message_header->stun_method == StunMethodEnum::binding) {
-            QString client_IP;
-            MPProcess<CResponseSuccessTag, MBindingTag> mpps(stun_message_header, client_IP);
-            MessageProcessor<CResponseSuccessTag, MBindingTag>::process(mpps);
-            std::cout << "IP: " << client_IP.toStdString() << ", port: " << mpps.port << std::endl;
+            // QString client_IP;
+            // MPProcess<CResponseSuccessTag, MBindingTag> mpps(stun_message_header, client_IP);
+            // MessageProcessor<CResponseSuccessTag, MBindingTag>::process(mpps);
+            // std::cout << "IP: " << client_IP.toStdString() << ", port: " << mpps.port << std::endl;
         }
         else if (stun_message_header->stun_method == StunMethodEnum::allocate) {
             process_response_success_allocate(socket, stun_message_header);
@@ -143,8 +140,8 @@ void StunClient::handle_received_message(stun_header_ptr stun_message_header, QT
     }
     else if (stun_message_header->stun_class == StunClassEnum::response_error) {
         if (stun_message_header->stun_method == StunMethodEnum::binding) {
-            MPProcess<CResponseErrorTag, MBindingTag> mppe(stun_message_header);
-            MessageProcessor<CResponseErrorTag, MBindingTag>::process(mppe);
+            // MPProcess<CResponseErrorTag, MBindingTag> mppe(stun_message_header);
+            // MessageProcessor<CResponseErrorTag, MBindingTag>::process(mppe);
         }
         else if (stun_message_header->stun_method == StunMethodEnum::identify) {
             process_response_error_identify(stun_message_header);
@@ -197,8 +194,8 @@ void StunClient::allocate_request(pk_t where) {
 }
 
 void StunClient::create_binding_request(stun_header_ptr stun_msg) {
-    MPCreate<CRequestTag, MBindingTag> mpc(rng, stun_msg);
-    MessageProcessor<CRequestTag, MBindingTag>::create(mpc);
+    // MPCreate<CRequestTag, MBindingTag> mpc(rng, stun_msg);
+    // MessageProcessor<CRequestTag, MBindingTag>::create(mpc);
 }
 
 void StunClient::error(QAbstractSocket::SocketError socketError) {
@@ -357,7 +354,7 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
             xma = (XorMappedAddressAttribute*)attr.get();
         }
         if (attr->attribute_type == StunAttributeEnum::lifetime) {
-            la = (LifetimeAttribute*)attr.get();
+            // la = (LifetimeAttribute*)attr.get();
         }
         if (attr->attribute_type == StunAttributeEnum::public_identifier) {
             pia = (PublicIdentifierAttribute*)attr.get();
@@ -370,18 +367,20 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
 }
 
 void StunClient::process_response_success_binding(stun_header_ptr stun_message, QTcpSocket* socket_) {
-    XorMappedAddressAttribute* xmaa;
+    XorMappedAddressAttribute* xmaa = NULL;
     for (auto&& attr : stun_message->attributes) {
         if (attr->attribute_type == StunAttributeEnum::xor_mapped_address) {
             xmaa = (XorMappedAddressAttribute*) attr.get();
         }
     }
-    if ((socket_->localAddress() == QHostAddress(xmaa->get_address())) && (socket_->localPort() == xmaa->get_port())) {}
-    else {
-        nat_active_flag = true;
+    if (xmaa) {
+        if ((socket_->localAddress() == QHostAddress(xmaa->get_address())) && (socket_->localPort() == xmaa->get_port())) {}
+        else {
+            nat_active_flag = true;
+        }
+        networking_->ip_map_.my_ip.ipv4 = QHostAddress(xmaa->get_address());
+        networking_->ip_map_.my_ip.port = xmaa->get_port();
     }
-    networking_->ip_map_.my_ip.ipv4 = QHostAddress(xmaa->get_address());
-    networking_->ip_map_.my_ip.port = xmaa->get_port();
 }
 
 void StunClient::identify(pk_t who) {
@@ -421,10 +420,6 @@ void StunClient::identify(QHostAddress& address) {
 
 pk_t StunClient::get_stun_server_any() {
     return stun_servers[0];
-}
-
-void StunClient::stun_server_connected() {
-    QTcpSocket* socket = (QTcpSocket*) QObject::sender();
 }
 
 void StunClient::stun_server_connection_error() {

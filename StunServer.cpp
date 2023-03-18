@@ -54,8 +54,8 @@ void StunServer::reply() {
 
         if (stun_message->stun_class == StunClassEnum::request) {
             if (stun_message->stun_method == StunMethodEnum::binding) {
-                auto mp = MPProcess<CRequestTag, MBindingTag>(stun_message, stun_new, socket, unknown_cr_attributes);
-                MessageProcessor<CRequestTag, MBindingTag>::process(mp);
+                // auto mp = MPProcess<CRequestTag, MBindingTag>(stun_message, stun_new, socket, unknown_cr_attributes);
+                // MessageProcessor<CRequestTag, MBindingTag>::process(mp);
             }
             else if (stun_message->stun_method == StunMethodEnum::allocate) {
                 process_request_allocate(stun_message, stun_new, socket);
@@ -205,9 +205,8 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
 
     for (auto&& attr : message_orig->attributes) { //process attributes
         if (attr->attribute_type == StunAttributeEnum::requested_transport) {
-            request_transport_found = true;
-
-            protocol = ((RequestedTransportAttribute*)attr.get())->get_protocol();
+            // request_transport_found = true;
+            // protocol = ((RequestedTransportAttribute*)attr.get())->get_protocol();
         }
         if (attr->attribute_type == StunAttributeEnum::lifetime) {
             std::uint32_t temp;
@@ -229,16 +228,20 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
         }
     }
 
-    if (networking_->ip_map_.have_ip4(public_identifier) && networking_->ip_map_.have_rsa_public(public_identifier)) {
-        create_response_error_allocate(message_orig, message_new);
-        return;
+    try {
+        if (networking_->ip_map_.have_ip4(public_identifier) && networking_->ip_map_.have_rsa_public(public_identifier)) {
+            create_response_error_allocate(message_orig, message_new);
+            return;
+        }
     }
-    else {
-        networking_->ip_map_.update_rsa_public(public_identifier, pk);
+    catch (user_not_found_in_database& unfid) {
+        networking_->add_to_ip_map(public_identifier, socket->peerAddress());
+    }
 
-        networking_->ip_map_.set_tcp_socket(public_identifier, socket);
-        networking_->user_map->emplace(public_identifier, PeerInfo(public_identifier, 127));
-    }
+    networking_->ip_map_.update_rsa_public(public_identifier, pk);
+
+    networking_->ip_map_.set_tcp_socket(public_identifier, socket);
+    networking_->user_map->emplace(public_identifier, PeerInfo(public_identifier, 127));
 
     create_response_success_allocate(message_orig, message_new, lifetime, socket);
 }

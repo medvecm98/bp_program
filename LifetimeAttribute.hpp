@@ -52,7 +52,7 @@ public:
      * 
      * @param output Stream to write the STUN attribute into.
      */
-    virtual void write_stun_attribute(QDataStream&);
+    virtual void write_stun_attribute(QDataStream&) override;
 
     std::uint32_t time = 0; //tiem of allocation, for future purposes
 };

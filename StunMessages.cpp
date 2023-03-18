@@ -247,14 +247,8 @@ void StunMessageAttribute::initialize(std::uint16_t len, StunMessageHeader* h) {
 
 
 std::uint16_t StunMessageAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {
-    std::uint16_t read_length = 0;
-
-    //input >> stun_attr_type >> stun_attr_length;
     stun_attr_type = type;
     stun_attr_length = length;
-
-
-    read_length = 2 + 2;
 
     return 0;
 }

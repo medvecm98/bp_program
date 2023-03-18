@@ -2,8 +2,17 @@
 #define PROGRAM_STUN_CLIENT_HPP
 
 #include "GlobalUsing.h"
-#include "MessageProcessor.hpp"
 #include "Networking.h"
+#include "XorMappedAddressAttribute.hpp"
+#include "ErrorCodeAttribute.hpp"
+#include "UnknownAttributesAttribute.hpp"
+#include "TurnAllocation.hpp"
+#include "RequestedTransportAttribute.hpp"
+#include "LifetimeAttribute.hpp"
+#include "XorRelayedAddress.hpp"
+#include "IpMap.h"
+#include "PublicIdentifierAttribute.hpp"
+#include "StunTags.hpp"
 
 #include <bitset>
 
@@ -99,12 +108,6 @@ public:
      * @param pid Public identifier of the server.
      */
     void add_stun_server(QTcpSocket* tcp_socket_, pk_t pid);
-
-    /**
-     * @brief Successful connection to STUN server handler.
-     * 
-     */
-    void stun_server_connected();
 
     /**
      * @brief Failed connection to STUN server handler.

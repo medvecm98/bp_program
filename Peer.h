@@ -47,7 +47,7 @@ public:
 		std::cout << "Public ID: " << public_identifier_ << std::endl;
 
 		CryptoPP::RSA::PrivateKey private_key_new;
-		private_key_new.GenerateRandomWithKeySize(prng, 4096);
+		private_key_new.GenerateRandomWithKeySize(prng, 3072);
 		CryptoPP::RSA::PublicKey public_key_new(private_key_new);
 
 		networking_->ip_map_.my_ip.add_rsa_key(std::move(public_key_new));

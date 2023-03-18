@@ -36,13 +36,13 @@ public:
 	Article& get_article(hash_t id);
 	void deserialize(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
 
-	user_container_citer get_first_authority();
+	user_container_citer get_first_authority() const;
 
-	std::size_t get_authority_count();
+	std::size_t get_authority_count() const;
 
-	pk_t get_id();
+	pk_t get_id() const;
 
-	const my_string& get_name();
+	const my_string& get_name() const;
 
 	level_t level();
 
@@ -72,7 +72,9 @@ public:
 
 	CryptoPP::RSA::PrivateKey& get_newspaper_private_key_value();
 
-	void sign_article();
+	void sign_article(hash_t id);
+
+	bool verify_article_signature(hash_t id);
 
 private:
 	pk_t news_id_;
