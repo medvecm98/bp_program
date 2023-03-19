@@ -1098,17 +1098,28 @@ void Peer::handle_article_solicitation_one_way(shared_ptr_message msg) {
 }
 
 void Peer::handle_symmetric_key_one_way(shared_ptr_message msg) {
+	using namespace CryptoPP;
+
 	CryptoPP::AutoSeededRandomPool rng;
 	std::string key_str = msg->symmetric_key().key();
 	std::string signature_str = msg->symmetric_key().signature();
 
-	CryptoPP::SecByteBlock key_encrypted(reinterpret_cast<const CryptoPP::byte*>(&key_str[0]), key_str.size());
+	std::string key_decrypted_str, key_encrypted_decoded;
+	StringSource ss0(
+		key_str,
+		true,
+		new HexDecoder(
+			new StringSink(
+				key_encrypted_decoded
+			)
+		)
+	);
+
+	CryptoPP::SecByteBlock key_encrypted(reinterpret_cast<const CryptoPP::byte*>(&key_encrypted_decoded[0]), key_encrypted_decoded.size());
 	CryptoPP::SecByteBlock signature(reinterpret_cast<const CryptoPP::byte*>(&signature_str[0]), signature_str.size());
 
 	signer_verifier::Verifier verifier(networking_->ip_map_.get_rsa_public(msg->from())->value());
 	rsa_encryptor_decryptor::Decryptor rsa_decryptor(networking_->ip_map_.private_rsa.value());
-
-	std::string key_decrypted_str;
 
 	CryptoPP::StringSource ss1(
 		key_encrypted.data(),
@@ -1130,11 +1141,12 @@ void Peer::handle_symmetric_key_one_way(shared_ptr_message msg) {
 		signature.size()
 	);
 
+	std::cout << "Verification of received symmetric key";
 	if (!verification_result) {
-		std::cout << "Verification FAILED" << std::endl;
+		std::cout << " FAILED" << std::endl;
 	}
 	else {
-		std::cout << "Verification SUCCEEDED" << std::endl;
+		std::cout << " SUCCEEDED" << std::endl;
 		networking_->ip_map_.get_wrapper_for_pk(msg->from())->second.add_eax_key(std::move(key_decrypted));
 	}
 

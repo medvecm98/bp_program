@@ -3,6 +3,7 @@
 
 #include "GlobalUsing.h"
 #include "Article.h"
+#include "CryptoUtils.hpp"
 #include <optional>
 
 using database_iterator_t = article_database_container::iterator;

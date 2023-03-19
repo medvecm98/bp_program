@@ -83,7 +83,7 @@ shared_ptr_message Networking::sign_and_encrypt_key(CryptoPP::SecByteBlock& key,
 	signature.resize(length);
 
 	auto& [ipw_pk, ipw] = *(ip_map_.get_wrapper_for_pk(receiver));
-	rsa_encryptor_decryptor::Encryptor rsa_encryptor(ipw.key_pair.first.value()); //encrypt with recipient's public key
+	rsa_encryptor_decryptor::Encryptor rsa_encryptor(ipw.get_rsa()); //encrypt with recipient's public key
 	std::string encrypted_key;
 
 	CryptoPP::StringSource s(

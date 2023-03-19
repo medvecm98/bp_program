@@ -36,7 +36,7 @@ add_executable(news_p2p_sharing main.cpp newarticleform.h newarticleform.cpp new
 	ErrorCodeAttribute.hpp ErrorCodeAttribute.cpp UnknownAttributesAttribute.hpp
 	UnknownAttributesAttribute.cpp TurnAllocation.hpp RequestedTransportAttribute.hpp RequestedTransportAttribute.cpp
 	LifetimeAttribute.hpp LifetimeAttribute.cpp XorRelayedAddress.hpp XorRelayedAddress.cpp 
-	PublicIdentifierAttribute.hpp PublicIdentifierAttribute.cpp StunTags.hpp 
+	PublicIdentifierAttribute.hpp PublicIdentifierAttribute.cpp StunTags.hpp CryptoUtils.hpp CryptoUtils.cpp
 	DataAttribute.hpp DataAttribute.cpp PublicKeyAttribute.hpp PublicKeyAttribute.cpp 
 	RelayedPublicIdentifierAttribute.hpp RelayedPublicIdentifierAttribute.cpp addmargin.h addmargin.cpp addmargin.ui)
 target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art proto_nee proto_per proto_ipm ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
