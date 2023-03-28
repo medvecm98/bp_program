@@ -32,7 +32,7 @@ void StunServer::new_connection() {
     in_stream.setVersion(QDataStream::Qt_5_0);
     QObject::connect(tcp_socket_, &QIODevice::readyRead, this, &StunServer::reply);
     QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, tcp_socket_, &QObject::deleteLater);
-    QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
+    // QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
 	QObject::connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &StunServer::display_error);
 }
 
@@ -144,9 +144,10 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
             if (networking_->ip_map_.have_ip4(pia_public_id) &&
                 networking_->ip_map_.have_port(pia_public_id) &&
                 networking_->ip_map_.have_rsa_public(pia_public_id) && 
-                networking_->ip_map_.get_rsa_public(pia_public_id)->has_value()) 
+                networking_->ip_map_.get_rsa_public(pia_public_id).has_value()) 
             {
-                create_response_success_identify(message_orig, message_new, pia_public_id, networking_->ip_map_.get_ip4(pia_public_id), networking_->ip_map_.get_port(pia_public_id), networking_->ip_map_.get_rsa_public(pia_public_id)->value());
+                rsa_public_optional rsa = networking_->ip_map_.get_rsa_public(pia_public_id);
+                create_response_success_identify(message_orig, message_new, pia_public_id, networking_->ip_map_.get_ip4(pia_public_id), networking_->ip_map_.get_port(pia_public_id), rsa.value());
             }
             else {
                 create_response_error_identify(message_orig, message_new, pia_public_id);
@@ -154,7 +155,8 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
         }
     }
     else {
-        create_response_success_identify(message_orig, message_new, networking_->get_peer_public_id(), QHostAddress(xraa->get_address()), PORT, networking_->ip_map_.my_ip.key_pair.first.value());
+        auto rsa = networking_->ip_map_.my_ip.get_rsa();
+        create_response_success_identify(message_orig, message_new, networking_->get_peer_public_id(), QHostAddress(xraa->get_address()), PORT, rsa);
     }
 }
 
@@ -313,7 +315,7 @@ void StunServer::start_server(QHostAddress address) {
     if (!server_started) {
         tcp_server_ = new QTcpServer(this);
 
-        if (!tcp_server_->listen(address, (quint16) STUN_PORT)) {
+        if (!tcp_server_->listen(QHostAddress::AnyIPv4, (quint16) STUN_PORT)) {
             std::cout << "STUN Server failed to start" << std::endl;
             return;
         }

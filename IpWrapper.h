@@ -3,7 +3,7 @@
 #ifndef PROGRAM_IPWRAPPER_H
 #define PROGRAM_IPWRAPPER_H
 
-#include "GlobalUsing.h"
+#include "CryptoUtils.hpp"
 #include <unordered_map>
 #include <QtNetwork/QHostAddress>
 #include <QtNetwork/QTcpSocket>
@@ -66,42 +66,18 @@ struct IpWrapper {
 		if (serialized_wrapper.has_rsa_public_key()) { //deserialize RSA public
 			using namespace CryptoPP;
 			std::string encoded_key = serialized_wrapper.rsa_public_key();
-			std::string decoded_key;
-			Base64Decoder decoder;
-			decoder.Put( (byte*) encoded_key.data(), encoded_key.size());
-			decoder.MessageEnd();
-
-			word64 size = decoder.MaxRetrievable();
-			if (size && size <= SIZE_MAX) {
-				decoded_key.resize(size);
-				decoder.Get((byte*)&decoded_key[0], decoded_key.size());
-			}
-
-			ByteQueue bq;
-
-			StringSource ss(decoded_key, true);
-			ss.TransferTo(bq);
-			RSA::PublicKey pk;
-			pk.Load(bq);
-			key_pair.first = {pk};
+			set_rsa_hex_string(encoded_key);
 		}
 
 		if (serialized_wrapper.has_eax_key()) { //deserialize EAX
 			using namespace CryptoPP;
-			std::string encoded = serialized_wrapper.eax_key();
-			std::string decoded;
-			Base64Decoder decoder(new StringSink(decoded));
-			decoder.Put(reinterpret_cast<const byte*>(&encoded[0]), encoded.size());
-			decoder.MessageEnd();
-
-			key_pair.second = {SecByteBlock(reinterpret_cast<const byte*>(&decoded[0]), decoded.size())};
+			std::string encoded_key = serialized_wrapper.eax_key();
+			set_eax_hex_string(encoded_key);
 		}
 	}
 
 	void add_rsa_key(const std::string& pkey_str) {
-		CryptoPP::RSA::PublicKey pub_key;
-		CryptoPP::StringSource s(pkey_str, true);
-		pub_key.BERDecode(s);
+		CryptoPP::RSA::PublicKey pub_key = CryptoUtils::instance().hex_to_rsa(pkey_str);
 		key_pair.first = {std::move(pub_key)};
 	}
 
@@ -113,14 +89,17 @@ struct IpWrapper {
 		key_pair.first = rsa_public_optional(pkey);
 	}
 
-
 	void add_eax_key(const std::string& ekey_str) {
-		key_pair.second = {CryptoPP::SecByteBlock(reinterpret_cast<const CryptoPP::byte*>(&ekey_str[0]), ekey_str.size())};
+		using namespace CryptoPP;
+		key_pair.second = {ByteQueue()};
+		ByteQueue& queue = key_pair.second.value();
+		StringSource source(ekey_str, true);
+		source.TransferTo(queue);
 	}
 
-
-	void add_eax_key(CryptoPP::SecByteBlock&& ekey) {
-		key_pair.second = eax_optional(ekey);
+	void add_eax_key(CryptoPP::ByteQueue&& ekey) {
+		using namespace CryptoPP;
+		key_pair.second = {ekey};
 	}
 
 	void copy_tcp_socket(QTcpSocket* socket) {
@@ -168,6 +147,10 @@ struct IpWrapper {
 		return !stun_address.isNull();
 	}
 
+	bool has_np2ps_socket() {
+		return !np2ps_tcp_socket_;
+	}
+
 	CryptoPP::RSA::PublicKey& get_rsa() {
 		if (has_rsa()) {
 			return key_pair.first.value();
@@ -175,11 +158,63 @@ struct IpWrapper {
 		throw no_rsa_key_found("RSA key was not found.");
 	}
 
-	CryptoPP::SecByteBlock& get_eax() {
+	rsa_public_optional get_rsa_optional() {
+		if (has_rsa()) {
+			return {key_pair.first};
+		}
+		throw no_rsa_key_found("RSA key was not found. (optional)");
+	}
+
+	std::string get_rsa_hex_string() {
+		return CryptoUtils::instance().rsa_to_hex(get_rsa());
+	}
+
+	CryptoPP::RSA::PublicKey& set_rsa_hex_string(std::string& input) {
+		key_pair.first = {CryptoUtils::instance().hex_to_rsa(input)};
+		return key_pair.first.value();
+	}
+
+	std::string get_eax_hex_string() {
+		return CryptoUtils::instance().bq_to_hex(get_eax());
+	}
+
+	CryptoPP::ByteQueue& set_eax_hex_string(const std::string& input) {
+		using namespace CryptoPP;
+
+		key_pair.second = std::optional<ByteQueue>(
+			CryptoUtils::instance().hex_to_bq(input)
+		);
+		return key_pair.second.value();
+	}
+
+	CryptoPP::ByteQueue& get_eax() {
 		if (has_eax()) {
 			return key_pair.second.value();
 		}
 		throw no_eax_key_found("EAX key was not found.");
+	}
+
+	eax_optional& get_eax_optional() {
+		if (has_eax()) {
+			return key_pair.second;
+		}
+		throw no_eax_key_found("EAX key was not found.");
+	}
+
+	QTcpSocket* get_np2ps_socket() {
+		return np2ps_tcp_socket_;
+	}
+
+	void set_np2ps_socket(QTcpSocket* socket) {
+		np2ps_tcp_socket_ = socket;
+	}
+
+	void clean_np2ps_socket() {
+		np2ps_tcp_socket_ = NULL;
+	}
+
+	void clean_turn_socket() {
+		tcp_socket_ = NULL;
 	}
 
 	void serialize_wrapper(np2ps::IpWrapper* wrapper) {
@@ -187,24 +222,12 @@ struct IpWrapper {
 		wrapper->set_port(port);
 
 		if (key_pair.second.has_value()) {
-			std::string shared_key_b64;
-			CryptoPP::Base64Encoder encoder(new CryptoPP::StringSink(shared_key_b64));
-			CryptoPP::SecByteBlock& shared_key = key_pair.second.value();
-
-			encoder.Put(shared_key, shared_key.size());
-			encoder.MessageEnd();
+			std::string shared_key_b64 = get_eax_hex_string();
 			wrapper->set_eax_key(shared_key_b64);
 		}
 
 		if (key_pair.first.has_value()) {
-			std::string public_key_b64;
-			CryptoPP::Base64Encoder encoder(new CryptoPP::StringSink(public_key_b64));
-			CryptoPP::RSA::PublicKey& public_key = key_pair.first.value();
-
-			CryptoPP::ByteQueue queue;
-			public_key.Save(queue);
-			queue.CopyTo(encoder);
-			encoder.MessageEnd();
+			std::string public_key_b64 = get_rsa_hex_string();
 			wrapper->set_rsa_public_key(public_key_b64);
 		}
 

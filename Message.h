@@ -3,7 +3,7 @@
 
 #include <random>
 
-#include "GlobalUsing.h"
+#include "CryptoUtils.hpp"
 #include "Article.h"
 #include "NewspaperEntry.h"
 #include "IpWrapper.h"
@@ -96,8 +96,11 @@ public:
 	}
 	
 	static shared_ptr_message ReqUserIsMemberFactory(shared_ptr_message&& msg, level_t level);
-	static shared_ptr_message ReqCredentialsFactory(shared_ptr_message&& msg, bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
-		string_ptr_optional ip4, string_ptr_optional ip6, rsa_public_ptr_optional public_key, eax_ptr_optional eax_key);
+	static shared_ptr_message ReqCredentialsFactory(shared_ptr_message&& msg, 
+		bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
+		string_ptr_optional ip4, string_ptr_optional ip6, 
+		rsa_public_optional public_key, rsa_private_optional private_key,
+		eax_optional eax_key);
 
 	/* Responses: */
 	//static shared_ptr_message RespIpAddressFactory(shared_ptr_message&& msg, const std::string& ip4);
@@ -108,7 +111,7 @@ public:
 	static shared_ptr_message RespUserIsMemberFactory(shared_ptr_message&& msg, bool is_member, level_t req_level);
 	//static shared_ptr_message RespNewPublicKeyFactory(shared_ptr_message&& msg, const CryptoPP::RSA::PublicKey& public_key);
 	static shared_ptr_message RespCredentialsFactory(shared_ptr_message&& msg, QString ip4, QString ip6, 
-		std::shared_ptr<rsa_public_optional> public_key, std::shared_ptr<eax_optional> eax_key);
+		rsa_public_optional public_key, eax_optional eax_key);
 	static shared_ptr_message RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news);
 
 	static shared_ptr_message ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header);

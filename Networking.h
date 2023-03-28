@@ -34,8 +34,8 @@ using msg_map = std::unordered_map< std::size_t, shared_ptr_message>;
 class StunClient;
 class StunServer;
 
-static constexpr quint16 NORMAL_MESSAGE = 0x0000;
-static constexpr quint16 KEY_MESSAGE = 0x0001;
+static constexpr quint16 ENCRYPTED_MESSAGE = 0x0000;
+static constexpr quint16 PLAIN_MESSAGE = 0x0001;
 
 static constexpr quint16 VERSION = 0x0001;
 
@@ -107,7 +107,7 @@ public slots:
 	 * Starts transaction on QDataStream `in_`.
 	 * 
 	 */
-	void message_receive();
+	void message_receive(QTcpSocket* socket);
 
 	/**
 	 * @brief Processes a received NP2PS message.
@@ -148,7 +148,7 @@ public slots:
 
 private:
 	QTcpServer* tcp_server_ = nullptr;
-	QTcpSocket* tcp_socket_ = nullptr;
+	// QTcpSocket* tcp_socket_ = nullptr;
 	QDataStream in_; //stream for incoming messages
 	networking_ptr networking_;
 	bool server_started = false;
@@ -356,7 +356,7 @@ public:
 	 * @param sender Sender of the message, creator of the symmetric key.
 	 * @param receiver Receiver of the message.
 	 */	
-	shared_ptr_message sign_and_encrypt_key(CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver);
+	shared_ptr_message sign_and_encrypt_key(CryptoPP::ByteQueue& key, pk_t sender, pk_t receiver);
 
 	/**
 	 * @brief Generates and stores private and public key for Peer.
@@ -450,16 +450,16 @@ public:
 
 	void add_to_ip_map(pk_t id, QHostAddress&& address);
 
-	std::shared_ptr<eax_optional> get_or_create_eax(shared_ptr_message msg);
-	IpWrapper& save_symmetric_key(pk_t save_to, CryptoPP::SecByteBlock&& aes_key);
+	eax_optional get_or_create_eax(shared_ptr_message msg);
+	IpWrapper& save_symmetric_key(pk_t save_to, CryptoPP::ByteQueue&& aes_key);
 
 	shared_ptr_message generate_symmetric_key_message(shared_ptr_message msg);
-	CryptoPP::SecByteBlock generate_symmetric_key();
+	CryptoPP::ByteQueue generate_symmetric_key();
 	void identify_peer_save_message(shared_ptr_message);
 
 	IpMap ip_map_; //map of all IPs, ports and RSA public keys
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles; //articles waiting to be found in the network
-	std::unordered_multimap<pk_t, shared_ptr_message> waiting_symmetrich_exchange; //messages waiting to be sent while symmetric key is exchanged
+	std::unordered_multimap<pk_t, shared_ptr_message> waiting_symmetric_exchange; //messages waiting to be sent while symmetric key is exchanged
 	user_level_map* user_map;
 	std::map<pk_t, shared_ptr_message> waiting_symmetric_key_messages;
 	std::map<quint32, std::string> newspapers_awaiting_identification;

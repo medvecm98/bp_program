@@ -15,7 +15,7 @@ void send_message_using_socket(QTcpSocket* tcp_socket, const std::string& msg) {
 	QString qs = QString::fromStdString(msg);
 	out << qs;
 	tcp_socket->write(block);
-	tcp_socket->disconnectFromHost();
+	// tcp_socket->disconnectFromHost();
 }
 
 /**
@@ -53,55 +53,28 @@ bool Networking::enroll_message_to_be_sent(shared_ptr_message message) {
 }
 
 void Networking::generate_rsa_key_pair() {
-	CryptoPP::RSA::PrivateKey private_key;
-	private_key.GenerateRandomWithKeySize(prng_, 3072);
+	auto pair = CryptoUtils::instance().generate_rsa_pair();
 
-	CryptoPP::RSA::PublicKey public_key(private_key);
-
-	ip_map_.private_rsa = {private_key};
-	ip_map_.my_ip.key_pair.first = {public_key};
+	ip_map_.private_rsa = {pair.second};
+	ip_map_.my_ip.key_pair.first = {pair.first};
 }
 
-shared_ptr_message Networking::sign_and_encrypt_key(CryptoPP::SecByteBlock& key, pk_t sender, pk_t receiver) {
+shared_ptr_message Networking::sign_and_encrypt_key(CryptoPP::ByteQueue& key_queue, pk_t sender, pk_t receiver) {
 	if (!ip_map_.private_rsa.has_value() || !ip_map_.my_ip.key_pair.first.has_value()) {
 		generate_rsa_key_pair(); //generated RSA keys, if they weren't before
 	}
+	auto& private_rsa = ip_map_.private_rsa;
+	auto public_rsa = ip_map_.get_wrapper_ref(receiver).get_rsa_optional();
 
-	auto& private_rsa = ip_map_.private_rsa.value();
-	auto& public_rsa = ip_map_.my_ip.key_pair.first.value();
-
-	signer_verifier::Signer signer(private_rsa);
-
-	std::size_t length = signer.MaxSignatureLength();
-	CryptoPP::SecByteBlock signature(length);
-	length = signer.SignMessage( //sign the message
-		prng_,
-		key.data(),
-		key.size(),
-		signature
-	);
-	signature.resize(length);
-
-	auto& [ipw_pk, ipw] = *(ip_map_.get_wrapper_for_pk(receiver));
-	rsa_encryptor_decryptor::Encryptor rsa_encryptor(ipw.get_rsa()); //encrypt with recipient's public key
-	std::string encrypted_key;
-
-	CryptoPP::StringSource s(
-		key.data(),
-		key.size(),
-		true,
-		new CryptoPP::PK_EncryptorFilter(
-			prng_,
-			rsa_encryptor,
-			new CryptoPP::HexEncoder (
-				new CryptoPP::StringSink(
-					encrypted_key
-				)
-			)
-		)
+	std::string signature_str = CryptoUtils::instance().sign_key(
+		key_queue,
+		private_rsa
 	);
 
-	std::string signature_str(reinterpret_cast<const char*>(&signature[0]), signature.size());
+	std::string encrypted_key = CryptoUtils::instance().encrypt_key(
+		key_queue,
+		public_rsa
+	);
 
 	/* creates the message to send */
 
@@ -122,6 +95,51 @@ void Networking::identify_peer_save_message(shared_ptr_message msg) {
 	stun_client->identify(msg->to()); //use STUN for IP and RSA public
 	waiting_ip.emplace(msg->to(), msg); //store message for later, when IP and RSA will arrive
 	std::cout << "User " << msg->to() << " was not found in IPMap" << std::endl;
+}
+
+void print_message(shared_ptr_message msg, std::string recv_send) {
+	std::cout << "Printing message (" << recv_send << "):" << std::endl;
+	std::cout << " Context:" << std::endl;
+
+	switch(msg->msg_ctx()) {
+		case np2ps::REQUEST:
+			std::cout << "  request" << std::endl;
+			break;
+		case np2ps::RESPONSE:
+			std::cout << "  response" << std::endl;
+			break;
+		case np2ps::ONE_WAY:
+			std::cout << "  one way" << std::endl;
+			break;
+		case np2ps::ERROR:
+			std::cout << "  error" << std::endl;
+			break;
+		default:
+			break;
+	}
+
+	std::cout << " Type:" << std::endl;
+
+	switch(msg->msg_type()) {
+		case np2ps::ARTICLE_ALL:
+			std::cout << "  article all" << std::endl;
+			break;
+		case np2ps::ARTICLE_LIST:
+			std::cout << "  article list" << std::endl;
+			break;
+		case np2ps::ARTICLE_HEADER:
+			std::cout << "  article header" << std::endl;
+			break;
+		case np2ps::SYMMETRIC_KEY:
+			std::cout << "  symmetric key" << std::endl;
+			break;
+		case np2ps::CREDENTIALS:
+			std::cout << "  creds" << std::endl;
+			break;
+		default:
+			break;
+	}
+
 }
 
 void Networking::send_message(shared_ptr_message msg) {
@@ -159,12 +177,13 @@ void Networking::send_message(shared_ptr_message msg) {
 
 		if (!ipw.has_eax()) {
 			shared_ptr_message key_msg = generate_symmetric_key_message(msg);
-			waiting_symmetrich_exchange.emplace(msg->to(), std::move(msg));
-			sender_->message_send(std::move(key_msg), ipw);
+			waiting_symmetric_exchange.emplace(msg->to(), msg);
+			sender_->message_send(key_msg, ipw);
 			return;
 		}
 
 		std::cout << "	Message ready to be normally sent." << std::endl;
+		print_message(msg, "sending");
 		sender_->message_send(std::move(msg), ipw);
 	} catch (user_not_found_in_database& e) {
 		identify_peer_save_message(msg);
@@ -267,7 +286,7 @@ PeerReceiver::PeerReceiver(networking_ptr net) : networking_(net) {}
 void PeerReceiver::start_server(QHostAddress address) {
 	if (!server_started) {
 		tcp_server_ = new QTcpServer(this);
-		if (!tcp_server_->listen(address, PORT)) {
+		if (!tcp_server_->listen(QHostAddress::AnyIPv4, PORT)) {
 			QTextStream(stdout)
 					<< "Failed to start the server "
 					<< tcp_server_->errorString()
@@ -283,20 +302,31 @@ void PeerReceiver::start_server(QHostAddress address) {
 	}
 }
 
-void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlock iv, IpWrapper& ipw, networking_ptr networking, QTcpSocket* socket) {
+void decrypt_message_using_symmetric_key(
+	std::string e_msg,
+	CryptoPP::SecByteBlock iv,
+	IpWrapper& ipw,
+	networking_ptr networking,
+	QTcpSocket* socket
+) {
 	symmetric_cipher::Decryption dec;
 
 	//symmetric key present
+	CryptoPP::SecByteBlock byte_block = CryptoUtils::instance().byte_queue_to_sec_byte_block(ipw.get_eax());
 
-	dec.SetKeyWithIV(ipw.key_pair.second.value(), ipw.key_pair.second.value().size(), iv);
+	std::cout << "Decrypting with symmetric key: " << CryptoUtils::instance().bq_to_hex(ipw.get_eax()) << std::endl;
+
+	dec.SetKeyWithIV(byte_block, byte_block.size(), iv);
 	std::string dec_msg; //decrypted message
 	CryptoPP::StringSource s(
 		e_msg,
 		true,
-		new CryptoPP::AuthenticatedDecryptionFilter (
-			dec,
-			new CryptoPP::StringSink(
-				dec_msg
+		new CryptoPP::HexDecoder(
+			new CryptoPP::AuthenticatedDecryptionFilter (
+				dec,
+				new CryptoPP::StringSink(
+					dec_msg
+				)
 			)
 		)
 	);
@@ -305,6 +335,7 @@ void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlo
 
 	shared_ptr_message m = std::make_shared<proto_message>();
 	m->ParseFromString(dec_msg);
+	print_message(m, "receiving");
 	if (m->msg_ctx() == np2ps::REQUEST) {
 		networking->add_to_received(std::move(m)); //message now can be read in GPB format
 		return;
@@ -317,23 +348,22 @@ void decrypt_message_using_symmetric_key(std::string e_msg, CryptoPP::SecByteBlo
 }
 
 void PeerReceiver::prepare_for_message_receive() {
-	tcp_socket_ = tcp_server_->nextPendingConnection(); //get the socket for incoming connection
+	QTcpSocket* tcp_socket_ = tcp_server_->nextPendingConnection(); //get the socket for incoming connection
 	tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
-	in_.setDevice(tcp_socket_);
-	in_.setVersion(QDataStream::Qt_5_0);
 	QObject::connect(tcp_socket_, &QIODevice::readyRead, this, &PeerReceiver::message_receive_connected);
 	QObject::connect(tcp_socket_, &QAbstractSocket::errorOccurred, this, &PeerReceiver::display_error);
-
+	QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, tcp_socket_, &QObject::deleteLater);
+	QObject::connect(tcp_socket_, &QAbstractSocket::disconnected, networking_.get(), &Networking::peer_process_disconnected_users);
 }
 
 void PeerReceiver::message_receive_connected() {
-	tcp_socket_ = (QTcpSocket*)QObject::sender();
+	QTcpSocket* tcp_socket_ = (QTcpSocket*)QObject::sender();
 	in_.setDevice(tcp_socket_);
 	in_.setVersion(QDataStream::Qt_5_0);
-	message_receive();
+	message_receive(tcp_socket_);
 }
 
-void PeerReceiver::message_receive() {
+void PeerReceiver::message_receive(QTcpSocket* tcp_socket_) {
 	in_.startTransaction();
 
 	process_received_np2ps_message(in_, tcp_socket_);
@@ -351,7 +381,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 	quint16 msg_class;
 	msg >> msg_class;
 
-	if (msg_class == NORMAL_MESSAGE) {
+	if (msg_class == ENCRYPTED_MESSAGE) {
 		quint64 pid;
 		msg >> pid; //public identifier
 
@@ -376,7 +406,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		auto e_msg = extract_encrypted_message(msg_array); //encrypted message
 		
 		//we can check now, if the IP of sender is already in database and if not, we will add it
-		check_ip(tcp_socket_, pid, networking_->ip_map_);
+		check_ip(np2ps_socket, pid, networking_->ip_map_);
 
 		//decrypt
 		auto& [ipw_pk, ipw] = *(networking_->ip_map_.get_wrapper_for_pk(pid));
@@ -386,6 +416,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		else {
 			//common symmetric key for given sender isn't stored locally yet
 			
+			std::cout << "Symmetric key missing for " << pid << "!!!" << std::endl;
 
 			auto cred_req = MFW::ReqCredentialsFactory(
 				MFW::CredentialsFactory(
@@ -393,12 +424,12 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 					pid
 				),
 				false, false, false, true,
-				{}, {}, {}, {}
+				{}, {}, {}, {}, {}
 			);
 
 
 			//message will now wait until symmetric key is received
-			networking_->add_to_messages_to_decrypt(pid, EncryptedMessageWrapper(e_msg, iv, pid, NORMAL_MESSAGE));
+			networking_->add_to_messages_to_decrypt(pid, EncryptedMessageWrapper(e_msg, iv, pid, ENCRYPTED_MESSAGE));
 
 			std::string cred_req_msg = cred_req->SerializeAsString();
 
@@ -406,17 +437,17 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 			QDataStream msg_key_sstream(&msg_key_sstream_block, QIODevice::ReadWrite);
 			msg_key_sstream.setVersion(QDataStream::Qt_5_0);
 			msg_key_sstream << VERSION;
-			msg_key_sstream << KEY_MESSAGE;
+			msg_key_sstream << PLAIN_MESSAGE;
 			msg_key_sstream << (quint64)cred_req_msg.size();
 			msg_key_sstream << QByteArray::fromStdString(cred_req_msg);
-			send_message_using_socket(tcp_socket_, msg_key_sstream_block);
+			send_message_using_socket(np2ps_socket, msg_key_sstream_block);
 
 			//tcp_socket_->disconnectFromHost();
 			msg.commitTransaction();
 			return;
 		}
 	}
-	else if (msg_class == KEY_MESSAGE) {
+	else if (msg_class == PLAIN_MESSAGE) {
 		auto m = std::make_shared<proto_message>();
 
 		quint64 msg_size;
@@ -458,11 +489,14 @@ void PeerSender::try_connect(shared_ptr_message msg, IpWrapper& connectee) {
 		message_send(NULL, msg, connectee, true);
 	}
 	else {
+		if (connectee.np2ps_tcp_socket_ && !connectee.np2ps_tcp_socket_->isValid()) {
+			std::cout << "Invalid NP2PS socket" << std::endl;
+		}
 		QTcpSocket* socket_ = new QTcpSocket(this);
 
 		QObject::connect(socket_, &QAbstractSocket::connected, this, &PeerSender::host_connected);
 		QObject::connect(socket_, &QAbstractSocket::errorOccurred, this, &PeerSender::handle_connection_error);
-
+		QObject::connect(socket_, &QAbstractSocket::disconnected, socket_, &QObject::deleteLater);
 		QObject::connect(socket_, &QAbstractSocket::readyRead, networking_->get_peer_receiver(), &PeerReceiver::message_receive_connected);
 
 		message_waiting_for_connection = msg;
@@ -484,6 +518,7 @@ void PeerSender::host_connected() {
 	message_waiting_for_connection.reset();
 	connectee_waiting_for_connection = IpWrapper();
 
+	networking_->ip_map().enroll_new_np2ps_tcp_socket(mtemp->to(), socket_);
 	message_send(socket_, mtemp, itemp, false); //send message directly
 }
 
@@ -509,18 +544,30 @@ void PeerSender::handle_connection_error() {
 	}
 }
 
-void encrypt_message_symmetrically(eax_optional& key, const CryptoPP::SecByteBlock& iv, const std::string& serialized_msg, std::string& encrypted_msg) {
+void encrypt_message_symmetrically(
+	eax_optional& key_queue,
+	const CryptoPP::SecByteBlock& iv,
+	const std::string& serialized_msg,
+	std::string& encrypted_msg
+) {
+	using namespace CryptoPP;
 	symmetric_cipher::Encryption enc;
 
+	auto key = CryptoUtils::instance().byte_queue_to_sec_byte_block(key_queue.value());
+
+	std::cout << "Encrypting with key: " << CryptoUtils::instance().bq_to_hex(key_queue.value()) << std::endl;
+
 	//encrypt message
-	enc.SetKeyWithIV(key.value(), key.value().size(), iv);
-	CryptoPP::StringSource s(
+	enc.SetKeyWithIV(key, key.size(), iv);
+	StringSource s(
 		serialized_msg,
 		true,
-		new CryptoPP::AuthenticatedEncryptionFilter(
+		new AuthenticatedEncryptionFilter(
 			enc,
-			new CryptoPP::StringSink(
-				encrypted_msg
+			new HexEncoder(
+				new StringSink(
+					encrypted_msg
+				)
 			)
 		)
 	);
@@ -530,19 +577,19 @@ std::string create_iv_string(CryptoPP::SecByteBlock& iv) {
 	return std::string(reinterpret_cast<const char*>(&iv[0]), iv.size());
 }
 
-void write_normal_message(QDataStream& length_plus_msg, shared_ptr_message msg, 
+void write_encrypted_message(QDataStream& length_plus_msg, shared_ptr_message msg, 
 						  const std::string& iv_str, const std::string& encrypted_msg) 
 {
 	length_plus_msg << VERSION;
-	length_plus_msg << NORMAL_MESSAGE;
+	length_plus_msg << ENCRYPTED_MESSAGE;
 	length_plus_msg << (quint64)msg->from(); //public identifier won't be encrypted
 	length_plus_msg << (quint64)iv_str.size() << QByteArray::fromStdString(iv_str);
 	length_plus_msg << (quint64)encrypted_msg.size() << QByteArray::fromStdString(encrypted_msg); //initialization vector is written after size, but before message itself
 }
 
-void write_key_message(QDataStream& length_plus_msg, const std::string& serialized_msg) {
+void write_plain_message(QDataStream& length_plus_msg, const std::string& serialized_msg) {
 	length_plus_msg << VERSION;
-	length_plus_msg << KEY_MESSAGE;
+	length_plus_msg << PLAIN_MESSAGE;
 	length_plus_msg << (quint64)serialized_msg.size();
 	length_plus_msg << QByteArray::fromStdString(serialized_msg);
 }
@@ -556,9 +603,10 @@ void PeerSender::message_send(QTcpSocket* socket, shared_ptr_message msg, IpWrap
 	QDataStream length_plus_msg(&length_plus_msg_block, QIODevice::ReadWrite);
 	length_plus_msg.setVersion(QDataStream::Qt_5_0);
 	if (msg->msg_type() == np2ps::PUBLIC_KEY ||
-		msg->msg_type() == np2ps::SYMMETRIC_KEY) 
+		msg->msg_type() == np2ps::SYMMETRIC_KEY ||
+		msg->msg_type() == np2ps::CREDENTIALS) 
 	{
-		write_key_message(length_plus_msg, serialized_msg);
+		write_plain_message(length_plus_msg, serialized_msg);
 	}
 	else {
 		std::string encrypted_msg;
@@ -568,11 +616,11 @@ void PeerSender::message_send(QTcpSocket* socket, shared_ptr_message msg, IpWrap
 		CryptoPP::SecByteBlock iv(CryptoPP::AES::BLOCKSIZE);
 		prng.GenerateBlock(iv, iv.size());
 
-		encrypt_message_symmetrically(ipw.key_pair.second, iv, serialized_msg, encrypted_msg);
+		encrypt_message_symmetrically(ipw.get_eax_optional(), iv, serialized_msg, encrypted_msg);
 
 		//we will create the initialization vector (iv) string
 		std::string iv_str = create_iv_string(iv);
-		write_normal_message(length_plus_msg, msg, iv_str, encrypted_msg);
+		write_encrypted_message(length_plus_msg, msg, iv_str, encrypted_msg);
 	}
 
     //send message
@@ -590,15 +638,20 @@ void Networking::decrypt_encrypted_messages(pk_t original_sender) {
 	auto [emb, eme] = waiting_decrypt.equal_range(original_sender);
 	auto& [ipw_pk, ipw] = *(ip_map_.get_wrapper_for_pk(original_sender));
 	for (; emb != eme; emb++) {
-		decrypt_message_using_symmetric_key(emb->second.encrypted_message_or_symmetric_key, emb->second.initialization_vector_or_signature, ipw, shared_from_this(), NULL);
+		decrypt_message_using_symmetric_key(
+			emb->second.encrypted_message_or_symmetric_key,
+			emb->second.initialization_vector_or_signature,
+			ipw,
+			shared_from_this(),
+			NULL);
 	}
 }
 
 void Networking::symmetric_exchanged(pk_t other_peer) {
-	auto [mapib, mapie] = waiting_symmetrich_exchange.equal_range(other_peer);
+	auto [mapib, mapie] = waiting_symmetric_exchange.equal_range(other_peer);
 	for (; mapib != mapie; mapib++) {
 		auto msg_ptr = mapib->second;
-		waiting_symmetrich_exchange.erase(mapib->first);
+		waiting_symmetric_exchange.erase(mapib->first);
 		enroll_message_to_be_sent(msg_ptr); //enroll all messages for that given peer
 		break;
 	}
@@ -614,8 +667,9 @@ pk_t Networking::get_peer_public_id() {
 }
 
 void Networking::peer_process_disconnected_users() {
+	QTcpSocket* socket = (QTcpSocket*) QObject::sender();
 	std::vector<pk_t> to_remove;
-	ip_map_.remove_disconnected_users(to_remove);
+	ip_map_.remove_disconnected_users(to_remove, socket);
 	pk_t peer_id;
 
 	if (!to_remove.empty()) {
@@ -626,7 +680,9 @@ void Networking::peer_process_disconnected_users() {
 				}
 			}
 			user_map->erase(user);
-			ip_map_.remove_from_map(user);
+			IpWrapper& disconnected_user = ip_map_.get_wrapper_ref(user);
+			disconnected_user.clean_np2ps_socket();
+			disconnected_user.clean_turn_socket();
 			journalists_->erase(user);
 		}
 	}
@@ -664,10 +720,10 @@ void Networking::add_to_ip_map(pk_t id, QHostAddress&& address) {
 	ip_map().add_to_map(id, wrapper);
 }
 
-std::shared_ptr<eax_optional> Networking::get_or_create_eax(shared_ptr_message msg) {
+eax_optional Networking::get_or_create_eax(shared_ptr_message msg) {
 	auto eax_opt = ip_map().get_eax(msg->from());
 
-	if (eax_opt->has_value()) {
+	if (eax_opt.has_value()) {
 		return eax_opt;
 	}
 
@@ -676,7 +732,7 @@ std::shared_ptr<eax_optional> Networking::get_or_create_eax(shared_ptr_message m
 	return ip_map().get_eax(msg->from());
 }
 
-IpWrapper& Networking::save_symmetric_key(pk_t save_to, CryptoPP::SecByteBlock&& aes_key) {
+IpWrapper& Networking::save_symmetric_key(pk_t save_to, CryptoPP::ByteQueue&& aes_key) {
 	auto wrapper = ip_map().get_wrapper_for_pk(save_to);
 	if (wrapper != ip_map_.get_map_end()) {
 		wrapper->second.add_eax_key(std::move(aes_key));
@@ -687,10 +743,10 @@ IpWrapper& Networking::save_symmetric_key(pk_t save_to, CryptoPP::SecByteBlock&&
 	return wrapper->second;
 }
 
-CryptoPP::SecByteBlock Networking::generate_symmetric_key() {
+CryptoPP::ByteQueue Networking::generate_symmetric_key() {
 	CryptoPP::SecByteBlock aes_key(CryptoPP::AES::DEFAULT_KEYLENGTH);
 	prng_.GenerateBlock(aes_key, aes_key.size());
-	return aes_key;
+	return CryptoUtils::instance().sec_byte_block_to_byte_queue(aes_key);
 }
 
 /**

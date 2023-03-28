@@ -6,10 +6,7 @@ PublicKeyAttribute::PublicKeyAttribute() : StunMessageAttribute() {
 }
 
 void PublicKeyAttribute::initialize(const CryptoPP::RSA::PublicKey& public_key, StunMessageHeader* h) {
-    CryptoPP::ByteQueue bq;
-	public_key.Save(bq);
-	CryptoPP::StringSink ss(value);
-	bq.CopyTo(ss);
+    value = CryptoUtils::instance().rsa_to_hex(public_key);
     StunMessageAttribute::initialize(value.size(), h);
 }
 
@@ -45,15 +42,7 @@ void PublicKeyAttribute::set_value(const CryptoPP::RSA::PublicKey& public_key) {
 }
 
 CryptoPP::RSA::PublicKey PublicKeyAttribute::get_value() {
-    CryptoPP::RSA::PublicKey pk;
-    CryptoPP::ByteQueue bq;
-
-    CryptoPP::StringSource ss(value, true);
-    ss.TransferTo(bq);
-    bq.MessageEnd();
-
-    pk.Load(bq);
-    return pk;
+    return CryptoUtils::instance().hex_to_rsa(value);
 }
 
 std::uint16_t PublicKeyAttribute::get_value_size() {

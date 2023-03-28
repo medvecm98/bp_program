@@ -4,6 +4,7 @@
 #include <memory>
 #include <exception>
 #include "GlobalUsing.h"
+#include "CryptoUtils.hpp"
 
 #include <QObject>
 #include <QApplication>

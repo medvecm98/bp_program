@@ -64,17 +64,7 @@ void Peer::newspaper_confirm(pk_t pid) {
  * @param newspaper_key Newspaper public ID for which we need the authorities.
  */
 void Peer::load_ip_authorities(pk_t newspaper_key) {
-	networking_->enroll_message_to_be_sent(
-		MFW::ReqCredentialsFactory(
-			MFW::CredentialsFactory(
-				public_identifier_, 
-				newspaper_key
-			),
-			true, false, false, false,
-			string_ptr_optional(std::make_shared<std::string>(networking_->ip_map_.my_ip.ipv4.toString().toStdString())),
-			string_ptr_optional(), rsa_public_ptr_optional(), eax_ptr_optional()
-		)
-	);
+	throw deprecated_feature("Loading IP authorities is deprecated.");
 }
 
 /**
@@ -87,7 +77,10 @@ void Peer::load_ip_authorities(pk_t newspaper_key) {
 void Peer::init_newspaper(my_string name) {
 	newspaper_name_ = name;
 	newspaper_id_ = public_identifier_;
-	news_.insert({newspaper_id_, NewspaperEntry(public_identifier_, newspaper_id_, newspaper_name_)}); //our news are in same db as all the others
+	auto [news_db, temp] = news_.insert({newspaper_id_, NewspaperEntry(public_identifier_, newspaper_id_, newspaper_name_)}); //our news are in same db as all the others
+	auto [public_key, private_key] = CryptoUtils::instance().generate_rsa_pair();
+	news_db->second.set_newspaper_private_key(private_key);
+	news_db->second.set_newspaper_public_key(public_key);
 }
 
 /**
@@ -358,16 +351,21 @@ void Peer::create_margin_request(pk_t to, hash_t article_hash) {
  * @param article_hash Shared pointer to message which needs to be handled.
  */
 void Peer::handle_message(shared_ptr_message message) {
+	std::cout << "Peer: Handling message from " << message->from() << std::endl;
 	if (message->msg_ctx() == np2ps::REQUEST) {
+		std::cout << "Peer: Handling request from " << message->from() << std::endl;
 		handle_requests( std::move( message));
 	}
 	else if (message->msg_ctx() == np2ps::RESPONSE) {
+		std::cout << "Peer: Handling response from " << message->from() << std::endl;
 		handle_responses( std::move( message));
 	}
 	else if (message->msg_ctx() == np2ps::ONE_WAY) {
+		std::cout << "Peer: Handling one way from " << message->from() << std::endl;
 		handle_one_way( std::move( message));
 	}
 	else if (message->msg_ctx() == np2ps::ERROR) {
+		std::cout << "Peer: Handling error from " << message->from() << std::endl;
 		handle_error( std::move( message));
 	}
 	else {
@@ -489,20 +487,20 @@ void Peer::generate_article_all_message(pk_t news_id, hash_t article_hash) {
 
 	/* Ask article readers, if any */
 
-	if (article.readers_count() > 0) {
-		for (auto&& reader_id : article.readers()) {
-			networking_->enroll_message_to_be_sent(
-				MFW::SetMessageContextRequest(
-					MFW::ArticleDownloadFactory(
-						public_identifier_,
-						reader_id,
-						article_hash,
-						255
-					)
-				)
-			);
-		}
-	}
+	// if (article.readers_count() > 0) {
+	// 	for (auto&& reader_id : article.readers()) {
+	// 		networking_->enroll_message_to_be_sent(
+	// 			MFW::SetMessageContextRequest(
+	// 				MFW::ArticleDownloadFactory(
+	// 					public_identifier_,
+	// 					reader_id,
+	// 					article_hash,
+	// 					255
+	// 				)
+	// 			)
+	// 		);
+	// 	}
+	// }
 }
 
 /**
@@ -867,8 +865,8 @@ void Peer::handle_update_margin_request(shared_ptr_message message) {
 
 void Peer::handle_credentials_request(shared_ptr_message message) {
 	QString resp_ip4, resp_ip6;
-	std::shared_ptr<rsa_public_optional> resp_rsa_public;
-	std::shared_ptr<eax_optional> resp_eax;
+	CryptoPP::RSA::PublicKey resp_rsa_public;
+	eax_optional resp_eax;
 
 	bool req_my_credentials = message->credentials().ipv4()[0] != 'r';
 	pk_t requested_credentials = 0;
@@ -889,9 +887,9 @@ void Peer::handle_credentials_request(shared_ptr_message message) {
 	}
 	if (message->credentials().req_rsa_public_key()) {
 		if (req_my_credentials)
-			resp_rsa_public = std::make_shared<rsa_public_optional>(networking_->ip_map_.my_ip.key_pair.first);
+			resp_rsa_public = networking_->ip_map_.my_ip.get_rsa();
 		else if (networking_->ip_map_.have_rsa_public(requested_credentials))
-			resp_rsa_public = networking_->ip_map_.get_rsa_public(requested_credentials);
+			resp_rsa_public = networking_->ip_map_.get_wrapper_ref(requested_credentials).get_rsa();
 	}
 	if (message->credentials().req_eax_key()) {
 		if (networking_->ip_map_.have_eax(message->from())) {
@@ -1048,11 +1046,11 @@ void Peer::handle_credentials_response(shared_ptr_message message) {
 		}
 	}
 	if (message->credentials().req_rsa_public_key()) {
-		networking_->ip_map_.update_rsa_public((pk_t)message->from(), message->credentials().rsa_public_key());
+		networking_->ip_map_.update_rsa_public((pk_t)message->from(), message->credentials().rsa_public_key().key());
 		
 	}
 	if (message->credentials().req_eax_key()) {
-		networking_->ip_map_.update_eax((pk_t)message->from(), message->credentials().eax_key());
+		networking_->ip_map_.update_eax((pk_t)message->from(), message->credentials().eax_key().key());
 		emit new_symmetric_key(message->from());
 	}
 }
@@ -1099,47 +1097,20 @@ void Peer::handle_article_solicitation_one_way(shared_ptr_message msg) {
 
 void Peer::handle_symmetric_key_one_way(shared_ptr_message msg) {
 	using namespace CryptoPP;
-
-	CryptoPP::AutoSeededRandomPool rng;
-	std::string key_str = msg->symmetric_key().key();
+	std::string key_encrypted_encoded = msg->symmetric_key().key();
 	std::string signature_str = msg->symmetric_key().signature();
 
-	std::string key_decrypted_str, key_encrypted_decoded;
-	StringSource ss0(
-		key_str,
-		true,
-		new HexDecoder(
-			new StringSink(
-				key_encrypted_decoded
-			)
-		)
-	);
-
-	CryptoPP::SecByteBlock key_encrypted(reinterpret_cast<const CryptoPP::byte*>(&key_encrypted_decoded[0]), key_encrypted_decoded.size());
-	CryptoPP::SecByteBlock signature(reinterpret_cast<const CryptoPP::byte*>(&signature_str[0]), signature_str.size());
-
-	signer_verifier::Verifier verifier(networking_->ip_map_.get_rsa_public(msg->from())->value());
-	rsa_encryptor_decryptor::Decryptor rsa_decryptor(networking_->ip_map_.private_rsa.value());
-
-	CryptoPP::StringSource ss1(
-		key_encrypted.data(),
-		key_encrypted.size(),
-		true,
-		new CryptoPP::PK_DecryptorFilter(
-			rng,
-			rsa_decryptor,
-			new CryptoPP::StringSink(key_decrypted_str)
-		)
-	);
-
-	CryptoPP::SecByteBlock key_decrypted(reinterpret_cast<const CryptoPP::byte*>(&key_decrypted_str[0]), key_decrypted_str.size());
-
-	bool verification_result = verifier.VerifyMessage(
-		key_decrypted.data(),
-		key_decrypted.SizeInBytes(),
-		signature,
-		signature.size()
-	);
+	rsa_public_optional rsa_public = networking_->ip_map_.get_rsa_public(msg->from());
+	rsa_private_optional rsa_private = networking_->ip_map_.private_rsa;
+	ByteQueue queue;
+	bool verification_result = 
+		CryptoUtils::instance().verify_decrypt_symmetric_key(
+			key_encrypted_encoded,
+			signature_str,
+			queue,
+			rsa_public,
+			rsa_private
+		);
 
 	std::cout << "Verification of received symmetric key";
 	if (!verification_result) {
@@ -1147,7 +1118,12 @@ void Peer::handle_symmetric_key_one_way(shared_ptr_message msg) {
 	}
 	else {
 		std::cout << " SUCCEEDED" << std::endl;
-		networking_->ip_map_.get_wrapper_for_pk(msg->from())->second.add_eax_key(std::move(key_decrypted));
+
+		networking_->ip_map_.get_wrapper_for_pk(
+			msg->from()
+		)->second.add_eax_key(
+			std::move(queue)
+		);
 	}
 
 	//send response that symmetric key was received and processed

@@ -138,38 +138,56 @@ shared_ptr_message MFW::ReqUserIsMemberFactory(shared_ptr_message&& msg, level_t
 	return std::move(msg);
 }
 
-shared_ptr_message MFW::ReqCredentialsFactory(shared_ptr_message&& msg, bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
-	string_ptr_optional ip4, string_ptr_optional ip6, rsa_public_ptr_optional public_key, eax_ptr_optional eax_key) {
+shared_ptr_message MFW::ReqCredentialsFactory(shared_ptr_message&& msg, 
+	bool req_ip4, bool req_ip6,
+	bool req_public_key, bool req_eax_key,
+	string_ptr_optional ip4, string_ptr_optional ip6,
+	rsa_public_optional public_key, rsa_private_optional private_key,
+	eax_optional eax_key)
+{
+	msg->set_msg_ctx(np2ps::REQUEST);
 
-		msg->set_msg_ctx(np2ps::REQUEST);
+	msg->mutable_credentials()->set_req_ipv4(req_ip4);
+	msg->mutable_credentials()->set_req_ipv6(req_ip6);
+	msg->mutable_credentials()->set_req_rsa_public_key(req_public_key);
+	msg->mutable_credentials()->set_req_eax_key(req_eax_key);
 
-		msg->mutable_credentials()->set_req_ipv4(req_ip4);
-		msg->mutable_credentials()->set_req_ipv6(req_ip6);
-		msg->mutable_credentials()->set_req_rsa_public_key(req_public_key);
-		msg->mutable_credentials()->set_req_eax_key(req_eax_key);
-
-		if (ip4.has_value()) {
-			msg->mutable_credentials()->set_ipv4(*ip4.value());
-		}
-
-		if (ip6.has_value()) {
-			msg->mutable_credentials()->set_ipv6(*ip6.value());
-		}
-
-		if (public_key.has_value()) {
-			std::string string_key;
-			CryptoPP::StringSink rsa_pub_sink(string_key);
-			public_key.value()->DEREncode(rsa_pub_sink);
-			msg->mutable_credentials()->set_rsa_public_key(string_key);
-		}
-
-		if (eax_key.has_value()) {
-			std::string string_key(reinterpret_cast<const char*>(&(*eax_key.value())[0]), eax_key.value()->size());
-			msg->mutable_credentials()->set_eax_key(string_key);
-		}
-
-		return std::move(msg);
+	if (ip4.has_value()) {
+		msg->mutable_credentials()->set_ipv4(*ip4.value());
 	}
+
+	if (ip6.has_value()) {
+		msg->mutable_credentials()->set_ipv6(*ip6.value());
+	}
+
+	if (public_key.has_value()) {
+		msg->mutable_credentials()->mutable_rsa_public_key()->set_key(
+			CryptoUtils::instance().rsa_to_hex(
+				public_key.value()
+			)
+		);
+	}
+
+	if (eax_key.has_value() 
+		&& public_key.has_value()
+		&& private_key.has_value())
+	{
+		std::string signature = CryptoUtils::instance().sign_key(
+			eax_key.value(),
+			private_key
+		);
+		std::string encrypted_key = CryptoUtils::instance().encrypt_key(
+			eax_key.value(),
+			public_key
+		);
+		msg->mutable_credentials()->mutable_eax_key()->set_key(encrypted_key);
+		msg->mutable_credentials()->mutable_eax_key()->set_signature(
+			signature
+		);
+	}
+
+	return std::move(msg);
+}
 
 
 
@@ -217,7 +235,7 @@ shared_ptr_message MFW::RespUserIsMemberFactory(shared_ptr_message&& msg, bool i
 }
 
 shared_ptr_message MFW::RespCredentialsFactory(shared_ptr_message&& msg, QString ip4, QString ip6, 
-	std::shared_ptr<rsa_public_optional> public_key, std::shared_ptr<eax_optional> eax_key) {
+	rsa_public_optional public_key, eax_optional eax_key) {
 		msg->set_msg_ctx(np2ps::RESPONSE);
 		if (!ip4.isEmpty()) {
 			msg->mutable_credentials()->set_ipv4(ip4.toStdString());
@@ -233,19 +251,20 @@ shared_ptr_message MFW::RespCredentialsFactory(shared_ptr_message&& msg, QString
 		else 
 			msg->mutable_credentials()->set_req_ipv6(false);
 
-		if (public_key->has_value()) {
-			std::string string_key;
-			CryptoPP::StringSink rsa_pub_sink(string_key);
-			public_key->value().DEREncode(rsa_pub_sink);
-			msg->mutable_credentials()->set_rsa_public_key(string_key);
+		if (public_key.has_value()) {
+			msg->mutable_credentials()->mutable_rsa_public_key()->set_key(CryptoUtils::instance().rsa_to_hex(public_key.value()));
 			msg->mutable_credentials()->set_req_rsa_public_key(true);
 		}
 		else
 			msg->mutable_credentials()->set_req_rsa_public_key(false);
 
-		if (eax_key->has_value()) {
-			std::string string_key(reinterpret_cast<const char*>(&(eax_key->value())[0]), eax_key->value().size());
-			msg->mutable_credentials()->set_eax_key(string_key);
+		if (eax_key.has_value()) {
+			msg->mutable_credentials()->mutable_eax_key()->set_key(
+				CryptoUtils::instance().encrypt_key(
+					eax_key.value(),
+					public_key
+				)
+			);
 			msg->mutable_credentials()->set_req_eax_key(true);
 		}
 		else

@@ -130,8 +130,8 @@ message Credentials {
 	// in response: response to requested fields
 	optional string ipv4 = 1;
 	optional string ipv6 = 2;
-	optional string rsa_public_key = 3;
-	optional string eax_key = 4;
+	optional PublicKey rsa_public_key = 3;
+	optional SymmetricKey eax_key = 4;
 }
 
 message SymmetricKey {

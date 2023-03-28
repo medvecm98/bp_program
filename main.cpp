@@ -56,6 +56,8 @@ int main(int argc, char *argv[]) {
 		std::string path_string(QCoreApplication::arguments().at(1).toStdString());
 		std::filesystem::path path(path_string);
 
+		std::cout << "FOUND PATH in arguments: " << path_string << std::endl;
+
 		if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
 			if (path.filename().string()[0] == '_') { // create new peer, for testing purposes
 				pk_t custom_id = 123;

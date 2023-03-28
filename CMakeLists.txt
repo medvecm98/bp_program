@@ -4,10 +4,10 @@ project(news_p2p_sharing)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-pedantic -O0 -g)
-set(CMAKE_CXX_CLANG_TIDY
-	clang-tidy;
-	-header-filter=${CMAKE_CURRENT_SOURCE_DIR};
-)
+# set(CMAKE_CXX_CLANG_TIDY
+# 	clang-tidy;
+# 	-header-filter=${CMAKE_CURRENT_SOURCE_DIR};
+# )
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)

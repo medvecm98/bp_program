@@ -72,6 +72,8 @@ public:
 	 */
 	void generate_article_list();
 
+	void check_on_article(NewspaperEntry& news, hash_t article_selected_hash, article_optional& article_header);
+
 public slots:
 	/**
 	 * @brief New newspaper was added to database.
@@ -262,6 +264,8 @@ private slots:
 	void on_pushButton_testPeer1_clicked();
 
 	void on_pushButton_testPeer2_clicked();
+
+    void on_treeWidget_newspaper_itemDoubleClicked(QTreeWidgetItem *item, int column);
 
 signals:
 	/**

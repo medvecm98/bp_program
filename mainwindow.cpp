@@ -162,6 +162,45 @@ void MainWindow::on_pushButton_set_ip_released()
 	emit start_server(address); //starts the STUN and NP2PS servers
 }
 
+void MainWindow::check_on_article(
+	NewspaperEntry& news, hash_t article_selected_hash, article_optional& article_header
+) {
+	if (!article_header.has_value()) { //if article wasn't found, not even his header
+		ctx->p.generate_article_all_message(news.get_id(), article_selected_hash); //request an article
+	}
+	else {
+		if (!article_header.value()->article_present()) { //check if article contains its contents
+			ctx->p.generate_article_all_message(
+				ctx->p.check_destination_valid(
+					article_header.value()->author_id(),
+					news.get_id()),
+				article_selected_hash); //no, and so it needs to be requested
+		}
+		else {
+			ui->textEdit_article->clear();
+
+			//article content is present and we may print it
+
+			ui->textEdit_article->clear();
+			QString contents = QString::fromStdString(article_header.value()->read_contents());
+
+			switch (article_header.value()->get_format()) //sets the correct format for Article field
+			{
+			case article_format::Markdown:
+				ui->textEdit_article->setMarkdown(contents);
+				break;
+			case article_format::Html:
+				ui->textEdit_article->setHtml(contents);
+				break;
+
+			default:
+				ui->textEdit_article->setPlainText(contents);
+				break;
+			}
+		}
+	}
+}
+
 void MainWindow::on_pushButton_external_article_released()
 {
 	if (ui->treeWidget_newspaper->selectedItems().size() == 0) { //no item was selected from Newspaper tree
@@ -179,43 +218,25 @@ void MainWindow::on_pushButton_external_article_released()
 	}
 	else {
 		/* gets an article from newspaper database */
-		auto news_db_id = ctx->p.get_news_db().at(ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent()->text(2).toULongLong()).get_id();
-		auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
-		auto present_article = ctx->p.get_news_db().at(news_db_id).find_article_header(article_selected_hash);
-		if (!present_article.has_value()) { //if article wasn't found, not even his header
-			ctx->p.generate_article_all_message(news_db_id, article_selected_hash); //request an article
-		}
-		else {
-			if (!present_article.value()->article_present()) { //check if article contains its contents
-				ctx->p.generate_article_all_message(
-					ctx->p.check_destination_valid(
-						present_article.value()->author_id(), 
-						news_db_id), 
-					article_selected_hash); //no, and so it needs to be requested
-			}
-			else {
-				ui->textEdit_article->clear();
+        NewspaperEntry& news_db = ctx->p.get_news_db().at(
+			ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent()->text(2).toULongLong()
+		);
+        hash_t article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong();
+        article_optional present_article = ctx->p.get_news_db().at(news_db.get_id()).find_article_header(article_selected_hash);
+        check_on_article(news_db, article_selected_hash, present_article);
+	}
+}
 
-				//article content is present and we may print it
-
-				ui->textEdit_article->clear();
-				QString contents = QString::fromStdString(present_article.value()->read_contents());
-
-				switch (present_article.value()->get_format()) //sets the correct format for Article field
-				{
-				case article_format::Markdown:
-					ui->textEdit_article->setMarkdown(contents);
-					break;
-				case article_format::Html:
-					ui->textEdit_article->setHtml(contents);
-					break;
-
-				default:
-					ui->textEdit_article->setPlainText(contents);
-					break;
-				}
-			}
-		}
+void MainWindow::on_treeWidget_newspaper_itemDoubleClicked(QTreeWidgetItem *item, int column)
+{
+	if (item->parent() != nullptr &&
+		item->parent()->parent() != nullptr
+	) {
+		/* We have selected an article, it will be requested now. */
+		NewspaperEntry& news_db = ctx->p.get_news(item->parent()->parent()->text(2).toULongLong());
+		hash_t selected_article_hash = item->text(2).toULongLong();
+		article_optional article_header = news_db.find_article_header(selected_article_hash);
+		check_on_article(news_db, selected_article_hash, article_header);
 	}
 }
 

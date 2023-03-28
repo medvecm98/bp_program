@@ -239,3 +239,20 @@ public:
 private:
     std::string message;
 };
+
+class deprecated_feature : public std::exception {
+public:
+    deprecated_feature(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    deprecated_feature(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};

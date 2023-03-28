@@ -171,7 +171,7 @@ public:
 	 * 
 	 * @return Optional value with RSA public key.
 	 */
-	std::shared_ptr<rsa_public_optional> get_rsa_public(pk_t);
+	rsa_public_optional get_rsa_public(pk_t);
 
 	/**
 	 * @brief Gets the EAX+AES symmetric key. 
@@ -180,7 +180,7 @@ public:
 	 * 
 	 * @return Optional value with EAX+AES symmetric key.
 	 */
-	std::shared_ptr<eax_optional> get_eax(pk_t);
+	eax_optional get_eax(pk_t);
 
 	/**
 	 * @brief Checks, if peer has IPv4 assigned in the map.
@@ -251,13 +251,15 @@ public:
 
 	IpWrapper& get_wrapper_ref(pk_t id);
 
+	bool has_wrapper(pk_t id);
+
 	/**
 	 * @brief Scans all enrolled sockets and remove those peers, who are 
 	 * comlpetely disconnected.
 	 * 
 	 * @param public_ids_to_remove Push back peers, whose sockets were detected disconnected.
 	 */
-	void remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove);
+	void remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove, QTcpSocket* socket);
 
 	void serialize_ip_map(np2ps::IpMap* im) {
 		std::cout << "Serializing IP MAP" << std::endl;

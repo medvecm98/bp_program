@@ -60,20 +60,29 @@ void IpMap::remove_from_map(pk_t pk) {
 void IpMap::enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket) {
 	if (socket) { //check if socket isn't NULL, function IS called with socket set to null
 		try {
-			auto w = get_wrapper_for_pk(id);
-			if (!w->second.np2ps_tcp_socket_) { //check if given NP2PS socket isn't already enrolled
-				w->second.np2ps_tcp_socket_ = socket;
-				w->second.np2ps_tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+			auto& w = get_wrapper_ref(id);
+			auto* np2ps_socket = w.get_np2ps_socket(); 
+
+			if (np2ps_socket && !np2ps_socket->isValid()) {
+				w.clean_np2ps_socket();
+				std::cout << "Removing socket that was previously enrolled for " 
+						  << id << std::endl;
+			}
+
+			if (!np2ps_socket) { //check if given NP2PS socket isn't already enrolled
+				socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+				w.set_np2ps_socket(socket);
+				std::cout << "NP2PS socket NEWLY enrolled for " << id << std::endl;
 			}
 			else {
-				std::cout << "Np2ps socket already enrolled " << id << std::endl;
+				std::cout << "NP2PS socket already enrolled for " << id << std::endl;
 			}
 		}
 		catch (const user_not_found_in_database& e) {
-			std::cout << "User readded to database\n";
+			std::cout << "User " << id << " readded to database\n";
 			IpWrapper ipw(socket->peerAddress(), socket->peerPort());
-			ipw.np2ps_tcp_socket_ = socket;
-			ipw.np2ps_tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+			socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+			ipw.set_np2ps_socket(socket);
 			
 			add_to_map(id, std::move(ipw));
 		}
@@ -129,7 +138,7 @@ bool IpMap::update_eax(pk_t pk, const std::string& eax) {
 		throw create_ip_wrapper_error(pk, "updating EAX");
 	}
 	else {
-		map_.at(pk).add_eax_key(eax);
+		map_.at(pk).set_eax_hex_string(eax);
 		return true;
 	}
 }
@@ -164,21 +173,21 @@ std::uint16_t IpMap::get_port(pk_t pk) {
 	throw create_ip_wrapper_error(pk, "getting port");
 }
 
-std::shared_ptr<rsa_public_optional> IpMap::get_rsa_public(pk_t pk) {
+rsa_public_optional IpMap::get_rsa_public(pk_t pk) {
 	auto it = map_.find(pk);
 	if (it != map_.end()) {
 		//element was found in map
-		return std::make_shared<rsa_public_optional>(it->second.key_pair.first);
+		return it->second.key_pair.first;
 	}
 
 	throw create_ip_wrapper_error(pk, "getting RSA public");
 }
 
-std::shared_ptr<eax_optional> IpMap::get_eax(pk_t pk) {
+eax_optional IpMap::get_eax(pk_t pk) {
 	auto it = map_.find(pk);
 	if (it != map_.end()) {
 		//element was found in map
-		return std::make_shared<eax_optional>(it->second.key_pair.second);
+		return it->second.key_pair.second;
 	}
 
 	throw create_ip_wrapper_error(pk, "getting EAX");
@@ -286,17 +295,30 @@ bool IpMap::update_stun_ip(pk_t pid, const QHostAddress& ip, std::uint16_t port)
 	return true;
 }
 
-void IpMap::remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove) {
+void IpMap::remove_disconnected_users(std::vector<pk_t>& public_ids_to_remove, QTcpSocket* socket) {
 	for (auto&& item : map_) {
-		if (item.second.tcp_socket_) { //check if STUN socket is connected
-			if (item.second.tcp_socket_->state() == QAbstractSocket::UnconnectedState ||
-				item.second.tcp_socket_->error() == QAbstractSocket::RemoteHostClosedError) 
-			{
-				item.second.tcp_socket_ = NULL; //NULLify the STUN socket
-			}
-		}
-		if (!item.second.tcp_socket_) { //if both sockets were NULLified
-			public_ids_to_remove.push_back(item.first); //push ID of that peer into list of peers to remove
+		// if (item.second.tcp_socket_) { //check if STUN socket is connected
+		// 	if (item.second.tcp_socket_->state() == QAbstractSocket::UnconnectedState ||
+		// 		item.second.tcp_socket_->error() == QAbstractSocket::RemoteHostClosedError) 
+		// 	{
+		// 		item.second.tcp_socket_ = NULL; //NULLify the STUN socket
+		// 	}
+		// }
+		// if (!item.second.tcp_socket_) { //if both sockets were NULLified
+		// 	public_ids_to_remove.push_back(item.first); //push ID of that peer into list of peers to remove
+		// }
+		std::cout << "Checking peer " << item.first << std::endl;
+		if (item.second.get_np2ps_socket() == socket || item.second.get_tcp_socket() == socket) {
+			std::cout << "Removing peer " << item.first << std::endl;
+			public_ids_to_remove.push_back(item.first);
 		}
 	}
+}
+
+bool IpMap::has_wrapper(pk_t id) {
+	if (map_.find(id) == map_.end()) {
+		return false;
+	}
+
+	return true;
 }

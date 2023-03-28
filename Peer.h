@@ -1,7 +1,7 @@
 #ifndef PROGRAM_PEER_H
 #define PROGRAM_PEER_H
 
-#include "GlobalUsing.h"
+#include "CryptoUtils.hpp"
 #include "Networking.h"
 #include "NewspaperEntry.h"
 #include <unordered_map>
@@ -46,12 +46,10 @@ public:
 			public_identifier_ = public_id;
 		std::cout << "Public ID: " << public_identifier_ << std::endl;
 
-		CryptoPP::RSA::PrivateKey private_key_new;
-		private_key_new.GenerateRandomWithKeySize(prng, 3072);
-		CryptoPP::RSA::PublicKey public_key_new(private_key_new);
+		auto key_pair = CryptoUtils::instance().generate_rsa_pair();
 
-		networking_->ip_map_.my_ip.add_rsa_key(std::move(public_key_new));
-		networking_->ip_map_.private_rsa = {std::move(private_key_new)};
+		networking_->ip_map_.my_ip.add_rsa_key(key_pair.first);
+		networking_->ip_map_.private_rsa = {key_pair.second};
 		qobject_connect_peer();
 		peer_init();
 	}
