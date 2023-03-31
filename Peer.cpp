@@ -1668,7 +1668,12 @@ user_container& Peer::get_friends() {
 	return friends_;
 }
 
+bool Peer::add_friend(pk_t id, QHostAddress address) {
+	
+}
+
 bool Peer::add_friend(pk_t id, const std::string& ip) {
+	return add_friend(id, QHostAddress(ip));
 	return friends_.emplace(id).second;
 	// Networking* networking = get_networking();
 	// return true;

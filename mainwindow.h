@@ -267,6 +267,8 @@ private slots:
 
     void on_treeWidget_newspaper_itemDoubleClicked(QTreeWidgetItem *item, int column);
 
+    void on_pushButtonFriends_clicked();
+
 signals:
 	/**
 	 * @brief Emits when Add article button is clicked and file is selected

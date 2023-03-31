@@ -139,6 +139,14 @@ struct PeerInfo {
 	level_t peer_level = 0; //usused
 };
 
+pk_t string_to_pid(std::string input) {
+    return std::stoull(input);
+}
+
+pk_t string_to_pid(QString input) {
+    return std::stoull(input.toStdString());
+}
+
 using seq_t = std::size_t;
 
 using symmetric_cipher = CryptoPP::EAX< CryptoPP::AES>;

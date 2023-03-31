@@ -542,3 +542,11 @@ void MainWindow::on_pushButton_loadFromFile_clicked()
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open Newspaper File"), QDir::homePath(), tr("NP2PS newspaper (*.nppsn)"));
     emit signal_add_new_newspaper_from_file(fileName);
 }
+
+void MainWindow::on_pushButtonFriends_clicked()
+{
+	QString ip_string = ui->lineEditFriends->text();
+	QString pid_string = ui->lineEditFriendID->text();
+	pk_t pid = string_to_pid(pid_string);
+	ctx->p.add_friend(pid, ip_string);
+}
