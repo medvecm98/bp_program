@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package np2ps;
 import "articles.proto";
+import "ip_map.proto";
 
 message NewspaperEntry {
     uint64 news_id = 1;
@@ -10,6 +11,7 @@ message NewspaperEntry {
 
 message NetworkSerializedNewspaperEntry {
     NewspaperEntry entry = 1;
+    IpWrapper network_info = 2;
     repeated Article articles = 3;
 }
 
@@ -20,5 +22,5 @@ message LocalSerializedNewspaperEntry {
 }
 
 message NewspaperList {
-    repeated NewspaperEntry news = 1;
+    repeated NetworkSerializedNewspaperEntry news = 1;
 }

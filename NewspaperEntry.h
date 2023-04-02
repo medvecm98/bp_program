@@ -4,6 +4,7 @@
 #include "GlobalUsing.h"
 #include "Article.h"
 #include "CryptoUtils.hpp"
+#include "IpMap.h"
 #include <optional>
 
 using database_iterator_t = article_database_container::iterator;
@@ -49,11 +50,11 @@ public:
 
 	ArticleListWrapper& get_list_of_articles();
 
-	void serialize_entry(np2ps::NewspaperEntry* entry);
+	void serialize_entry(np2ps::NewspaperEntry* entry) const;
 
-	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne);
+	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpWrapper& news_wrapper) const;
 
-	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) ;
+	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) const;
 
 	void fill_time_sorted_articles();
 
@@ -77,6 +78,12 @@ public:
 
 	bool verify_article_signature(hash_t id);
 
+	bool confirmation();
+
+	void set_confirmation(bool c);
+
+	bool await_confirmation = false;
+
 private:
 	pk_t news_id_;
 	my_string news_name_;
@@ -88,6 +95,7 @@ private:
 	user_container friends_; //friends, that can share the articles with you
 	rsa_public_optional newspaper_public_key_; //newspaper public key to check article legitimacy
 	rsa_private_optional newspaper_private_key_;
+	bool confirmed = false;
 };
 
 using news_database = std::unordered_map<pk_t, NewspaperEntry>;

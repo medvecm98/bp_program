@@ -161,17 +161,19 @@ void Networking::send_message(shared_ptr_message msg) {
 
 		if (!ipw.has_rsa()) { // no public key
 			shared_ptr_message credentials_msg = 
-				MFW::SetMessageContextRequest(
+				MFW::ReqCredentialsFactory(
 					MFW::CredentialsFactory(
 						msg->from(), msg->to()
-					)
+					),
+					false, false, true, true,
+					{}, {}, ip_map_.my_ip.get_rsa(), {}, {}
 				);
-			waiting_symmetric_key_messages.emplace(msg->to(), msg); //save message for when exchange is finished
+			messages_waiting_for_credentials.emplace(msg->to(), msg); //save message for when exchange is finished
 
 			credentials_msg->mutable_credentials()->set_req_eax_key(true);
 			credentials_msg->mutable_credentials()->set_req_rsa_public_key(true);
 
-			sender_->message_send(std::move(msg), ipw);
+			sender_->message_send(std::move(credentials_msg), ipw);
 			return;
 		}
 
@@ -183,7 +185,6 @@ void Networking::send_message(shared_ptr_message msg) {
 		}
 
 		std::cout << "	Message ready to be normally sent." << std::endl;
-		print_message(msg, "sending");
 		sender_->message_send(std::move(msg), ipw);
 	} catch (user_not_found_in_database& e) {
 		identify_peer_save_message(msg);
@@ -458,16 +459,27 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		msg >> msg_array;
 
 		m->ParseFromString(msg_array.toStdString());
-		if (networking_->ip_map_.have_rsa_public(m->from())) { //check if received symmetric key message is from someone we know
-			std::cout << "RSA public found for " << m->from() << std::endl;
-			check_ip(np2ps_socket, m->from(), networking_->ip_map_);
-			networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket);
+
+		if (m->msg_type() == np2ps::SYMMETRIC_KEY) {
+			if (networking_->ip_map_.have_rsa_public(m->from())) { //check if received symmetric key message is from someone we know
+				std::cout << "RSA public found for " << m->from() << std::endl;
+				check_ip(np2ps_socket, m->from(), networking_->ip_map_);
+				networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket);
+				networking_->add_to_received(std::move(m));
+			}
+			else {
+				std::cout << "No public key and or ipv4 found for " << m->from() << "; needs to be identified" << std::endl;
+				networking_->waiting_symmetric_key_messages.emplace(m->from(), m); //we dont know the sender and so we needs to identify him first
+				networking_->get_stun_client()->identify(m->from());
+			}
+		}
+		else if (m->msg_type() == np2ps::CREDENTIALS) {
+			networking_->add_to_ip_map(m->from(), np2ps_socket->peerAddress());
+			networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket); //enroll NP2PS socket for peers, that are not enrolled yet
 			networking_->add_to_received(std::move(m));
 		}
 		else {
-			std::cout << "No public key and or ipv4 found for " << m->from() << "; needs to be identified" << std::endl;
-			networking_->waiting_symmetric_key_messages.emplace(m->from(), m); //we dont know the sender and so we needs to identify him first
-			networking_->get_stun_client()->identify(m->from());
+			throw other_error("Public key should be exchanged in credentials or using STUN.");
 		}
 
 		msg.commitTransaction();
@@ -528,7 +540,7 @@ void PeerSender::handle_connection_error() {
 
 	if (socket_->error() == QAbstractSocket::SocketError::ConnectionRefusedError || 
 		socket_->error() == QAbstractSocket::SocketError::SocketTimeoutError) {
-		std::cout << "Host non-successfuly connected" << std::endl; //connection failed, try relaying
+		std::cout << "Host connection failed" << std::endl; //connection failed, try relaying
 		auto mtemp = message_waiting_for_connection;
 		auto itemp = connectee_waiting_for_connection;
 
@@ -631,6 +643,7 @@ void PeerSender::message_send(QTcpSocket* socket, shared_ptr_message msg, IpWrap
 }
 
 void PeerSender::message_send(shared_ptr_message msg, IpWrapper& ipw) {
+	print_message(msg, "sending");
 	try_connect(msg, ipw);
 }
 
@@ -715,9 +728,9 @@ void Networking::start_servers_with_first_ip() {
 	}
 }
 
-void Networking::add_to_ip_map(pk_t id, QHostAddress&& address) {
+bool Networking::add_to_ip_map(pk_t id, QHostAddress&& address) {
 	IpWrapper wrapper(address);
-	ip_map().add_to_map(id, wrapper);
+	return ip_map().add_to_map(id, wrapper);
 }
 
 eax_optional Networking::get_or_create_eax(shared_ptr_message msg) {

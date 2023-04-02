@@ -28,11 +28,30 @@ void Peer::newspaper_identified(pk_t newspaper_key, my_string newspaper_name, st
  * @param newspaper_key Public key of newspaper.
  * @param newspaper_ip_domain IP, or domain name, of the newspaper.
  */
-void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain) {
+void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain, bool allocate_now) {
 	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
-	networking_->get_stun_client()->allocate_request(newspaper_key);
+	if (allocate_now) {
+		networking_->get_stun_client()->allocate_request(newspaper_key);
+	}
 
-	newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name));
+	auto news = NewspaperEntry(newspaper_key, newspaper_key, newspaper_name);
+	news.await_confirmation = true;
+
+	newspapers_awaiting_confirmation.emplace(newspaper_key, std::move(news));
+}
+
+/**
+ * Adds new newspaper to the collection.
+ * @param newspaper_key Public key of newspaper.
+ * @param newspaper_ip_domain IP of the newspaper.
+ */
+NewspaperEntry& Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, QHostAddress&& newspaper_ip_domain, bool allocate_now) {
+	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
+	if (allocate_now) {
+		networking_->get_stun_client()->allocate_request(newspaper_key);
+	}
+
+	return newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name)).first->second;
 }
 
 /**
@@ -51,7 +70,8 @@ void Peer::newspaper_confirm(pk_t pid) {
 	auto ne = newspapers_awaiting_confirmation.find(pid);
 	if (ne == newspapers_awaiting_confirmation.end()) //no newspaper were awaiting confirmation with this pid
 		return;
-	news_.emplace(pid, ne->second);
+	auto news = news_.emplace(pid, ne->second).first;
+	news->second.set_confirmation(true);
 	newspapers_awaiting_confirmation.erase(ne);
 	emit got_newspaper_confirmation(pid);
 }
@@ -868,45 +888,71 @@ void Peer::handle_credentials_request(shared_ptr_message message) {
 	CryptoPP::RSA::PublicKey resp_rsa_public;
 	eax_optional resp_eax;
 
-	bool req_my_credentials = message->credentials().ipv4()[0] != 'r';
-	pk_t requested_credentials = 0;
-	if (req_my_credentials)
-		requested_credentials = QString(message->credentials().ipv4().c_str()).mid(1).toULongLong();
+	if (get_networking()->ip_map().have_rsa_public(message->from())) {
+		networking_->enroll_message_to_be_sent(
+			MFW::SetMessageContextError(
+				MFW::CredentialsFactory(
+					public_identifier_,
+					message->from()
+				)
+			)
+		);
+	}
+	else {
+		bool req_my_credentials = message->credentials().ipv4()[0] != 'r';
+		pk_t requested_credentials = 0;
 
-	if (message->credentials().req_ipv4()) {
 		if (req_my_credentials)
-			resp_ip4 = networking_->ip_map_.my_ip.ipv4.toString();
-		else if (networking_->ip_map_.have_ip4(requested_credentials))
-			resp_ip4 = networking_->ip_map_.get_ip4(requested_credentials).toString();
-	}
-	if (message->credentials().req_ipv6()) {
-		if (req_my_credentials)
-			resp_ip6 = networking_->ip_map_.my_ip.ipv6.toString();
-		else if (networking_->ip_map_.have_ip6(requested_credentials))
-			resp_ip6 = networking_->ip_map_.get_ip6(requested_credentials).toString();
-	}
-	if (message->credentials().req_rsa_public_key()) {
-		if (req_my_credentials)
-			resp_rsa_public = networking_->ip_map_.my_ip.get_rsa();
-		else if (networking_->ip_map_.have_rsa_public(requested_credentials))
-			resp_rsa_public = networking_->ip_map_.get_wrapper_ref(requested_credentials).get_rsa();
-	}
-	if (message->credentials().req_eax_key()) {
-		if (networking_->ip_map_.have_eax(message->from())) {
-			networking_->generate_symmetric_key();
+			requested_credentials = QString(message->credentials().ipv4().c_str()).mid(1).toULongLong();
+
+		if (message->credentials().req_ipv4()) {
+			if (req_my_credentials)
+				resp_ip4 = networking_->ip_map_.my_ip.ipv4.toString();
+			else if (networking_->ip_map_.have_ip4(requested_credentials))
+				resp_ip4 = networking_->ip_map_.get_ip4(requested_credentials).toString();
 		}
-		resp_eax = networking_->ip_map_.get_eax(message->from());
-	}
+		if (message->credentials().req_ipv6()) {
+			if (req_my_credentials)
+				resp_ip6 = networking_->ip_map_.my_ip.ipv6.toString();
+			else if (networking_->ip_map_.have_ip6(requested_credentials))
+				resp_ip6 = networking_->ip_map_.get_ip6(requested_credentials).toString();
+		}
+		if (message->credentials().req_rsa_public_key()) {
+			if (req_my_credentials)
+				resp_rsa_public = networking_->ip_map_.my_ip.get_rsa();
+			else if (networking_->ip_map_.have_rsa_public(requested_credentials))
+				resp_rsa_public = networking_->ip_map_.get_wrapper_ref(requested_credentials).get_rsa();
+		}
+		if (message->credentials().req_eax_key()) {
+			if (!networking_->ip_map_.have_eax(message->from())) {
+				networking_->save_symmetric_key(
+					message->from(),
+					networking_->generate_symmetric_key()
+				);
+			}
+			resp_eax = networking_->ip_map_.get_eax(message->from());
+		}
 
-	networking_->enroll_message_to_be_sent(
-		MFW::RespCredentialsFactory(
-			MFW::CredentialsFactory(
-				public_identifier_,
-				message->from()
-			),
-			resp_ip4, resp_ip6, resp_rsa_public, resp_eax
-		)
-	);
+		if (message->credentials().has_rsa_public_key()) {
+			IpWrapper& wrapper = get_networking()->ip_map().get_wrapper_ref(message->from());
+			auto hex_key = message->credentials().rsa_public_key().key();
+			wrapper.set_rsa_hex_string(hex_key);
+		}
+
+		CredentialsPayload payload;
+		payload.set_private(get_networking()->ip_map().private_rsa);
+		payload.set_public(get_networking()->ip_map().get_wrapper_ref(message->from()).get_rsa_optional());
+
+		networking_->enroll_message_to_be_sent(
+			MFW::RespCredentialsFactory(
+				MFW::CredentialsFactory(
+					public_identifier_,
+					message->from()
+				),
+				resp_ip4, resp_ip6, resp_rsa_public, resp_eax, payload
+			)
+		);
+	}
 }
 
 
@@ -998,6 +1044,27 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 	}
 }
 
+void check_add_article_to_news(shared_ptr_message message, NewspaperEntry& news, Article&& article) {
+	auto add_to_news = [&](){
+		article.add_reader(message->from());
+		news.add_article(article.main_hash(), std::move(article));
+	};
+
+	try { //try finding received article from article list in article database
+		auto& present_article = news.get_article(article.main_hash());
+		if (present_article.modification_time() >= article.modification_time()) { //if received article is newer, replace it
+			news.remove_article(article.main_hash());
+			add_to_news();
+		}
+		else {
+			present_article.add_reader(message->from());
+		}
+	}
+	catch (article_not_found_database& e) { //if it wasn't found, add it
+		add_to_news();
+	}
+}
+
 void Peer::handle_article_list_response(shared_ptr_message message) {
 	auto list_size = message->article_list().response_size();
 	if (list_size != 0) {
@@ -1005,26 +1072,7 @@ void Peer::handle_article_list_response(shared_ptr_message message) {
 
 		for (auto it = message->article_list().response().begin(); it != message->article_list().response().end(); it++) {
 			auto& news = get_news(list_news_id);
-
-			auto add_to_news = [&](){
-				auto a = Article(*it);
-				a.add_reader(message->from());
-				news.add_article(a.main_hash(), std::move(a));
-			};
-
-			try { //try finding received article from article list in article database
-				auto& present_article = news.get_article(it->main_hash());
-				if (present_article.modification_time() >= it->modification_time()) { //if received article is newer, replace it
-					news.remove_article(it->main_hash());
-					add_to_news();
-				}
-				else {
-					present_article.add_reader(message->from());
-				}
-			}
-			catch (article_not_found_database& e) { //if it wasn't found, add it
-				add_to_news();
-			}
+			check_add_article_to_news(message, news, Article(*it));
 		}
 
 		emit new_article_list(list_news_id);
@@ -1039,7 +1087,10 @@ void Peer::handle_article_list_response(shared_ptr_message message) {
 void Peer::handle_credentials_response(shared_ptr_message message) {
 	if (message->credentials().req_ipv4()) {
 		if (message->credentials().req_ipv6()) {
-			networking_->ip_map_.update_ip((pk_t)message->from(), QHostAddress(QString(message->credentials().ipv4().c_str())), QHostAddress(QString(message->credentials().ipv6().c_str())));
+			networking_->ip_map_.update_ip(
+				(pk_t)message->from(),
+				QHostAddress(QString(message->credentials().ipv4().c_str())),
+				QHostAddress(QString(message->credentials().ipv6().c_str())));
 		}
 		else {
 			networking_->ip_map_.update_ip((pk_t)message->from(), QHostAddress(QString(message->credentials().ipv4().c_str())));
@@ -1047,11 +1098,30 @@ void Peer::handle_credentials_response(shared_ptr_message message) {
 	}
 	if (message->credentials().req_rsa_public_key()) {
 		networking_->ip_map_.update_rsa_public((pk_t)message->from(), message->credentials().rsa_public_key().key());
-		
 	}
 	if (message->credentials().req_eax_key()) {
-		networking_->ip_map_.update_eax((pk_t)message->from(), message->credentials().eax_key().key());
-		emit new_symmetric_key(message->from());
+		CryptoPP::ByteQueue dec_key;
+		std::string enc_key = message->credentials().eax_key().key();
+		std::string signature = message->credentials().eax_key().signature();
+		auto public_rsa = get_networking()->ip_map().get_wrapper_ref(message->from()).get_rsa_optional();
+		auto private_rsa = get_networking()->ip_map().private_rsa;
+		CryptoUtils::instance().verify_decrypt_symmetric_key(
+			enc_key,
+			signature,
+			dec_key,
+			public_rsa,
+			private_rsa
+		);
+		networking_->ip_map_.update_eax((pk_t)message->from(), dec_key);
+	}
+
+	std::multimap<pk_t, shared_ptr_message>& messages_waiting_for_credentials = get_networking()->messages_waiting_for_credentials;
+	if (messages_waiting_for_credentials.count(message->from()) > 0) {
+		auto [bit, eit] = messages_waiting_for_credentials.equal_range(message->from());
+		auto message = bit->second;
+		messages_waiting_for_credentials.erase(bit);
+
+		networking_->enroll_message_to_be_sent(message);
 	}
 }
 
@@ -1240,7 +1310,8 @@ void Peer::generate_newspaper_entry_request(pk_t destination, pk_t newspaper_id)
 			MFW::NewspaperEntryFactory(
 				public_identifier_,
 				destination,
-				newspaper_id
+				newspaper_id,
+				""
 			)
 		)
 	);
@@ -1248,6 +1319,8 @@ void Peer::generate_newspaper_entry_request(pk_t destination, pk_t newspaper_id)
 
 void Peer::handle_newspaper_entry_request(shared_ptr_message message) {
 	std::uint64_t news_id = message->newspaper_entry().entry().news_id();
+	std::string news_name = message->newspaper_entry().entry().news_name();
+	auto& news_wrapper = get_networking()->ip_map().get_wrapper_ref(news_id);
 
 	try {
 		auto& news = get_news(news_id);
@@ -1256,9 +1329,11 @@ void Peer::handle_newspaper_entry_request(shared_ptr_message message) {
 				MFW::NewspaperEntryFactory(
 					public_identifier_,
 					message->to(),
-					news_id
+					news_id,
+					news_name
 				),
-				news
+				news,
+				news_wrapper
 			)
 		);
 	}
@@ -1268,7 +1343,8 @@ void Peer::handle_newspaper_entry_request(shared_ptr_message message) {
 				MFW::NewspaperEntryFactory(
 					public_identifier_,
 					message->from(),
-					news_id
+					news_id,
+					news_name
 				)
 			)
 		);
@@ -1304,7 +1380,8 @@ void Peer::handle_newspaper_list_request(shared_ptr_message message) {
 				get_public_key(),
 				message->from()
 			),
-			get_news()
+			get_news(),
+			get_networking()->ip_map()
 		)
 	);
 }
@@ -1386,10 +1463,25 @@ void Peer::handle_newspaper_list_response(shared_ptr_message message) {
 	}
 
 	for (auto it = message->newspaper_list().news().begin(); it != message->newspaper_list().news().end(); it++) {
-		if (!find_news(it->news_id())) {
-			add_new_newspaper(it->news_id(), it->news_name(), message->from());
+		auto check_articles = [&](NewspaperEntry& news){
+			if (it->articles_size() > 0) {
+				for (auto article_it = it->articles().begin(); article_it != it->articles().end(); article_it++) {
+					check_add_article_to_news(message, news, Article(*article_it));
+				}
+			}	
+		};
+
+		if (!find_news(it->entry().news_id())) {
+			auto& news = add_new_newspaper(it->entry().news_id(), it->entry().news_name(), QHostAddress(it->network_info().ipv4()));
+			check_articles(news);
+		}
+		else {
+			auto& news = get_news(it->entry().news_id());
+			check_articles(news);
 		}
 	}
+
+	emit newspaper_list_received();
 }
 
 /**
@@ -1669,12 +1761,24 @@ user_container& Peer::get_friends() {
 }
 
 bool Peer::add_friend(pk_t id, QHostAddress address) {
-	
+	bool emplace_ok = friends_.emplace(id).second;
+	return get_networking()->add_to_ip_map(id, std::move(address)) && emplace_ok;
+}
+
+bool Peer::add_friend(pk_t id, const QString& str_address) {
+	QHostAddress address;
+	if (!address.setAddress(str_address)) {
+		throw other_error("Invalid IPv4 address.");
+	}
+	return add_friend(id, address);
 }
 
 bool Peer::add_friend(pk_t id, const std::string& ip) {
-	return add_friend(id, QHostAddress(ip));
-	return friends_.emplace(id).second;
-	// Networking* networking = get_networking();
-	// return true;
+	return add_friend(id, QString::fromStdString(ip));
+}
+
+void Peer::allocate_next_newspaper() {
+	if (newspapers_awaiting_confirmation.size() > 0) {
+		get_networking()->get_stun_client()->allocate_request(newspapers_awaiting_confirmation.begin()->first);
+	}
 }

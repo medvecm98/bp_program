@@ -280,7 +280,7 @@ std::string Article::get_crypto_hash() {
 	return crypto_hash_;
 }
 
-void Article::network_serialize_article(np2ps::Article* art) {
+void Article::network_serialize_article(np2ps::Article* art) const {
 	art->set_author_id(_author_id);
 	art->set_author_name(_author_name);
 	art->set_news_id(_news_id);
@@ -310,7 +310,7 @@ void Article::network_serialize_article(np2ps::Article* art) {
 	}
 }	
 
-void Article::local_serialize_article(np2ps::SerializedArticle* art) {
+void Article::local_serialize_article(np2ps::SerializedArticle* art) const {
 	network_serialize_article(art->mutable_article());
 	art->set_path_to_article_file(_path_to_article_file);
 	art->set_article_present(article_present_);

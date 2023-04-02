@@ -117,6 +117,8 @@ public:
 	 */
 	bool update_eax(pk_t id, const std::string&);
 
+	bool update_eax(pk_t id, CryptoPP::ByteQueue& eax);
+
 	/**
 	 * @brief Sets the TCP socket for STUN communication.
 	 * 
@@ -287,6 +289,10 @@ public:
 			serialized_wrapper->set_publicid(wrapper_map_pair.first);
 		}
 	}
+
+	// IpWrapper& my_ip() {
+	// 	return map_[my_public_id];
+	// }
 
 	IpWrapper my_ip; //IpWrapper containing information related to my networking
 	pk_t my_public_id; //my public identifier, set by Peer

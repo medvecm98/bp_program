@@ -113,9 +113,10 @@ public:
 
 	void load_ip_authorities(pk_t newspaper_key); //to load the IPs of authorities
 	void enroll_new_article(Article article, bool header_only); //add new article to list of category -> article
-	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string& newspaper_ip);
+	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string& newspaper_ip, bool allocate_now = true);
 	void add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, pk_t sender);
 	void add_new_newspaper(pk_t destination, pk_t news_id, my_string news_name);
+	NewspaperEntry& add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, QHostAddress&& newspaper_ip_domain, bool allocate_now = false);
 	void add_new_newspaper_from_file(const std::string& path);
 	void add_new_newspaper_pk(pk_t pid);
 	size_t list_all_articles_from_news(article_container& articles, const std::set<category_t>& categories);
@@ -229,6 +230,10 @@ public:
 	bool find_news(pk_t news_id);
 	user_container& get_friends();
 	bool add_friend(pk_t id, const std::string& ip);
+	bool add_friend(pk_t id, const QString& ip);
+	bool add_friend(pk_t id, QHostAddress ip);
+
+	void allocate_next_newspaper();
 
 public slots:
 	void handle_message(shared_ptr_message message);
@@ -255,6 +260,8 @@ public slots:
 	}
 
 signals:
+	void newspaper_list_received();
+
 	/**
 	 * @brief Confirmation, that requested newspaper exists and are communicating.
 	 * 

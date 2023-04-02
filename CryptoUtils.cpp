@@ -126,7 +126,6 @@ CryptoPP::ByteQueue CryptoUtils::sec_byte_block_to_byte_queue(
 void CryptoUtils::decrypt_symmetric_key(
     std::string& enc_key,
     CryptoPP::ByteQueue& dec_key,
-    CryptoPP::RSA::PublicKey& rsa_public,
     CryptoPP::RSA::PrivateKey& rsa_private
 ) {
     using namespace CryptoPP;
@@ -163,7 +162,6 @@ bool CryptoUtils::verify_decrypt_symmetric_key(
     decrypt_symmetric_key(
         enc_key,
         dec_key,
-        rsa_public.value(),
         rsa_private.value()
     );
 

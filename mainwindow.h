@@ -82,6 +82,15 @@ public slots:
 	 * 
 	 * @param news_id Public identifier of newly added newspaper.
 	 */
+	void newspaper_added_to_db_noarg();
+
+	/**
+	 * @brief New newspaper was added to database.
+	 * 
+	 * Refreshes the Newspaper tree.
+	 * 
+	 * @param news_id Public identifier of newly added newspaper.
+	 */
 	void newspaper_added_to_db(pk_t news_id);
 
 	/**

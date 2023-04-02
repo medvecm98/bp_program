@@ -397,9 +397,9 @@ public:
 		return contents.toStdString();
 	}
 
-	void network_serialize_article(np2ps::Article* art);
+	void network_serialize_article(np2ps::Article* art) const;
 
-	void local_serialize_article(np2ps::SerializedArticle* art);
+	void local_serialize_article(np2ps::SerializedArticle* art) const;
 
 	bool is_header_only() {
 		return !article_present_;

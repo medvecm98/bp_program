@@ -448,7 +448,7 @@ public:
 
 	void start_servers_with_first_ip();
 
-	void add_to_ip_map(pk_t id, QHostAddress&& address);
+	bool add_to_ip_map(pk_t id, QHostAddress&& address);
 
 	eax_optional get_or_create_eax(shared_ptr_message msg);
 	IpWrapper& save_symmetric_key(pk_t save_to, CryptoPP::ByteQueue&& aes_key);
@@ -462,6 +462,7 @@ public:
 	std::unordered_multimap<pk_t, shared_ptr_message> waiting_symmetric_exchange; //messages waiting to be sent while symmetric key is exchanged
 	user_level_map* user_map;
 	std::map<pk_t, shared_ptr_message> waiting_symmetric_key_messages;
+	std::multimap<pk_t, shared_ptr_message> messages_waiting_for_credentials;
 	std::map<quint32, std::string> newspapers_awaiting_identification;
 
 public slots:

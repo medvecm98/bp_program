@@ -32,9 +32,14 @@ void MainWindow::on_pushButton_print_peer_released()
 	ctx->p.print_contents();
 }
 
-void MainWindow::newspaper_added_to_db(pk_t news_id) {
-	auto& news = ctx->p.get_news(news_id);
+void MainWindow::newspaper_added_to_db_noarg() {
 	generate_article_list();
+	ctx->p.allocate_next_newspaper();
+}
+
+void MainWindow::newspaper_added_to_db(pk_t news_id) {
+	generate_article_list();
+	ctx->p.allocate_next_newspaper();
 }
 
 void MainWindow::on_pushButton_add_news_released()
@@ -44,7 +49,10 @@ void MainWindow::on_pushButton_add_news_released()
 
 void MainWindow::generate_article_list() {
 	ui->treeWidget_newspaper->clear();
-	for (auto&& news : ctx->p.get_news_db()) { //for all newspapers in database
+	for (auto&& news : ctx->p.get_news()) { //for all newspapers in database
+		if (news.second.await_confirmation && !news.second.confirmation()) { // skip news that require confirmation, but aren't confirmed
+			continue;
+		}
 		ui->treeWidget_newspaper->addTopLevelItem( //adds newspaper into Newspaper tree
 				new QTreeWidgetItem(QStringList({
 								QString::fromStdString(news.second.get_name()),
@@ -547,6 +555,10 @@ void MainWindow::on_pushButtonFriends_clicked()
 {
 	QString ip_string = ui->lineEditFriends->text();
 	QString pid_string = ui->lineEditFriendID->text();
-	pk_t pid = string_to_pid(pid_string);
-	ctx->p.add_friend(pid, ip_string);
+	bool pid_cast_ok;
+	pk_t pid = pid_string.toULongLong(&pid_cast_ok);
+	if (!ctx->p.add_friend(pid, ip_string) || !pid_cast_ok) {
+		throw other_error("Adding friend failed for some reason.");
+	}
+	ctx->p.generate_newspaper_list_request(pid);
 }

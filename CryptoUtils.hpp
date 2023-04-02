@@ -41,7 +41,6 @@ struct CryptoUtils {
     void decrypt_symmetric_key(
         std::string& enc_key,
         CryptoPP::ByteQueue& dec_key,
-        CryptoPP::RSA::PublicKey& rsa_public,
         CryptoPP::RSA::PrivateKey& rsa_private
     );
 

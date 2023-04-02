@@ -183,21 +183,24 @@ ArticleListWrapper& NewspaperEntry::get_list_of_articles() {
 	return article_list_wrapper_;
 };
 
-void NewspaperEntry::serialize_entry(np2ps::NewspaperEntry* entry) {
+void NewspaperEntry::serialize_entry(np2ps::NewspaperEntry* entry) const {
 	std::cout << "serializing newspaper\n";
 	entry->set_news_name(news_name_);
 	entry->set_news_id(news_id_);
 }
 
-void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne) {
+void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpWrapper& news_wrapper) const {
 	serialize_entry(nserialized_ne->mutable_entry());
-	// for (auto& [hash, art] : _articles) {
-	// 	np2ps::Article* pa = nserialized_ne->add_articles();
-	// 	art.network_serialize_article(pa);
-	// }
+	for (auto& [hash, art] : _articles) {
+		np2ps::Article* pa = nserialized_ne->add_articles();
+		art.network_serialize_article(pa);
+	}
+	nserialized_ne->mutable_network_info()->set_ipv4(news_wrapper.ipv4.toIPv4Address());
+	nserialized_ne->mutable_network_info()->set_port(news_wrapper.port);
+	nserialized_ne->mutable_network_info()->set_publicid(news_id_);
 }
 
-void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) {
+void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) const {
 	serialize_entry(lserialized_ne->mutable_entry());
 	for (auto& [hash, art] : _articles) {
 		np2ps::SerializedArticle* pa = lserialized_ne->add_articles();
@@ -274,4 +277,12 @@ bool NewspaperEntry::verify_article_signature(hash_t id) {
 		article.get_crypto_hash(),
 		article.get_signature()
 	);
+}
+
+bool NewspaperEntry::confirmation() {
+	return confirmed;
+}
+
+void NewspaperEntry::set_confirmation(bool c) {
+	confirmed = c;
 }

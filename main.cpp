@@ -85,6 +85,7 @@ int main(int argc, char *argv[]) {
 	
 	/* Connect slots and signals in-between various widgets of the windows and windows and peer */
 	QObject::connect(&ctx->p, &Peer::got_newspaper_confirmation, &w, &MainWindow::newspaper_added_to_db);
+	QObject::connect(&ctx->p, &Peer::newspaper_list_received, &w, &MainWindow::newspaper_added_to_db_noarg);
 	QObject::connect(&ctx->p, &Peer::new_article_list, &w, &MainWindow::article_list_received);
 	QObject::connect(ctx->p.get_networking(), &Networking::got_network_interfaces, &w, &MainWindow::got_network_interfaces);
 	QObject::connect(&w, &MainWindow::start_server, ctx->p.get_networking()->get_peer_receiver(), &PeerReceiver::start_server);

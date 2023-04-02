@@ -234,8 +234,14 @@ shared_ptr_message MFW::RespUserIsMemberFactory(shared_ptr_message&& msg, bool i
 	return std::move(msg);
 }
 
-shared_ptr_message MFW::RespCredentialsFactory(shared_ptr_message&& msg, QString ip4, QString ip6, 
-	rsa_public_optional public_key, eax_optional eax_key) {
+shared_ptr_message MFW::RespCredentialsFactory(
+	shared_ptr_message&& msg,
+	QString ip4,
+	QString ip6, 
+	rsa_public_optional public_key,
+	eax_optional eax_key,
+	CredentialsPayload payload
+) {
 		msg->set_msg_ctx(np2ps::RESPONSE);
 		if (!ip4.isEmpty()) {
 			msg->mutable_credentials()->set_ipv4(ip4.toStdString());
@@ -259,10 +265,16 @@ shared_ptr_message MFW::RespCredentialsFactory(shared_ptr_message&& msg, QString
 			msg->mutable_credentials()->set_req_rsa_public_key(false);
 
 		if (eax_key.has_value()) {
+			msg->mutable_credentials()->mutable_eax_key()->set_signature(
+				CryptoUtils::instance().sign_key(
+					eax_key.value(),
+					payload.my_private_key_for_signing
+				)
+			);
 			msg->mutable_credentials()->mutable_eax_key()->set_key(
 				CryptoUtils::instance().encrypt_key(
 					eax_key.value(),
-					public_key
+					payload.their_public_key_for_encrypting
 				)
 			);
 			msg->mutable_credentials()->set_req_eax_key(true);
@@ -323,19 +335,20 @@ void MFW::SetMessageContextError(shared_ptr_message& msg) {
 	msg->set_msg_ctx(np2ps::ERROR);
 }
 
-shared_ptr_message MFW::RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news) {
-	news.network_serialize_entry(msg->mutable_newspaper_entry());
+shared_ptr_message MFW::RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news, IpWrapper& news_wrapper) {
+	news.network_serialize_entry(msg->mutable_newspaper_entry(), news_wrapper);
 	msg->set_msg_ctx(np2ps::RESPONSE);
 	return msg;
 }
 
-shared_ptr_message MFW::NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id) {
+shared_ptr_message MFW::NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id, const std::string& name) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
 	msg->set_msg_type(np2ps::NEWSPAPER_ENTRY);
 
 	msg->mutable_newspaper_entry()->mutable_entry()->set_news_id(newspaper_id);
+	msg->mutable_newspaper_entry()->mutable_entry()->set_news_name(name);
 
 	return msg;
 }
@@ -346,16 +359,16 @@ shared_ptr_message MFW::NewspaperListFactory(pk_t from, pk_t to) {
 
 	msg->set_msg_type(np2ps::NEWSPAPER_LIST);
 
-	return msg;	
+	return msg;
 }
 
-shared_ptr_message MFW::RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news) {
+shared_ptr_message MFW::RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news_db, IpMap& networking_map) {
 	msg->set_msg_ctx(np2ps::RESPONSE);
 
-	for (auto&& one_news : news) {
-		auto news_gpb = msg->mutable_newspaper_list()->add_news();
-		news_gpb->set_news_id(one_news.second.get_id());
-		news_gpb->set_news_name(one_news.second.get_name());
+	for (auto&& [nid, news] : news_db) {
+		np2ps::NetworkSerializedNewspaperEntry* gpb_news = msg->mutable_newspaper_list()->add_news();
+		IpWrapper& news_wrapper = networking_map.get_wrapper_ref(nid);
+		news.network_serialize_entry(gpb_news, news_wrapper);
 	}
 
 	return msg;

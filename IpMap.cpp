@@ -135,10 +135,20 @@ bool IpMap::update_rsa_public(pk_t pk, const CryptoPP::RSA::PublicKey& rsa) {
 
 bool IpMap::update_eax(pk_t pk, const std::string& eax) {
 	if (map_.find(pk) == map_.end()) {
-		throw create_ip_wrapper_error(pk, "updating EAX");
+		throw create_ip_wrapper_error(pk, "updating EAX string");
 	}
 	else {
 		map_.at(pk).set_eax_hex_string(eax);
+		return true;
+	}
+}
+
+bool IpMap::update_eax(pk_t pk, CryptoPP::ByteQueue& eax) {
+	if (map_.find(pk) == map_.end()) {
+		throw create_ip_wrapper_error(pk, "updating EAX");
+	}
+	else {
+		map_.at(pk).add_eax_key(std::move(eax));
 		return true;
 	}
 }

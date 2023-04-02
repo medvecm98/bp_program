@@ -20,6 +20,19 @@ using string_ptr_optional = std::optional<std::shared_ptr<std::string>>;
 using rsa_public_ptr_optional = std::optional<std::shared_ptr<CryptoPP::RSA::PublicKey>>;
 using eax_ptr_optional = std::optional<std::shared_ptr<CryptoPP::SecByteBlock>>;
 
+struct CredentialsPayload {
+	void set_private(rsa_private_optional my_private_key_for_signing_) {
+		my_private_key_for_signing = my_private_key_for_signing_;
+	}
+
+	void set_public(rsa_public_optional their_public_key_for_encrypting_) {
+		their_public_key_for_encrypting = their_public_key_for_encrypting_;
+	}
+
+	rsa_private_optional my_private_key_for_signing;
+	rsa_public_optional their_public_key_for_encrypting;
+};
+
 class MessageFactoryWrapper {
 public:
 
@@ -103,21 +116,24 @@ public:
 		eax_optional eax_key);
 
 	/* Responses: */
-	//static shared_ptr_message RespIpAddressFactory(shared_ptr_message&& msg, const std::string& ip4);
-	//static shared_ptr_message RespIpAddressFactory(shared_ptr_message&& msg, const std::string& ip4, const std::string& ip6);
 	static shared_ptr_message RespArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header, std::string&& article);
 	static shared_ptr_message RespArticleHeaderFactory(shared_ptr_message&& msg, article_ptr article_header);
 	static shared_ptr_message RespArticleListFactory(shared_ptr_message&& msg, article_container& articles);
 	static shared_ptr_message RespUserIsMemberFactory(shared_ptr_message&& msg, bool is_member, level_t req_level);
-	//static shared_ptr_message RespNewPublicKeyFactory(shared_ptr_message&& msg, const CryptoPP::RSA::PublicKey& public_key);
-	static shared_ptr_message RespCredentialsFactory(shared_ptr_message&& msg, QString ip4, QString ip6, 
-		rsa_public_optional public_key, eax_optional eax_key);
-	static shared_ptr_message RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news);
+	static shared_ptr_message RespCredentialsFactory(
+		shared_ptr_message&& msg,
+		QString ip4,
+		QString ip6, 
+		rsa_public_optional public_key,
+		eax_optional eax_key,
+		CredentialsPayload payload
+	);
+	static shared_ptr_message RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news, IpWrapper& news_wrapper);
 
 	static shared_ptr_message ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header);
 
 	static shared_ptr_message ErrorArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id);
-	static shared_ptr_message RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news);
+	static shared_ptr_message RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news, IpMap& news_networking);
 
 	/* Basic factories: */
 	
@@ -133,7 +149,7 @@ public:
 	static shared_ptr_message UpdateArticleFactory(pk_t from, pk_t to, hash_t article_hash);
 	static shared_ptr_message CredentialsFactory(pk_t from, pk_t to);
 	static shared_ptr_message PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::PublicKey& key);
-	static shared_ptr_message NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id);
+	static shared_ptr_message NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id, const std::string& name);
 	static shared_ptr_message NewspaperListFactory(pk_t from, pk_t to);
 
 	template<typename PeerContainer>
