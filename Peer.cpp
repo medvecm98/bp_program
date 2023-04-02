@@ -462,6 +462,9 @@ void Peer::handle_responses(shared_ptr_message message) {
 	else if (type == np2ps::UPDATE_MARGIN) {
 		handle_update_margin_request(message);
 	}
+	else if (type == np2ps::NEWSPAPER_LIST) {
+		handle_newspaper_list_response(message);
+	}
 	else {
 		throw unsupported_message_type_in_context("Peer received a message type that is unsupported in given context");
 	}
@@ -907,19 +910,19 @@ void Peer::handle_credentials_request(shared_ptr_message message) {
 
 		if (message->credentials().req_ipv4()) {
 			if (req_my_credentials)
-				resp_ip4 = networking_->ip_map_.my_ip.ipv4.toString();
+				resp_ip4 = networking_->ip_map_.my_ip().ipv4.toString();
 			else if (networking_->ip_map_.have_ip4(requested_credentials))
 				resp_ip4 = networking_->ip_map_.get_ip4(requested_credentials).toString();
 		}
 		if (message->credentials().req_ipv6()) {
 			if (req_my_credentials)
-				resp_ip6 = networking_->ip_map_.my_ip.ipv6.toString();
+				resp_ip6 = networking_->ip_map_.my_ip().ipv6.toString();
 			else if (networking_->ip_map_.have_ip6(requested_credentials))
 				resp_ip6 = networking_->ip_map_.get_ip6(requested_credentials).toString();
 		}
 		if (message->credentials().req_rsa_public_key()) {
 			if (req_my_credentials)
-				resp_rsa_public = networking_->ip_map_.my_ip.get_rsa();
+				resp_rsa_public = networking_->ip_map_.my_ip().get_rsa();
 			else if (networking_->ip_map_.have_rsa_public(requested_credentials))
 				resp_rsa_public = networking_->ip_map_.get_wrapper_ref(requested_credentials).get_rsa();
 		}
@@ -1217,7 +1220,7 @@ void Peer::handle_public_key_one_way(shared_ptr_message msg) {
 			MFW::PublicKeyFactory(
 				public_identifier_,
 				msg->from(),
-				networking_->ip_map_.my_ip.key_pair.first.value()
+				networking_->ip_map_.my_ip().key_pair.first.value()
 			)
 		)
 	);
@@ -1508,7 +1511,7 @@ pk_t Peer::get_my_news_id() {
  * @param ip Desired IP to be set.
  */
 void Peer::set_my_ip(QString ip) {
-	networking_->ip_map_.my_ip.ipv4 = QHostAddress(ip);
+	networking_->ip_map_.get_wrapper_ref(public_identifier_).ipv4 = QHostAddress(ip);
 }
 
 /**

@@ -12,7 +12,6 @@ message IpWrapper {
 }
 
 message IpMap {
-    IpWrapper my_IP = 10;
     uint64 my_public_ID = 20;
     optional string rsa_private_key = 30;
     repeated IpWrapper wrapper_map = 40;

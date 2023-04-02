@@ -56,11 +56,11 @@ void Networking::generate_rsa_key_pair() {
 	auto pair = CryptoUtils::instance().generate_rsa_pair();
 
 	ip_map_.private_rsa = {pair.second};
-	ip_map_.my_ip.key_pair.first = {pair.first};
+	ip_map_.my_ip().key_pair.first = {pair.first};
 }
 
 shared_ptr_message Networking::sign_and_encrypt_key(CryptoPP::ByteQueue& key_queue, pk_t sender, pk_t receiver) {
-	if (!ip_map_.private_rsa.has_value() || !ip_map_.my_ip.key_pair.first.has_value()) {
+	if (!ip_map_.private_rsa.has_value() || !ip_map_.my_ip().key_pair.first.has_value()) {
 		generate_rsa_key_pair(); //generated RSA keys, if they weren't before
 	}
 	auto& private_rsa = ip_map_.private_rsa;
@@ -115,6 +115,7 @@ void print_message(shared_ptr_message msg, std::string recv_send) {
 			std::cout << "  error" << std::endl;
 			break;
 		default:
+			std::cout << "  <<unknown type>>" << std::endl;
 			break;
 	}
 
@@ -136,7 +137,11 @@ void print_message(shared_ptr_message msg, std::string recv_send) {
 		case np2ps::CREDENTIALS:
 			std::cout << "  creds" << std::endl;
 			break;
+		case np2ps::NEWSPAPER_LIST:
+			std::cout << "  news list" << std::endl;
+			break;
 		default:
+			std::cout << "  <<unknown type>>" << std::endl;
 			break;
 	}
 
@@ -166,7 +171,7 @@ void Networking::send_message(shared_ptr_message msg) {
 						msg->from(), msg->to()
 					),
 					false, false, true, true,
-					{}, {}, ip_map_.my_ip.get_rsa(), {}, {}
+					{}, {}, ip_map_.my_ip().get_rsa(), {}, {}
 				);
 			messages_waiting_for_credentials.emplace(msg->to(), msg); //save message for when exchange is finished
 

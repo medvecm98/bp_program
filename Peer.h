@@ -37,7 +37,7 @@ public:
 	 * 
 	 */
 	Peer(pk_t public_id) : 
-		networking_(std::make_shared<Networking>()) 
+		networking_(std::make_shared<Networking>(public_id)) 
 	{
 		CryptoPP::AutoSeededRandomPool prng;
 		if (public_id == 0)
@@ -48,7 +48,7 @@ public:
 
 		auto key_pair = CryptoUtils::instance().generate_rsa_pair();
 
-		networking_->ip_map_.my_ip.add_rsa_key(key_pair.first);
+		networking_->ip_map_.my_ip().add_rsa_key(key_pair.first);
 		networking_->ip_map_.private_rsa = {key_pair.second};
 		qobject_connect_peer();
 		peer_init();
@@ -57,7 +57,7 @@ public:
 	explicit Peer(np2ps::Peer& peer_serialized) : 
 		public_identifier_(peer_serialized.public_identifier()),
 		name_(peer_serialized.name()),
-		networking_(std::make_shared<Networking>(peer_serialized.ip_map()))
+		networking_(std::make_shared<Networking>(peer_serialized.ip_map(), peer_serialized.public_identifier()))
 	{
 		for (const np2ps::LocalSerializedNewspaperEntry& ne : peer_serialized.news()) {
 			news_.emplace(ne.entry().news_id(), NewspaperEntry(ne));

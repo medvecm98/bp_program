@@ -16,7 +16,9 @@
  */
 class IpMap {
 public:
-	IpMap() = default;
+	IpMap() = delete;
+
+	explicit IpMap(pk_t public_id);
 
 	explicit IpMap(const np2ps::IpMap& ip_map_serialized);
 
@@ -265,8 +267,6 @@ public:
 
 	void serialize_ip_map(np2ps::IpMap* im) {
 		std::cout << "Serializing IP MAP" << std::endl;
-		auto my_wrapper = im->mutable_my_ip();
-		my_ip.serialize_wrapper(my_wrapper);
 		im->set_my_public_id(my_public_id);
 
 		if (private_rsa.has_value()) {
@@ -290,11 +290,11 @@ public:
 		}
 	}
 
-	// IpWrapper& my_ip() {
-	// 	return map_[my_public_id];
-	// }
+	IpWrapper& my_ip() {
+		return map_.at(my_public_id);
+	}
 
-	IpWrapper my_ip; //IpWrapper containing information related to my networking
+	// IpWrapper my_ip; //IpWrapper containing information related to my networking
 	pk_t my_public_id; //my public identifier, set by Peer
 	rsa_private_optional private_rsa; //my private RSA key
 private:

@@ -444,23 +444,23 @@ class IpMap final :
   std::string* _internal_mutable_rsa_private_key();
   public:
 
-  // .np2ps.IpWrapper my_IP = 10;
-  bool has_my_ip() const;
+  // .np2ps.IpWrapper my_ip() = 10;
+  bool has_my_ip()() const;
   private:
-  bool _internal_has_my_ip() const;
+  bool _internal_has_my_ip()() const;
   public:
-  void clear_my_ip();
-  const ::np2ps::IpWrapper& my_ip() const;
-  PROTOBUF_NODISCARD ::np2ps::IpWrapper* release_my_ip();
-  ::np2ps::IpWrapper* mutable_my_ip();
-  void set_allocated_my_ip(::np2ps::IpWrapper* my_ip);
+  void clear_my_ip()();
+  const ::np2ps::IpWrapper& my_ip()() const;
+  PROTOBUF_NODISCARD ::np2ps::IpWrapper* release_my_ip()();
+  ::np2ps::IpWrapper* mutable_my_ip()();
+  void set_allocated_my_ip()(::np2ps::IpWrapper* my_ip());
   private:
-  const ::np2ps::IpWrapper& _internal_my_ip() const;
-  ::np2ps::IpWrapper* _internal_mutable_my_ip();
+  const ::np2ps::IpWrapper& _internal_my_ip()() const;
+  ::np2ps::IpWrapper* _internal_mutable_my_ip()();
   public:
-  void unsafe_arena_set_allocated_my_ip(
-      ::np2ps::IpWrapper* my_ip);
-  ::np2ps::IpWrapper* unsafe_arena_release_my_ip();
+  void unsafe_arena_set_allocated_my_ip()(
+      ::np2ps::IpWrapper* my_ip());
+  ::np2ps::IpWrapper* unsafe_arena_release_my_ip()();
 
   // uint64 my_public_ID = 20;
   void clear_my_public_id();
@@ -483,7 +483,7 @@ class IpMap final :
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::np2ps::IpWrapper > wrapper_map_;
     ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr rsa_private_key_;
-    ::np2ps::IpWrapper* my_ip_;
+    ::np2ps::IpWrapper* my_ip()_;
     uint64_t my_public_id_;
   };
   union { Impl_ _impl_; };
@@ -720,45 +720,45 @@ inline void IpWrapper::set_allocated_rsa_public_key(std::string* rsa_public_key)
 
 // IpMap
 
-// .np2ps.IpWrapper my_IP = 10;
-inline bool IpMap::_internal_has_my_ip() const {
-  return this != internal_default_instance() && _impl_.my_ip_ != nullptr;
+// .np2ps.IpWrapper my_ip() = 10;
+inline bool IpMap::_internal_has_my_ip()() const {
+  return this != internal_default_instance() && _impl_.my_ip()_ != nullptr;
 }
-inline bool IpMap::has_my_ip() const {
-  return _internal_has_my_ip();
+inline bool IpMap::has_my_ip()() const {
+  return _internal_has_my_ip()();
 }
-inline void IpMap::clear_my_ip() {
-  if (GetArenaForAllocation() == nullptr && _impl_.my_ip_ != nullptr) {
-    delete _impl_.my_ip_;
+inline void IpMap::clear_my_ip()() {
+  if (GetArenaForAllocation() == nullptr && _impl_.my_ip()_ != nullptr) {
+    delete _impl_.my_ip()_;
   }
-  _impl_.my_ip_ = nullptr;
+  _impl_.my_ip()_ = nullptr;
 }
-inline const ::np2ps::IpWrapper& IpMap::_internal_my_ip() const {
-  const ::np2ps::IpWrapper* p = _impl_.my_ip_;
+inline const ::np2ps::IpWrapper& IpMap::_internal_my_ip()() const {
+  const ::np2ps::IpWrapper* p = _impl_.my_ip()_;
   return p != nullptr ? *p : reinterpret_cast<const ::np2ps::IpWrapper&>(
       ::np2ps::_IpWrapper_default_instance_);
 }
-inline const ::np2ps::IpWrapper& IpMap::my_ip() const {
-  // @@protoc_insertion_point(field_get:np2ps.IpMap.my_IP)
-  return _internal_my_ip();
+inline const ::np2ps::IpWrapper& IpMap::my_ip()() const {
+  // @@protoc_insertion_point(field_get:np2ps.IpMap.my_ip())
+  return _internal_my_ip()();
 }
-inline void IpMap::unsafe_arena_set_allocated_my_ip(
-    ::np2ps::IpWrapper* my_ip) {
+inline void IpMap::unsafe_arena_set_allocated_my_ip()(
+    ::np2ps::IpWrapper* my_ip()) {
   if (GetArenaForAllocation() == nullptr) {
-    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.my_ip_);
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(_impl_.my_ip()_);
   }
-  _impl_.my_ip_ = my_ip;
-  if (my_ip) {
+  _impl_.my_ip()_ = my_ip();
+  if (my_ip()) {
     
   } else {
     
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2ps.IpMap.my_IP)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2ps.IpMap.my_ip())
 }
-inline ::np2ps::IpWrapper* IpMap::release_my_ip() {
+inline ::np2ps::IpWrapper* IpMap::release_my_ip()() {
   
-  ::np2ps::IpWrapper* temp = _impl_.my_ip_;
-  _impl_.my_ip_ = nullptr;
+  ::np2ps::IpWrapper* temp = _impl_.my_ip()_;
+  _impl_.my_ip()_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
   auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
   temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
@@ -770,44 +770,44 @@ inline ::np2ps::IpWrapper* IpMap::release_my_ip() {
 #endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
   return temp;
 }
-inline ::np2ps::IpWrapper* IpMap::unsafe_arena_release_my_ip() {
-  // @@protoc_insertion_point(field_release:np2ps.IpMap.my_IP)
+inline ::np2ps::IpWrapper* IpMap::unsafe_arena_release_my_ip()() {
+  // @@protoc_insertion_point(field_release:np2ps.IpMap.my_ip())
   
-  ::np2ps::IpWrapper* temp = _impl_.my_ip_;
-  _impl_.my_ip_ = nullptr;
+  ::np2ps::IpWrapper* temp = _impl_.my_ip()_;
+  _impl_.my_ip()_ = nullptr;
   return temp;
 }
-inline ::np2ps::IpWrapper* IpMap::_internal_mutable_my_ip() {
+inline ::np2ps::IpWrapper* IpMap::_internal_mutable_my_ip()() {
   
-  if (_impl_.my_ip_ == nullptr) {
+  if (_impl_.my_ip()_ == nullptr) {
     auto* p = CreateMaybeMessage<::np2ps::IpWrapper>(GetArenaForAllocation());
-    _impl_.my_ip_ = p;
+    _impl_.my_ip()_ = p;
   }
-  return _impl_.my_ip_;
+  return _impl_.my_ip()_;
 }
-inline ::np2ps::IpWrapper* IpMap::mutable_my_ip() {
-  ::np2ps::IpWrapper* _msg = _internal_mutable_my_ip();
-  // @@protoc_insertion_point(field_mutable:np2ps.IpMap.my_IP)
+inline ::np2ps::IpWrapper* IpMap::mutable_my_ip()() {
+  ::np2ps::IpWrapper* _msg = _internal_mutable_my_ip()();
+  // @@protoc_insertion_point(field_mutable:np2ps.IpMap.my_ip())
   return _msg;
 }
-inline void IpMap::set_allocated_my_ip(::np2ps::IpWrapper* my_ip) {
+inline void IpMap::set_allocated_my_ip()(::np2ps::IpWrapper* my_ip()) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   if (message_arena == nullptr) {
-    delete _impl_.my_ip_;
+    delete _impl_.my_ip()_;
   }
-  if (my_ip) {
+  if (my_ip()) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(my_ip);
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(my_ip());
     if (message_arena != submessage_arena) {
-      my_ip = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, my_ip, submessage_arena);
+      my_ip() = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, my_ip(), submessage_arena);
     }
     
   } else {
     
   }
-  _impl_.my_ip_ = my_ip;
-  // @@protoc_insertion_point(field_set_allocated:np2ps.IpMap.my_IP)
+  _impl_.my_ip()_ = my_ip();
+  // @@protoc_insertion_point(field_set_allocated:np2ps.IpMap.my_ip())
 }
 
 // uint64 my_public_ID = 20;

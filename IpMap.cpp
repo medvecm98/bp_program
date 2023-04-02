@@ -6,8 +6,11 @@ user_not_found_in_database create_ip_wrapper_error(pk_t user, const std::string&
 	return user_not_found_in_database(ss.str().c_str());
 }
 
+IpMap::IpMap(pk_t public_id) {
+	my_public_id = public_id;
+}
+
 IpMap::IpMap(const np2ps::IpMap& ip_map_serialized) : 
-	my_ip(ip_map_serialized.my_ip()),
 	my_public_id(ip_map_serialized.my_public_id())
 {
 	std::cout << "Deserializing IP MAP" << std::endl;

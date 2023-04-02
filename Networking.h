@@ -268,7 +268,9 @@ class Networking : public QObject, public std::enable_shared_from_this<Networkin
 	Q_OBJECT
 
 public:
-	friend StunClient;	
+	friend StunClient;
+
+	Networking() = delete;
 
 	/**
 	 * @brief Construct a new Networking object.
@@ -277,14 +279,17 @@ public:
 	 * 
 	 * Connects signal `new_message_enrolled` to `send_message` slot.
 	 */
-	Networking() {
+	Networking(pk_t public_id) : ip_map_(public_id)
+	{
 		sender_receiver_initialized = false;
 
 		QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
 		for (int i = 0; i < ipAddressesList.size(); ++i) {
 			if (ipAddressesList.at(i) != QHostAddress::LocalHost &&
-				ipAddressesList.at(i).toIPv4Address()) {
-				ip_map_.my_ip.ipv4 = ipAddressesList.at(i);
+				ipAddressesList.at(i).toIPv4Address())
+			{
+				auto address = ipAddressesList.at(i);
+				add_to_ip_map(public_id, std::move(address));
 				break;
 			}
 		}
@@ -295,10 +300,8 @@ public:
 		QObject::connect(this, &Networking::new_message_enrolled, this, &Networking::send_message);
 	}
 
-	Networking(const np2ps::IpMap& serialized_ip_map) : Networking() {
-		auto my_ip_new = ip_map_.my_ip.ipv4;
+	Networking(const np2ps::IpMap& serialized_ip_map, pk_t public_id) : Networking(public_id) {
 		ip_map_ = IpMap(serialized_ip_map);
-		ip_map_.my_ip.ipv4 = my_ip_new;
 	}
 
 	/**

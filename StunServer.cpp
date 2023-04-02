@@ -132,9 +132,9 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
         auto pia_public_id = pia->get_public_identifier();
     
         if (pia_public_id == my_public_id) {
-            if (networking_->ip_map_.my_ip.key_pair.first.has_value()) 
+            if (networking_->ip_map_.my_ip().key_pair.first.has_value()) 
             {
-                create_response_success_identify(message_orig, message_new, pia_public_id, networking_->ip_map_.my_ip.ipv4, PORT, networking_->ip_map_.my_ip.key_pair.first.value());
+                create_response_success_identify(message_orig, message_new, pia_public_id, networking_->ip_map_.my_ip().ipv4, PORT, networking_->ip_map_.my_ip().key_pair.first.value());
             }
             else {
                 create_response_error_identify(message_orig, message_new, pia_public_id);
@@ -155,7 +155,7 @@ void StunServer::process_request_identify(stun_header_ptr message_orig, stun_hea
         }
     }
     else {
-        auto rsa = networking_->ip_map_.my_ip.get_rsa();
+        auto rsa = networking_->ip_map_.my_ip().get_rsa();
         create_response_success_identify(message_orig, message_new, networking_->get_peer_public_id(), QHostAddress(xraa->get_address()), PORT, rsa);
     }
 }

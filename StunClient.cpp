@@ -335,7 +335,7 @@ void StunClient::create_request_allocate(stun_header_ptr stun_message, std::uint
     stun_message->append_attribute(pia);
 
     auto pka = std::make_shared<PublicKeyAttribute>();
-    pka->initialize(networking_->ip_map_.my_ip.key_pair.first.value(), stun_message.get());
+    pka->initialize(networking_->ip_map_.my_ip().key_pair.first.value(), stun_message.get());
     stun_message->append_attribute(pka);
 
     if (lifetime != 600) {
@@ -362,8 +362,8 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
             pia = (PublicIdentifierAttribute*)attr.get();
         }
     }
-    networking_->ip_map_.my_ip.ipv4 = QHostAddress(xma->get_address());
-    networking_->ip_map_.my_ip.port = xma->get_port();
+    networking_->ip_map_.my_ip().ipv4 = QHostAddress(xma->get_address());
+    networking_->ip_map_.my_ip().port = xma->get_port();
     add_stun_server(tcp_socket, pia->get_public_identifier());
     emit confirmed_newspaper(pia->get_public_identifier());
 }
@@ -380,8 +380,8 @@ void StunClient::process_response_success_binding(stun_header_ptr stun_message, 
         else {
             nat_active_flag = true;
         }
-        networking_->ip_map_.my_ip.ipv4 = QHostAddress(xmaa->get_address());
-        networking_->ip_map_.my_ip.port = xmaa->get_port();
+        networking_->ip_map_.my_ip().ipv4 = QHostAddress(xmaa->get_address());
+        networking_->ip_map_.my_ip().port = xmaa->get_port();
     }
 }
 

@@ -46,7 +46,7 @@ PROTOBUF_CONSTEXPR IpMap::IpMap(
   , /*decltype(_impl_._cached_size_)*/{}
   , /*decltype(_impl_.wrapper_map_)*/{}
   , /*decltype(_impl_.rsa_private_key_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.my_ip_)*/nullptr
+  , /*decltype(_impl_.my_ip()_)*/nullptr
   , /*decltype(_impl_.my_public_id_)*/uint64_t{0u}} {}
 struct IpMapDefaultTypeInternal {
   PROTOBUF_CONSTEXPR IpMapDefaultTypeInternal()
@@ -87,7 +87,7 @@ const uint32_t TableStruct_ip_5fmap_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::np2ps::IpMap, _impl_.my_ip_),
+  PROTOBUF_FIELD_OFFSET(::np2ps::IpMap, _impl_.my_ip()_),
   PROTOBUF_FIELD_OFFSET(::np2ps::IpMap, _impl_.my_public_id_),
   PROTOBUF_FIELD_OFFSET(::np2ps::IpMap, _impl_.rsa_private_key_),
   PROTOBUF_FIELD_OFFSET(::np2ps::IpMap, _impl_.wrapper_map_),
@@ -131,7 +131,7 @@ PROTOBUF_ATTRIBUTE_WEAK const ::_pbi::DescriptorTable* descriptor_table_ip_5fmap
 }
 
 // Force running AddDescriptors() at dynamic initialization time.
-PROTOBUF_ATTRIBUTE_INIT_PRIORITY2 static ::_pbi::AddDescriptorsRunner dynamic_init_dummy_ip_5fmap_2eproto(&descriptor_table_ip_5fmap_2eproto);
+PROTOBUF_ATTRIBUTE_INIT_PRIORITY2 static ::_pbi::AddDescriptorsRunner dynamic_init_dummy_ip()_5fmap_2eproto(&descriptor_table_ip_5fmap_2eproto);
 namespace np2ps {
 
 // ===================================================================
@@ -528,15 +528,15 @@ void IpWrapper::InternalSwap(IpWrapper* other) {
 class IpMap::_Internal {
  public:
   using HasBits = decltype(std::declval<IpMap>()._impl_._has_bits_);
-  static const ::np2ps::IpWrapper& my_ip(const IpMap* msg);
+  static const ::np2ps::IpWrapper& my_ip()(const IpMap* msg);
   static void set_has_rsa_private_key(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
 };
 
 const ::np2ps::IpWrapper&
-IpMap::_Internal::my_ip(const IpMap* msg) {
-  return *msg->_impl_.my_ip_;
+IpMap::_Internal::my_ip()(const IpMap* msg) {
+  return *msg->_impl_.my_ip()_;
 }
 IpMap::IpMap(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
@@ -552,7 +552,7 @@ IpMap::IpMap(const IpMap& from)
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.wrapper_map_){from._impl_.wrapper_map_}
     , decltype(_impl_.rsa_private_key_){}
-    , decltype(_impl_.my_ip_){nullptr}
+    , decltype(_impl_.my_ip()_){nullptr}
     , decltype(_impl_.my_public_id_){}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -564,8 +564,8 @@ IpMap::IpMap(const IpMap& from)
     _this->_impl_.rsa_private_key_.Set(from._internal_rsa_private_key(), 
       _this->GetArenaForAllocation());
   }
-  if (from._internal_has_my_ip()) {
-    _this->_impl_.my_ip_ = new ::np2ps::IpWrapper(*from._impl_.my_ip_);
+  if (from._internal_has_my_ip()()) {
+    _this->_impl_.my_ip()_ = new ::np2ps::IpWrapper(*from._impl_.my_ip()_);
   }
   _this->_impl_.my_public_id_ = from._impl_.my_public_id_;
   // @@protoc_insertion_point(copy_constructor:np2ps.IpMap)
@@ -580,7 +580,7 @@ inline void IpMap::SharedCtor(
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.wrapper_map_){arena}
     , decltype(_impl_.rsa_private_key_){}
-    , decltype(_impl_.my_ip_){nullptr}
+    , decltype(_impl_.my_ip()_){nullptr}
     , decltype(_impl_.my_public_id_){uint64_t{0u}}
   };
   _impl_.rsa_private_key_.InitDefault();
@@ -602,7 +602,7 @@ inline void IpMap::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.wrapper_map_.~RepeatedPtrField();
   _impl_.rsa_private_key_.Destroy();
-  if (this != internal_default_instance()) delete _impl_.my_ip_;
+  if (this != internal_default_instance()) delete _impl_.my_ip()_;
 }
 
 void IpMap::SetCachedSize(int size) const {
@@ -620,10 +620,10 @@ void IpMap::Clear() {
   if (cached_has_bits & 0x00000001u) {
     _impl_.rsa_private_key_.ClearNonDefaultToEmpty();
   }
-  if (GetArenaForAllocation() == nullptr && _impl_.my_ip_ != nullptr) {
-    delete _impl_.my_ip_;
+  if (GetArenaForAllocation() == nullptr && _impl_.my_ip()_ != nullptr) {
+    delete _impl_.my_ip()_;
   }
-  _impl_.my_ip_ = nullptr;
+  _impl_.my_ip()_ = nullptr;
   _impl_.my_public_id_ = uint64_t{0u};
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
@@ -636,10 +636,10 @@ const char* IpMap::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // .np2ps.IpWrapper my_IP = 10;
+      // .np2ps.IpWrapper my_ip() = 10;
       case 10:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 82)) {
-          ptr = ctx->ParseMessage(_internal_mutable_my_ip(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_my_ip()(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -705,11 +705,11 @@ uint8_t* IpMap::_InternalSerialize(
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // .np2ps.IpWrapper my_IP = 10;
-  if (this->_internal_has_my_ip()) {
+  // .np2ps.IpWrapper my_ip() = 10;
+  if (this->_internal_has_my_ip()()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(10, _Internal::my_ip(this),
-        _Internal::my_ip(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(10, _Internal::my_ip()(this),
+        _Internal::my_ip()(this).GetCachedSize(), target, stream);
   }
 
   // uint64 my_public_ID = 20;
@@ -767,11 +767,11 @@ size_t IpMap::ByteSizeLong() const {
         this->_internal_rsa_private_key());
   }
 
-  // .np2ps.IpWrapper my_IP = 10;
-  if (this->_internal_has_my_ip()) {
+  // .np2ps.IpWrapper my_ip() = 10;
+  if (this->_internal_has_my_ip()()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.my_ip_);
+        *_impl_.my_ip()_);
   }
 
   // uint64 my_public_ID = 20;
@@ -803,9 +803,9 @@ void IpMap::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF
   if (from._internal_has_rsa_private_key()) {
     _this->_internal_set_rsa_private_key(from._internal_rsa_private_key());
   }
-  if (from._internal_has_my_ip()) {
-    _this->_internal_mutable_my_ip()->::np2ps::IpWrapper::MergeFrom(
-        from._internal_my_ip());
+  if (from._internal_has_my_ip()()) {
+    _this->_internal_mutable_my_ip()()->::np2ps::IpWrapper::MergeFrom(
+        from._internal_my_ip()());
   }
   if (from._internal_my_public_id() != 0) {
     _this->_internal_set_my_public_id(from._internal_my_public_id());
@@ -838,9 +838,9 @@ void IpMap::InternalSwap(IpMap* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(IpMap, _impl_.my_public_id_)
       + sizeof(IpMap::_impl_.my_public_id_)
-      - PROTOBUF_FIELD_OFFSET(IpMap, _impl_.my_ip_)>(
-          reinterpret_cast<char*>(&_impl_.my_ip_),
-          reinterpret_cast<char*>(&other->_impl_.my_ip_));
+      - PROTOBUF_FIELD_OFFSET(IpMap, _impl_.my_ip()_)>(
+          reinterpret_cast<char*>(&_impl_.my_ip()_),
+          reinterpret_cast<char*>(&other->_impl_.my_ip()_));
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata IpMap::GetMetadata() const {
