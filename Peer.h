@@ -321,7 +321,7 @@ private:
 	std::unordered_map<pk_t, NewspaperEntry> newspapers_awaiting_confirmation; //newspaper that we want to add, but that haven't yet confirmed their existence
 
 	//journalist part
-	reader_database readers_; //list of article readers
+	// reader_database readers_; //list of article readers
 
 	//authorities
 	user_level_map user_map; //users and their levels, contains `PeerInfo`

@@ -405,6 +405,10 @@ public:
 		return !article_present_;
 	}
 
+	const user_container& const_readers() const {
+		return readers_;
+	}
+
 	user_container& readers() {
 		return readers_;
 	}

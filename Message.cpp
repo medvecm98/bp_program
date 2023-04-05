@@ -373,3 +373,11 @@ shared_ptr_message MFW::RespNewspaperListFactory(shared_ptr_message&& msg, const
 
 	return msg;
 }
+
+shared_ptr_message MFW::ErrorArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header) {
+	auto header_ptr = msg->mutable_article_all()->mutable_header();
+	msg->set_msg_ctx(np2ps::ERROR);
+	article_header->network_serialize_article(header_ptr);
+
+	return std::move(msg);
+}

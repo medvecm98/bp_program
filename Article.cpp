@@ -82,6 +82,10 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 	}
 
 	creation_time_timepoint_ = my_timepoint(std::chrono::seconds(creation_time_));
+
+	for (auto it = protobuf_article.readers().begin(); it != protobuf_article.readers().end(); it++) {
+		readers().emplace(*it);
+	}
 }
  /**
   * @brief Construct Article object from SerializedArticle GPB.
@@ -307,6 +311,10 @@ void Article::network_serialize_article(np2ps::Article* art) const {
 	auto [ci, cie] = categories();
 	for (; ci != cie; ci++) {
 		art->add_categories(*ci);
+	}
+
+	for (pk_t reader : const_readers()) {
+		art->add_readers(reader);
 	}
 }	
 

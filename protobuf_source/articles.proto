@@ -33,6 +33,7 @@ message Article {
   bytes news_signature = 15; //signature of newspaper journalist to prove article legitimacy
   int64 creation_time = 13;
   int64 modification_time = 14;
+  repeated uint64 readers = 16;
   /*
     Left out `notes` and `article path`, since those are only relevant for client.
     Length could be irrelevant as well, we'll see about that.

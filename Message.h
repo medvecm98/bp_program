@@ -133,6 +133,7 @@ public:
 	static shared_ptr_message ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header);
 
 	static shared_ptr_message ErrorArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id);
+	static shared_ptr_message ErrorArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header);
 	static shared_ptr_message RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news, IpMap& news_networking);
 
 	/* Basic factories: */
