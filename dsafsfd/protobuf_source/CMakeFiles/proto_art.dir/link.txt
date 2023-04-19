@@ -1,2 +1,0 @@
-/usr/bin/ar qc libproto_art.a CMakeFiles/proto_art.dir/proto_art_autogen/mocs_compilation.cpp.o CMakeFiles/proto_art.dir/articles.pb.cc.o
-/usr/bin/ranlib libproto_art.a

@@ -243,7 +243,6 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
     networking_->ip_map_.update_rsa_public(public_identifier, pk);
 
     networking_->ip_map_.set_tcp_socket(public_identifier, socket);
-    networking_->user_map->emplace(public_identifier, PeerInfo(public_identifier, 127));
 
     create_response_success_allocate(message_orig, message_new, lifetime, socket);
 }

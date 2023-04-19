@@ -7,9 +7,6 @@
  */
 void Peer::enroll_new_article(Article a, bool header_only) {
 	news_[a.news_id()].add_article(a.main_hash(),std::move(a));
-	if (!header_only) {
-		PeerInfo* peer_info = &user_map[public_identifier_];
-	}
 	emit new_article_list(a.news_id());
 }
 
@@ -33,7 +30,7 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 		networking_->get_stun_client()->allocate_request(newspaper_key);
 	}
 
-	auto news = NewspaperEntry(newspaper_key, newspaper_key, newspaper_name);
+	auto news = NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove);
 	news.await_confirmation = true;
 
 	newspapers_awaiting_confirmation.emplace(newspaper_key, std::move(news));
@@ -48,10 +45,10 @@ NewspaperEntry& Peer::add_new_newspaper(pk_t newspaper_key, const my_string& new
 	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
 	if (allocate_now) {
 		networking_->get_stun_client()->allocate_request(newspaper_key);
-		return newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name)).first->second;
+		return newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove)).first->second;
 	}
 	else {
-		news_.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name));
+		news_.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove));
 		return newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry()).first->second;
 	}
 }
@@ -63,7 +60,7 @@ NewspaperEntry& Peer::add_new_newspaper(pk_t newspaper_key, const my_string& new
  */
 void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, pk_t sender) {
 	networking_->get_stun_client()->identify(newspaper_key, sender);
-	NewspaperEntry ne(newspaper_key, newspaper_key, newspaper_name);
+	NewspaperEntry ne(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove);
 	ne.add_friend(sender);
 	newspapers_awaiting_confirmation.emplace(newspaper_key, std::move(ne));
 }
@@ -108,7 +105,7 @@ void Peer::load_ip_authorities(pk_t newspaper_key) {
 void Peer::init_newspaper(my_string name) {
 	newspaper_name_ = name;
 	newspaper_id_ = public_identifier_;
-	auto [news_db, temp] = news_.insert({newspaper_id_, NewspaperEntry(public_identifier_, newspaper_id_, newspaper_name_)}); //our news are in same db as all the others
+	auto [news_db, temp] = news_.insert({newspaper_id_, NewspaperEntry(public_identifier_, newspaper_id_, newspaper_name_, &networking_->disconnected_readers_lazy_remove)}); //our news are in same db as all the others
 	auto [public_key, private_key] = CryptoUtils::instance().generate_rsa_pair();
 	news_db->second.set_newspaper_private_key(private_key);
 	news_db->second.set_newspaper_public_key(public_key);
@@ -522,25 +519,25 @@ void Peer::generate_article_all_message(pk_t news_id, hash_t article_hash) {
 
 	/* Ask article readers, if any */
 
-	if (article.readers_count() > 0) {
-		std::cout << "Readers: " << article.readers_count() << std::flush;
-		for (auto&& reader_id : article.readers()) {
-			std::cout << ", reader: " << reader_id << std::endl;
-			if (reader_id == author_id) {
-				continue;
-			}
-			networking_->enroll_message_to_be_sent(
-				MFW::SetMessageContextRequest(
-					MFW::ArticleDownloadFactory(
-						public_identifier_,
-						reader_id,
-						article_hash,
-						255
-					)
-				)
-			);
-		}
-	}
+	// if (article.readers_count() > 0) {
+	// 	std::cout << "Readers: " << article.readers_count() << std::flush;
+	// 	for (auto&& reader_id : article.readers()) {
+	// 		std::cout << ", reader: " << reader_id << std::endl;
+	// 		if (reader_id == author_id) {
+	// 			continue;
+	// 		}
+	// 		networking_->enroll_message_to_be_sent(
+	// 			MFW::SetMessageContextRequest(
+	// 				MFW::ArticleDownloadFactory(
+	// 					public_identifier_,
+	// 					reader_id,
+	// 					article_hash,
+	// 					255
+	// 				)
+	// 			)
+	// 		);
+	// 	}
+	// }
 }
 
 /**
@@ -621,6 +618,12 @@ void Peer::handle_one_way(shared_ptr_message msg) {
 	else if (type == np2ps::PUBLIC_KEY) {
 		handle_public_key_one_way(msg);
 	}
+	else if (type == np2ps::ARTICLE_DATA_UPDATE) {
+		handle_article_data_update_one_way(msg);
+	}
+	else if (type == np2ps::CREDENTIALS) {
+		handle_credentials_one_way(msg);
+	}
 	else {
 		throw unsupported_message_type_in_context("Peer received a message type that is unsupported in given context");
 	}
@@ -665,29 +668,18 @@ void Peer::handle_article_all_request(shared_ptr_message message) {
 			std::string article_whole;
 
 			article_whole = article->read_contents();
+			article->add_reader(message->from());
 
 			shared_ptr_message article_msg = MFW::RespArticleDownloadFactory(
 				MFW::ArticleDownloadFactory(
 					public_identifier_, 
 					message->from(), 
 					article_opt.value()->main_hash(), 
-					255),
+					255
+				),
 				article_opt.value(), 
 				std::move(article_whole)
 			);
-
-			article->add_reader(message->to());
-
-			bool found_in_readers = false;
-			for (auto&& reader : article_opt.value()->readers()) {
-				if (reader == message->from()) {
-					found_in_readers = true;
-					break;
-				}
-			}
-			if (!found_in_readers) {
-				article->readers().emplace(message->article_all().article_hash());
-			}
 
 			//send message
 			networking_->enroll_message_to_be_sent(article_msg);
@@ -784,47 +776,47 @@ void Peer::handle_article_list_request(shared_ptr_message message) {
 }
 
 void Peer::handle_article_data_update_request(shared_ptr_message message) {
-	//reporter part
-	if (find_article(message->article_data_update().article_pk()).has_value()) {
-		if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
-			if (user_map.find(message->from()) == user_map.end()) {
-				auto uit = user_map.insert( {message->from(), PeerInfo(message->from())} );
-				readers_.insert( {message->from(), &(uit.first->second)} );
-			}
-			else {
-				auto uit = user_map.find(message->from());
-				readers_.insert( {message->from(), &(uit->second)} );
-			}
-		}
-		else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
-			auto [bit, eit] = readers_.equal_range(message->article_data_update().article_pk());
-			for (auto it = bit; it != eit; it++) {
-				if (it->second->peer_key == message->from()) {
-					readers_.erase(it);
-					break;
-				}
-			}
-		}
-	}
-	//authority part
-	auto article_author_peers = find_article_in_article_categories_db(message->article_data_update().article_pk());
-	if (article_author_peers.has_value()) {
-		//AuthorPeer entry for given article exists
+	// //reporter part
+	// if (find_article(message->article_data_update().article_pk()).has_value()) {
+	// 	if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
+	// 		if (user_map.find(message->from()) == user_map.end()) {
+	// 			auto uit = user_map.insert( {message->from(), PeerInfo(message->from())} );
+	// 			readers_.insert( {message->from(), &(uit.first->second)} );
+	// 		}
+	// 		else {
+	// 			auto uit = user_map.find(message->from());
+	// 			readers_.insert( {message->from(), &(uit->second)} );
+	// 		}
+	// 	}
+	// 	else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
+	// 		auto [bit, eit] = readers_.equal_range(message->article_data_update().article_pk());
+	// 		for (auto it = bit; it != eit; it++) {
+	// 			if (it->second->peer_key == message->from()) {
+	// 				readers_.erase(it);
+	// 				break;
+	// 			}
+	// 		}
+	// 	}
+	// }
+	// //authority part
+	// auto article_author_peers = find_article_in_article_categories_db(message->article_data_update().article_pk());
+	// if (article_author_peers.has_value()) {
+	// 	//AuthorPeer entry for given article exists
 
-		auto user = user_map.find(message->from());
-		if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
-			if (user == user_map.end()) {
-				auto ins = user_map.insert({message->from(), PeerInfo(message->from(), 127)});
-				article_author_peers.value()->readers.insert({ins.first->first, &(ins.first->second)});
-			}
-			else {
-				article_author_peers.value()->readers.insert({user->first, &(user->second)});
-			}
-		}
-		else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
-			article_author_peers.value()->readers.erase(message->from());
-		}
-	}
+	// 	auto user = user_map.find(message->from());
+	// 	if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
+	// 		if (user == user_map.end()) {
+	// 			auto ins = user_map.insert({message->from(), PeerInfo(message->from(), 127)});
+	// 			article_author_peers.value()->readers.insert({ins.first->first, &(ins.first->second)});
+	// 		}
+	// 		else {
+	// 			article_author_peers.value()->readers.insert({user->first, &(user->second)});
+	// 		}
+	// 	}
+	// 	else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
+	// 		article_author_peers.value()->readers.erase(message->from());
+	// 	}
+	// }
 }
 
 void Peer::handle_update_margin_request(shared_ptr_message message) {
@@ -932,18 +924,31 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 			/* Article (header) found in database */
 			/* Verify article */
 
-			if (article_opt.value()->verify(message->article_all().article_actual())) {
+			Article& article = *(article_opt.value());
+
+			if (article.verify(message->article_all().article_actual())) {
 
 				/* Successful verification */
 
 				std::cout << "Article verification succeded for " << recv_article_id << std::endl;
-				if (article_opt.value()->is_header_only()) {
+				
+				article.add_readers(message->article_all().header().readers());
+
+				if (article.is_header_only()) {
 
 					/* Article in database contains only the header */
+					
+					Article article_from_message(message->article_all().header(), "");
+					article.update_metadata(article_from_message);
+					article.set_path(message->article_all().article_actual());
 
-					article_opt.value()->set_path(message->article_all().article_actual());
+					generate_successful_download_message_all_readers(
+						article.const_readers(),
+						message->from(),
+						recv_article_id
+					);
 				}
-				else if (article_opt.value()->modification_time() <= message->article_all().header().modification_time()) {
+				else if (article.modification_time() <= message->article_all().header().modification_time()) {
 
 					/* Received article is newer than one in database */
 
@@ -984,6 +989,16 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 			/* Article not found in database. */
 
 			Article recv_article(message->article_all().header(), message->article_all().article_actual());
+			recv_article.lazy_remove_readers(networking_->disconnected_readers_lazy_remove.users);
+
+			/* Inform every reader, that we downloaded article successfully */
+
+			generate_successful_download_message_all_readers(
+				recv_article.const_readers(),
+				message->from(),
+				recv_article_id
+			);
+
 			enroll_new_article(recv_article, false);
 		}
 
@@ -996,18 +1011,33 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 		if (networking_->soliciting_articles.find(recv_article_id) != networking_->soliciting_articles.end()) { //remote the article from soliticing articles, since we got an answer
 			networking_->soliciting_articles.erase(recv_article_id);
 		}
-		if (message->article_all().header().news_id() != message->from()) {
-			networking_->enroll_message_to_be_sent(
-				MFW::SetMessageContextRequest(
-				MFW::ArticleDataChangeFactory(
-					public_identifier_,
-					message->from(),
-					recv_article_id,
-					true
-				))
-			);
-		}
 	}
+}
+
+void Peer::generate_successful_download_message_all_readers(const user_container& readers, pk_t from, pk_t recv_article_id) {
+	for (auto&& reader : readers) {
+		if (reader == from || reader == get_public_key() || friends_.count(reader) > 0) {
+			continue;
+		}
+
+		generate_successful_download_message(reader, recv_article_id);
+	}
+	for (auto&& fren : friends_) {
+		generate_successful_download_message(fren, recv_article_id);
+	}
+}
+
+void Peer::generate_successful_download_message(pk_t reader, pk_t recv_article_id) {
+	networking_->enroll_message_to_be_sent(
+		MFW::SetMessageContextOneWay(
+			MFW::ArticleDataChangeFactory(
+				public_identifier_,
+				reader,
+				recv_article_id,
+				true
+			)
+		)
+	);
 }
 
 void check_add_article_to_news(shared_ptr_message message, NewspaperEntry& news, Article&& article) {
@@ -1044,7 +1074,7 @@ void Peer::handle_article_list_response(shared_ptr_message message) {
 		emit new_article_list(list_news_id);
 	}
 	else {
-		std::cout << "Article List response for " << message->article_list().response().begin()->news_id() << "; empty list" << std::endl;
+		std::cout << "Article List response for " << message->from() << "; empty list" << std::endl;
 	}
 	getting_article_list.erase(message->from());
 	emit check_selected_item();
@@ -1176,7 +1206,6 @@ void Peer::handle_symmetric_key_one_way(shared_ptr_message msg) {
 
 void Peer::handle_public_key_one_way(shared_ptr_message msg) {
 	networking_->ip_map_.update_rsa_public((pk_t)msg->from(), msg->public_key().key());
-	user_map.insert({(pk_t)msg->from(), PeerInfo((pk_t)msg->from())});
 	
 	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextResponse(
@@ -1187,6 +1216,100 @@ void Peer::handle_public_key_one_way(shared_ptr_message msg) {
 			)
 		)
 	);
+}
+
+
+void Peer::handle_article_data_update_one_way(shared_ptr_message msg) {
+	// //reporter part
+	// if (find_article(message->article_data_update().article_pk()).has_value()) {
+	// 	if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
+	// 		if (user_map.find(message->from()) == user_map.end()) {
+	// 			auto uit = user_map.insert( {message->from(), PeerInfo(message->from())} );
+	// 			readers_.insert( {message->from(), &(uit.first->second)} );
+	// 		}
+	// 		else {
+	// 			auto uit = user_map.find(message->from());
+	// 			readers_.insert( {message->from(), &(uit->second)} );
+	// 		}
+	// 	}
+	// 	else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
+	// 		auto [bit, eit] = readers_.equal_range(message->article_data_update().article_pk());
+	// 		for (auto it = bit; it != eit; it++) {
+	// 			if (it->second->peer_key == message->from()) {
+	// 				readers_.erase(it);
+	// 				break;
+	// 			}
+	// 		}
+	// 	}
+	// }
+	// //authority part
+	// auto article_author_peers = find_article_in_article_categories_db(message->article_data_update().article_pk());
+	// if (article_author_peers.has_value()) {
+	// 	//AuthorPeer entry for given article exists
+
+	// 	auto user = user_map.find(message->from());
+	// 	if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
+	// 		if (user == user_map.end()) {
+	// 			auto ins = user_map.insert({message->from(), PeerInfo(message->from(), 127)});
+	// 			article_author_peers.value()->readers.insert({ins.first->first, &(ins.first->second)});
+	// 		}
+	// 		else {
+	// 			article_author_peers.value()->readers.insert({user->first, &(user->second)});
+	// 		}
+	// 	}
+	// 	else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
+	// 		article_author_peers.value()->readers.erase(message->from());
+	// 	}
+	// }
+	auto article_opt = find_article(msg->article_data_update().article_pk());
+	if (!article_opt.has_value()) {
+		return;
+	}
+	auto& article = article_opt.value();
+	article->add_reader(msg->from());
+}
+
+
+void Peer::handle_credentials_one_way(shared_ptr_message msg) {
+	IpWrapper& ipw = get_networking()->ip_map().get_wrapper_ref(msg->from());
+
+	if (msg->credentials().method() == 1) {
+		if (msg->credentials().has_rsa_public_key()) {
+			ipw.set_rsa_hex_string(msg->credentials().rsa_public_key().key());
+		}
+
+		if (msg->credentials().has_eax_key()) {
+			CryptoPP::ByteQueue dec_key;
+			std::string enc_key = msg->credentials().eax_key().key();
+			std::string signature = msg->credentials().eax_key().signature();
+			auto public_rsa = ipw.get_rsa_optional();
+			auto private_rsa = get_networking()->ip_map().private_rsa;
+			bool verified = CryptoUtils::instance().verify_decrypt_symmetric_key(
+				enc_key,
+				signature,
+				dec_key,
+				public_rsa,
+				private_rsa
+			);
+			ipw.add_eax_key(std::move(dec_key));
+		}
+
+		get_networking()->enroll_message_to_be_sent(
+			MFW::OneWayCredentialsFactory(
+				MFW::CredentialsFactory(
+					public_identifier_,
+					msg->from()
+				),
+				{},
+				{},
+				{},
+				2
+			)
+		);
+	}
+	else if (msg->credentials().method() == 2) {
+		emit symmetric_key_exchanged(msg->from());
+	}
 }
 
 
@@ -1362,7 +1485,7 @@ void Peer::add_new_newspaper_from_file(const std::string& path) {
 	else {
 		return; //throw other_error("Empty newspaper file.");
 	}
-	NewspaperEntry news(news_id);
+	NewspaperEntry news(news_id, &networking_->disconnected_readers_lazy_remove);
 	while (std::getline(file, line)) {
 		std::stringstream ss(line);
 		std::string ip, port, pk;
@@ -1383,12 +1506,12 @@ void Peer::add_new_newspaper_from_file(const std::string& path) {
 }
 
 void Peer::add_new_newspaper_pk(pk_t id) {
-	news_.insert({ id, std::move(NewspaperEntry(id)) });
+	news_.insert({ id, std::move(NewspaperEntry(id, &networking_->disconnected_readers_lazy_remove)) });
 	emit got_newspaper_confirmation(id);
 }
 
 /**
- * For debugging purposes only.
+ * For debugging purposes only. info
 */
 void Peer::print_contents() {
 	std::cout << "public_identifier_ " << public_identifier_ << std::endl;
@@ -1396,11 +1519,14 @@ void Peer::print_contents() {
 	std::cout << "newspaper_id_ " << newspaper_id_ << std::endl;
 	std::cout << "newspaper_name_ " << newspaper_name_ << std::endl;
 	std::cout << "news_ count: " << news_.size() << std::endl;
-	std::cout << "User count: " << user_map.size() << std::endl;
 	for (auto&& n : news_) {
 		std::cout << "news: " << (n.second.get_name().empty() ? "EMPTY" : n.second.get_name()) << "; " << n.second.get_id() << std::endl;
 		for (auto&& f : n.second.get_friends()) {
 			std::cout << "  friend: " << f << std::endl;
+		}
+		for (auto&& a : n.second.get_all_articles()) {
+			std::cout << "  Article: " << a.second.main_hash() << std::endl;
+			std::cout << "  - readers: " << a.second.readers().size() << std::endl;
 		}
 	}
 }

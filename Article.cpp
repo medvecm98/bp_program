@@ -337,3 +337,21 @@ std::string& Article::get_signature() {
 void Article::set_signature(std::string signature) {
 	signature_ = signature;
 }
+
+void Article::lazy_remove_readers(user_container& disconnected_users) {
+	std::set<pk_t> to_remove;
+	for (auto&& reader : readers_) {
+		if (disconnected_users.count(reader) > 0) {
+			to_remove.emplace(reader);
+		}
+	}
+	for (pk_t to_remove_user : to_remove) {
+		readers_.erase(to_remove_user);
+	}
+}
+
+void Article::update_metadata(Article& other_article) {
+	for (auto&& reader : other_article.readers()) {
+		add_reader(reader);
+	}
+}

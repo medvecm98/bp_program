@@ -135,6 +135,13 @@ public:
 	static shared_ptr_message ErrorArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id);
 	static shared_ptr_message ErrorArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header);
 	static shared_ptr_message RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news, IpMap& news_networking);
+	static shared_ptr_message OneWayCredentialsFactory(
+		shared_ptr_message&& msg,
+		rsa_public_optional public_key,
+		rsa_private_optional private_key,
+		eax_optional eax_key,
+		int method
+	);
 
 	/* Basic factories: */
 	

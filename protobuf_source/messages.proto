@@ -132,6 +132,8 @@ message Credentials {
 	optional string ipv6 = 2;
 	optional PublicKey rsa_public_key = 3;
 	optional SymmetricKey eax_key = 4;
+
+	optional int32 method = 10; //0 - normal, 1 - info, 2 - info ok, 3 - info err
 }
 
 message SymmetricKey {

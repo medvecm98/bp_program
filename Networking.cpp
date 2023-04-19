@@ -99,6 +99,16 @@ void Networking::identify_peer_save_message(shared_ptr_message msg) {
 
 void print_message(shared_ptr_message msg, std::string recv_send) {
 	std::cout << "Printing message (" << recv_send << "):" << std::endl;
+
+	if (recv_send == "receiving") {
+		std::cout << " Sender:" << std::endl;
+		std::cout << "  " << msg->from() << std::endl;
+	}
+	else if (recv_send == "sending") {
+		std::cout << " Receiver: " << std::endl;
+		std::cout << "  " << msg->to() << std::endl;
+	}
+
 	std::cout << " Context:" << std::endl;
 
 	switch(msg->msg_ctx()) {
@@ -115,7 +125,7 @@ void print_message(shared_ptr_message msg, std::string recv_send) {
 			std::cout << "  error" << std::endl;
 			break;
 		default:
-			std::cout << "  <<unknown type>>" << std::endl;
+			std::cout << "  <<unknown context>>" << std::endl;
 			break;
 	}
 
@@ -140,6 +150,9 @@ void print_message(shared_ptr_message msg, std::string recv_send) {
 		case np2ps::NEWSPAPER_LIST:
 			std::cout << "  news list" << std::endl;
 			break;
+		case np2ps::ARTICLE_DATA_UPDATE:
+			std::cout << "  article data update" << std::endl;
+			break;
 		default:
 			std::cout << "  <<unknown type>>" << std::endl;
 			break;
@@ -148,6 +161,10 @@ void print_message(shared_ptr_message msg, std::string recv_send) {
 }
 
 void Networking::send_message(shared_ptr_message msg) {
+	send_message_with_credentials(msg, false);
+}
+
+void Networking::send_message_with_credentials(shared_ptr_message msg, bool send_credentials) {
 	try {
 		IpWrapper& ipw = ip_map().get_wrapper_ref(msg->to());
 
@@ -183,10 +200,33 @@ void Networking::send_message(shared_ptr_message msg) {
 		}
 
 		if (!ipw.has_eax()) {
-			shared_ptr_message key_msg = generate_symmetric_key_message(msg);
-			waiting_symmetric_exchange.emplace(msg->to(), msg);
-			sender_->message_send(key_msg, ipw);
-			return;
+			if (!send_credentials) {
+				shared_ptr_message key_msg = generate_symmetric_key_message(msg);
+				waiting_symmetric_exchange.emplace(msg->to(), msg);
+				sender_->message_send(key_msg, ipw);
+				return;
+			}
+			else {
+				// shared_ptr_message credentials_msg =
+				shared_ptr_message key_msg = generate_symmetric_key_message(msg);
+				waiting_symmetric_exchange.emplace(msg->to(), msg);
+				shared_ptr_message creds = MFW::CredentialsFactory(peer_public_id, msg->to());
+
+				creds->set_msg_ctx(np2ps::ONE_WAY);
+				creds->mutable_credentials()->mutable_rsa_public_key()->set_key(
+					ip_map().my_ip().get_rsa_hex_string()
+				);
+				creds->mutable_credentials()->mutable_eax_key()->set_key(
+					key_msg->symmetric_key().key()
+				);
+				creds->mutable_credentials()->mutable_eax_key()->set_signature(
+					key_msg->symmetric_key().signature()
+				);
+				creds->mutable_credentials()->set_method(1);
+
+				sender_->message_send(creds, ipw);
+				return;
+			}
 		}
 
 		std::cout << "	Message ready to be normally sent." << std::endl;
@@ -194,7 +234,6 @@ void Networking::send_message(shared_ptr_message msg) {
 	} catch (user_not_found_in_database& e) {
 		identify_peer_save_message(msg);
 	}
-	
 }
 
 /**
@@ -456,6 +495,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 	else if (msg_class == PLAIN_MESSAGE) {
 		auto m = std::make_shared<proto_message>();
 
+
 		quint64 msg_size;
 		msg >> msg_size;
 
@@ -464,6 +504,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		msg >> msg_array;
 
 		m->ParseFromString(msg_array.toStdString());
+		print_message(m, "receiving");
 
 		if (m->msg_type() == np2ps::SYMMETRIC_KEY) {
 			if (networking_->ip_map_.have_rsa_public(m->from())) { //check if received symmetric key message is from someone we know
@@ -692,13 +733,8 @@ void Networking::peer_process_disconnected_users() {
 
 	if (!to_remove.empty()) {
 		for (auto&& user : to_remove) { //remove disconnected users
-			for (auto it = readers_->begin(); it != readers_->end(); it++) {
-				if (it->second->peer_key == user) {
-					it = readers_->erase(it); 
-				}
-			}
-			user_map->erase(user);
 			IpWrapper& disconnected_user = ip_map_.get_wrapper_ref(user);
+			disconnected_readers_lazy_remove.users.emplace(user);
 			disconnected_user.clean_np2ps_socket();
 			disconnected_user.clean_turn_socket();
 			journalists_->erase(user);

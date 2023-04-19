@@ -189,7 +189,43 @@ shared_ptr_message MFW::ReqCredentialsFactory(shared_ptr_message&& msg,
 	return std::move(msg);
 }
 
+shared_ptr_message MFW::OneWayCredentialsFactory(
+	shared_ptr_message&& msg,
+	rsa_public_optional public_key,
+	rsa_private_optional private_key,
+	eax_optional eax_key,
+	int method
+) {
+	msg->set_msg_ctx(np2ps::ONE_WAY);
 
+	if (public_key.has_value()) {
+		msg->mutable_credentials()->mutable_rsa_public_key()->set_key(
+			CryptoUtils::instance().rsa_to_hex(
+				public_key.value()
+			)
+		);
+	}
+
+	if (eax_key.has_value() 
+		&& public_key.has_value()
+		&& private_key.has_value())
+	{
+		std::string signature = CryptoUtils::instance().sign_key(
+			eax_key.value(),
+			private_key
+		);
+		std::string encrypted_key = CryptoUtils::instance().encrypt_key(
+			eax_key.value(),
+			public_key
+		);
+		msg->mutable_credentials()->mutable_eax_key()->set_key(encrypted_key);
+		msg->mutable_credentials()->mutable_eax_key()->set_signature(signature);
+
+	}
+	msg->mutable_credentials()->set_method(method);
+
+	return std::move(msg);
+}
 
 shared_ptr_message MFW::RespArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header, std::string&& article) { 
 	auto header_ptr = msg->mutable_article_all()->mutable_header();

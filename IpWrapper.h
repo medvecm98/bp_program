@@ -160,7 +160,7 @@ struct IpWrapper {
 
 	rsa_public_optional get_rsa_optional() {
 		if (has_rsa()) {
-			return {key_pair.first};
+			return key_pair.first;
 		}
 		throw no_rsa_key_found("RSA key was not found. (optional)");
 	}
@@ -169,7 +169,7 @@ struct IpWrapper {
 		return CryptoUtils::instance().rsa_to_hex(get_rsa());
 	}
 
-	CryptoPP::RSA::PublicKey& set_rsa_hex_string(std::string& input) {
+	CryptoPP::RSA::PublicKey& set_rsa_hex_string(const std::string& input) {
 		key_pair.first = {CryptoUtils::instance().hex_to_rsa(input)};
 		return key_pair.first.value();
 	}

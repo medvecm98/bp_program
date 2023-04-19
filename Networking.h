@@ -17,6 +17,7 @@
 #include "cryptopp/osrng.h"
 #include "StunClient.hpp"
 #include "StunServer.hpp"
+#include "LazyWrappers.hpp"
 
 #include <QObject>
 #include <QApplication>
@@ -412,7 +413,6 @@ public:
 	 * @param j Journalists pointer.
 	 */
 	void set_maps(user_level_map* m, news_database* n, reader_database* r, user_container* j) {
-		user_map = m;
 		news_db = n;
 		readers_ = r;
 		journalists_ = j;
@@ -460,13 +460,15 @@ public:
 	CryptoPP::ByteQueue generate_symmetric_key();
 	void identify_peer_save_message(shared_ptr_message);
 
+	void send_message_with_credentials(shared_ptr_message msg, bool send_credentials);
+
 	IpMap ip_map_; //map of all IPs, ports and RSA public keys
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles; //articles waiting to be found in the network
 	std::unordered_multimap<pk_t, shared_ptr_message> waiting_symmetric_exchange; //messages waiting to be sent while symmetric key is exchanged
-	user_level_map* user_map;
 	std::map<pk_t, shared_ptr_message> waiting_symmetric_key_messages;
 	std::multimap<pk_t, shared_ptr_message> messages_waiting_for_credentials;
 	std::map<quint32, std::string> newspapers_awaiting_identification;
+	DisconnectedUsersLazy disconnected_readers_lazy_remove;
 
 public slots:
 	/**
@@ -483,7 +485,7 @@ public slots:
 	 * 
 	 * @param msg Pointer to message to send.
 	 */
-	void send_message(shared_ptr_message);
+	void send_message(shared_ptr_message msg);
 
 	/**
 	 * @brief Decrypts all symmetric messages by given sender.

@@ -269,7 +269,8 @@ void StunClient::process_response_success_identify(stun_header_ptr stun_message)
     if (find_it_waiting_ip != networking_->waiting_ip.end()) { //found peer that needed to be identified
         auto msg = find_it_waiting_ip->second;
         networking_->waiting_ip.erase(find_it_waiting_ip);
-        networking_->send_message(msg); //...send him the message
+
+        networking_->send_message_with_credentials(msg, true); //...send him the message
     }
 
     auto find_it_waiting_sym_key = networking_->waiting_symmetric_key_messages.find(pia->get_public_identifier());
@@ -390,7 +391,7 @@ void StunClient::identify(pk_t who) {
     create_request_identify(msg, who);
     try {
         IpWrapper& ipw = networking_->ip_map().get_wrapper_ref(who);
-        auto preferred_stun_server = networking_->ip_map_.get_wrapper_for_pk(who)->second.preferred_stun_server;
+        auto preferred_stun_server = ipw.preferred_stun_server;
         if (preferred_stun_server == 0) {
             send_stun_message(msg, get_stun_server_any());
         }
@@ -399,7 +400,13 @@ void StunClient::identify(pk_t who) {
         }
     }
     catch (user_not_found_in_database& e) {
-        std::cout << "Failed to connect to peer " << who << " when attempting to establish STUN connection. " << e.what() << std::endl;
+        std::cout << "Failed to connect to peer "
+                  << who
+                  << " when attempting to establish STUN connection. "
+                  << e.what()
+                  << std::endl;
+        std::cout << "Sending to another STUN server." << std::endl;
+        send_stun_message(msg, get_stun_server_any());
     }
 }
 
@@ -410,7 +417,10 @@ void StunClient::identify(pk_t who, pk_t where) {
         send_stun_message(msg, where);
     }
     else {
-        std::cout << "Failed to connect to peer " << where << " when attempting to establish STUN connection." << std::endl;
+        std::cout << "Failed to connect to peer "
+                  << where
+                  << " when attempting to establish STUN connection."
+                  << std::endl;
     }
 }
 

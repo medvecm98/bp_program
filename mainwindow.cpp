@@ -53,12 +53,16 @@ void MainWindow::generate_article_list() {
 		if (news.second.await_confirmation && !news.second.confirmation()) { // skip news that require confirmation, but aren't confirmed
 			continue;
 		}
+		QTreeWidgetItem* newspaper_tree_entry =
+			new QTreeWidgetItem(
+				QStringList({
+					QString::fromStdString(news.second.get_name()),
+					"Newspaper",
+					QString::number(news.second.get_id())
+				})
+			);
 		ui->treeWidget_newspaper->addTopLevelItem( //adds newspaper into Newspaper tree
-				new QTreeWidgetItem(QStringList({
-								QString::fromStdString(news.second.get_name()),
-								"Newspaper",
-								QString::number(news.second.get_id())
-							}))
+				newspaper_tree_entry
 		);
 		article_list_received(news.second.get_id()); //generate the article list for given newspaper
 	}
@@ -66,62 +70,58 @@ void MainWindow::generate_article_list() {
 }
 
 void MainWindow::article_list_received(pk_t newspaper_id) {
-	auto news_the_one  = ctx->p.get_news_db().at(newspaper_id); //find requested new in database
-
-	auto news_articles_it = news_the_one.get_iterator_database();
-	auto news_atricles_it_end = news_the_one.get_iterator_database_end();
+	auto& news_the_one  = ctx->p.get_news(newspaper_id); //find requested new in database
 	
-	std::set<my_string> categories;
+	std::multimap<my_string, Article&> categories;
+	std::set<my_string> category_names;
 
-	for (database_iterator_t it = news_articles_it; it != news_atricles_it_end; it++) { //create the union of all categories using std::set
-		auto[cit, cite] = it->second.categories();
-		for (; cit != cite; cit++) {
-			categories.insert(*cit);
+	for (auto&& [article_hash, article] : news_the_one.get_all_articles()) {
+		for (auto&& cat : article.categories_ref()) {
+			categories.emplace(cat, article);
+			category_names.emplace(cat);
 		}
 	}
 
 	QString news_name = QString::fromStdString(news_the_one.get_name());
 	QString id_in_string = QString::number(news_the_one.get_id());
 	
-	QTreeWidgetItem* requseted_newspaper = nullptr;
+	QTreeWidgetItem* requested_newspaper = nullptr;
 
-	for (int i = 0; i < ui->treeWidget_newspaper->topLevelItemCount() && !requseted_newspaper; i++) { //find newspaper in the Newspaper tree
+	for (int i = 0; i < ui->treeWidget_newspaper->topLevelItemCount() && !requested_newspaper; i++) { //find newspaper in the Newspaper tree
 		if (ui->treeWidget_newspaper->topLevelItem(i)->text(2) == id_in_string) {
-			requseted_newspaper = ui->treeWidget_newspaper->topLevelItem(i);
+			requested_newspaper = ui->treeWidget_newspaper->topLevelItem(i);
+			break;
 		}
 	}
 
-	bool category_found = false;
-	if (requseted_newspaper) { //if we found newspaper in the newspaper tree
-		for (auto&& category : categories) { //iterate thorugh all the categories
-			for (int i = 0; i < requseted_newspaper->childCount(); i++) { //traverse thorugh all the children of the newspaper (those are categories)
-				if (requseted_newspaper->child(i)->text(0).compare(QString::fromStdString(category))) { //is the currently iterated category `category` already in the Newspaper tree?
-					category_found = true; //found category we are looking for in Newspaper tree
-					auto article = news_articles_it;
-					for (; article != news_atricles_it_end; article++) { //traverse thorugh all articles
-						bool article_found = false; //(re)sets the flag
-						for (int j = 0; j < requseted_newspaper->child(i)->childCount(); j++) { //traverse thorugh all the children of given category (those are articles)
-							if (requseted_newspaper->child(i)->child(j)->text(2) == QString::number(article->second.main_hash())) { //is the currently iterated article `article` in the Newspaper tree already?
-								article_found = true; //we found the article in the Newspaper tree
+	if (requested_newspaper) {
+		requested_newspaper->takeChildren();
+		for (auto&& category : category_names) {
+			auto category_tree = new QTreeWidgetItem(
+				QStringList({
+					QString::fromStdString(category),
+					"Category",
+					""
+				})
+			);
+
+			auto [it, eit] = categories.equal_range(category);	
+			for (; it != eit; it++) {
+				Article& article = it->second;
+				category_tree->addChild(
+					new QTreeWidgetItem(
+						QStringList(
+							{
+								QString::fromStdString(article.heading()),
+								"Article",
+								QString::number(article.main_hash())
 							}
-						}
-						if (!article_found && article->second.is_in_category(category)) { //article wasn't found in the Newspaper tree, but does it belong to the category?
-							//yes, and so we will add it
-							requseted_newspaper->child(i)->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())})));
-						}
-					}
-				}
+						)
+					)
+				);
 			}
-			if (!category_found) { //category wasn't found in the newspaper tree
-				auto new_cat_tree = new QTreeWidgetItem(QStringList({category.c_str(), "Category", category.c_str()})); //we will add the category to the tree
-				requseted_newspaper->addChild( new_cat_tree);
-				auto article = news_articles_it;
-					for (; article != news_atricles_it_end; article++) { //check all the articles...
-						if (article->second.is_in_category(category)) //...if they belong in this newly inserted category
-							new_cat_tree->addChild( new QTreeWidgetItem(QStringList({article->second.heading().c_str(), "Article", QString::number(article->second.main_hash())}))); //and if yes, add them
-				}
-			}
-			category_found = false; //resets the flag
+
+			requested_newspaper->addChild(category_tree);
 		}
 	}
 }

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libproto_nee.a CMakeFiles/proto_nee.dir/proto_nee_autogen/mocs_compilation.cpp.o CMakeFiles/proto_nee.dir/newspaper_entry.pb.cc.o
-/usr/bin/ranlib libproto_nee.a

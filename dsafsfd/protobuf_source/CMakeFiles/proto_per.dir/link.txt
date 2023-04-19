@@ -1,2 +1,0 @@
-/usr/bin/ar qc libproto_per.a CMakeFiles/proto_per.dir/proto_per_autogen/mocs_compilation.cpp.o CMakeFiles/proto_per.dir/peer.pb.cc.o
-/usr/bin/ranlib libproto_per.a

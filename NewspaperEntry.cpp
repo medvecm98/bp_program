@@ -1,16 +1,24 @@
 #include "NewspaperEntry.h"
 
-NewspaperEntry::NewspaperEntry(pk_t id) : news_id_(id) {}
+NewspaperEntry::NewspaperEntry(pk_t id, DisconnectedUsersLazy* disconnected_users_lazy) :
+	news_id_(id),
+	disconnected_readers_lazy_remove(disconnected_users_lazy)
+{
+	
+}
 
-NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name) {
+NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name, DisconnectedUsersLazy* disconnected_users_lazy) :
+	disconnected_readers_lazy_remove(disconnected_users_lazy)
+{
 	_authorities.insert(first_key);
 	news_id_ = id;
 	news_name_= name;
 }
 
-NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne) : 
+NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy) : 
 	news_id_(serialized_ne.entry().news_id()),
-	news_name_(serialized_ne.entry().news_name()) 
+	news_name_(serialized_ne.entry().news_name()),
+	disconnected_readers_lazy_remove(disconnected_users_lazy)
 {
 	for(const np2ps::SerializedArticle& gpb_articles : serialized_ne.articles()) {
 		add_article(gpb_articles.article().main_hash(), Article(gpb_articles));
@@ -20,16 +28,17 @@ NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& seria
 	}
 }
 
-NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne) :
+NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy) :
 	news_id_(serialized_ne.entry().news_id()),
-	news_name_(serialized_ne.entry().news_name())
+	news_name_(serialized_ne.entry().news_name()),
+	disconnected_readers_lazy_remove(disconnected_users_lazy)
 {
 	// for(const np2ps::Article& gpb_articles : serialized_ne.articles()) {
 	// 	add_article(gpb_articles.main_hash(), Article(gpb_articles));
 	// }
 }
 
-NewspaperEntry::NewspaperEntry(const std::string& path) {
+NewspaperEntry::NewspaperEntry(const std::string& path, DisconnectedUsersLazy* disconnected_users_lazy) {
 	
 }
 
@@ -49,11 +58,13 @@ bool NewspaperEntry::remove_article(hash_t article_hash) {
 }
 
 std::optional<article_ptr> NewspaperEntry::find_article_header(hash_t article_hash) {
-	auto find_result = _articles.find(article_hash);
-	if (find_result == _articles.end()) {
-		return article_optional ();
+	try {
+		article_ptr article_ptr_ = &get_article(article_hash);
+		return {article_ptr_};
 	}
-	return article_optional (&find_result->second);
+	catch (article_not_found_database& e) {
+		return {};
+	}
 }
 
 database_iterator_t NewspaperEntry::get_iterator_database() {
@@ -151,7 +162,9 @@ void NewspaperEntry::add_friend(pk_t id) {
 Article& NewspaperEntry::get_article(hash_t id) {
 	auto it = _articles.find(id);
 	if (it != _articles.end()) {
-		return _articles[id];
+		auto& article = _articles[id];
+		remove_disconnected_readers(article);
+		return article;
 	}
 	throw article_not_found_database("Article not found in user database.");
 }
@@ -285,4 +298,31 @@ bool NewspaperEntry::confirmation() {
 
 void NewspaperEntry::set_confirmation(bool c) {
 	confirmed = c;
+}
+
+article_database_container& NewspaperEntry::get_all_articles() {
+	remove_disconnected_readers_all(false);
+	return _articles;
+}
+
+void NewspaperEntry::remove_disconnected_readers(hash_t article) {
+	Article& article_ref = _articles.at(article);
+	remove_disconnected_readers(article_ref);
+}
+
+void NewspaperEntry::remove_disconnected_readers(Article& article) {
+	for (auto&& disconnected_reader : disconnected_readers_lazy_remove->users) {
+		article.readers().erase(disconnected_reader);
+	}
+}
+
+void NewspaperEntry::remove_disconnected_readers_all(bool ignore_treshold) {
+	if (disconnected_readers_lazy_remove->users.size() >= 20 || ignore_treshold) {
+		for (auto&& disconnected_reader : disconnected_readers_lazy_remove->users) {
+			for (auto&& article : _articles) {
+				remove_disconnected_readers(article.second);
+			}
+		}
+		disconnected_readers_lazy_remove->users.clear();
+	}
 }

@@ -25,13 +25,25 @@ void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramCon
 	ctx->p.peer_init("Test Peer", "Newspaper Test Peer");
 	int counter = ctx->p.get_public_key() * 10;
 	while (std::getline(file, line)) { // loads articles from file, line after line
-		std::string article_file_path(line);
+		std::stringstream input_sstream(line);
+		std::string token;
+		std::string article_file_path;
+
+		if (std::getline(input_sstream, token, ' ')) {
+			article_file_path = token;
+		}
+
 		if (!std::filesystem::is_regular_file(std::filesystem::path(article_file_path))) {
 			std::cout << "Invalid file: " << article_file_path << std::endl;
 			continue;
 		}
-		Article a;
+
 		std::vector<std::string> v;
+		while (std::getline(input_sstream, token, ' ')) {
+			v.push_back(token);
+		}
+		
+		Article a;
 		a.initialize_article(v, article_file_path, ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id()), counter++);
 		ctx->p.enroll_new_article(std::move(a), false);
 	}

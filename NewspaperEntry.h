@@ -2,6 +2,7 @@
 #define PROGRAM_NEWSPAPERENTRY_H
 
 #include "GlobalUsing.h"
+#include "LazyWrappers.hpp"
 #include "Article.h"
 #include "CryptoUtils.hpp"
 #include "IpMap.h"
@@ -18,11 +19,11 @@ struct ArticleListWrapper {
 class NewspaperEntry {
 public:
 	NewspaperEntry() = default;
-	NewspaperEntry(pk_t first_key, pk_t id, const my_string& name);
-	explicit NewspaperEntry(pk_t id);
-	explicit NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne);
-	explicit NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
-	explicit NewspaperEntry(const std::string& path);
+	NewspaperEntry(pk_t first_key, pk_t id, const my_string& name, DisconnectedUsersLazy* disconnected_users_lazy);
+	explicit NewspaperEntry(pk_t id, DisconnectedUsersLazy* disconnected_users_lazy);
+	explicit NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy);
+	explicit NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy);
+	explicit NewspaperEntry(const std::string& path, DisconnectedUsersLazy* disconnected_users_lazy);
 	void add_article(hash_t article_hash, Article&& article);
 	timed_article_map_pair get_newest_articles(int count);
 	timed_article_map_pair get_newest_articles(QDate date, int count);
@@ -82,6 +83,12 @@ public:
 
 	void set_confirmation(bool c);
 
+	article_database_container& get_all_articles();
+
+	void remove_disconnected_readers(hash_t article);
+	void remove_disconnected_readers(Article& article);
+	void remove_disconnected_readers_all(bool ignore_treshold);
+
 	bool await_confirmation = false;
 
 private:
@@ -95,6 +102,7 @@ private:
 	user_container friends_; //friends, that can share the articles with you
 	rsa_public_optional newspaper_public_key_; //newspaper public key to check article legitimacy
 	rsa_private_optional newspaper_private_key_;
+	DisconnectedUsersLazy* disconnected_readers_lazy_remove;
 	bool confirmed = false;
 };
 

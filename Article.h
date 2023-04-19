@@ -202,9 +202,10 @@ public:
 		}
 
 		bool at_least_one_category = false;
-		for (auto&& i : categories) { // insert all the categories into article category container
+		for (auto&& category : categories) { // insert all the categories into article category container
+			std::cout << category << std::endl;
 			at_least_one_category = true;
-			_categories.insert(i);
+			_categories.insert(category);
 		}
 
 		if (!at_least_one_category) { //if there was no category inserted, insert the "no_cat" category
@@ -217,10 +218,28 @@ public:
 		_author_id = me.get_public_key();
 		_heading = "";
 
+		QFile article_file;
+		article_file.setFileName(QString::fromStdString(_path_to_article_file));
+		article_file.open(QIODevice::ReadOnly);
+		QTextStream file_stream(&article_file);
+		QString qline = file_stream.readLine();
+		while (!qline.isNull()) {
+			qsizetype pos;
+			if (_format == article_format::Markdown && (pos = qline.indexOf('#')) != -1) {
+				_heading = qline.mid(pos + 1).trimmed().toStdString();
+				break;
+			}
+			else if (_format == article_format::PlainText && qline.trimmed().size() > 0) {
+				_heading = qline.toStdString();
+				break;
+			}
+			qline = file_stream.readLine();
+		}
+		article_file.close();
+
 		/* main hash, is calculated and found here: */
 
 		CryptoPP::AutoSeededRandomPool prng;
-		calculate_hashes();
 		if (hash__ == 0) {
 			_main_hash = prng.GenerateWord32();
 		}
@@ -238,7 +257,7 @@ public:
 								 //... naturally present
 		calculate_crypto_hash();
 
-
+		readers_.emplace(me.get_public_key());
 	}
 
 	/**
@@ -320,6 +339,10 @@ public:
 	 * @return Pair of iterators.
 	 */
 	std::pair<category_container::const_iterator, category_container::const_iterator> categories() const { return {_categories.cbegin(), _categories.cend()}; }
+
+	const std::set<my_string>& categories_ref() const {
+		return _categories;
+	}
 
 	/**
 	 * @brief Gets both begin and end iterators to `_margins` container.
@@ -424,6 +447,13 @@ public:
 		readers_.emplace(id);
 	}
 
+	template<typename Container>
+	void add_readers(Container& reader_container) {
+		for (auto&& reader : reader_container) {
+			add_reader(reader);
+		}
+	}
+
 	std::size_t readers_count() {
 		return readers_.size();
 	}
@@ -431,6 +461,8 @@ public:
 	void sign_hash();
 	std::string& get_signature();
 	void set_signature(std::string signature);
+	void lazy_remove_readers(user_container& disconnected_users);
+	void update_metadata(Article& other_article);
 
 private:
 	my_string _author_name; //network, local
