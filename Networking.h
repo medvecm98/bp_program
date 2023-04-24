@@ -6,7 +6,7 @@
 #include <queue>
 #include <memory>
 #include "protobuf_source/messages.pb.h"
-#include "GlobalUsing.h"
+#include "CryptoUtils.hpp"
 #include "NewspaperEntry.h"
 #include <sstream>
 #include <iomanip>
@@ -270,6 +270,7 @@ class Networking : public QObject, public std::enable_shared_from_this<Networkin
 
 public:
 	friend StunClient;
+	friend StunServer;
 
 	Networking() = delete;
 

@@ -3,6 +3,9 @@
 
 #include "GlobalUsing.h"
 
+using StringEncoder = CryptoPP::HexEncoder;
+using StringDecoder = CryptoPP::HexDecoder;
+
 /**
  * Utilities for working with crypto++.
 */
@@ -68,6 +71,14 @@ struct CryptoUtils {
 
     CryptoPP::RSA::PublicKey hex_to_rsa(
         const std::string& hex_rsa_public
+    );
+
+    std::string private_to_hex(
+        const CryptoPP::RSA::PrivateKey& rsa_private
+    );
+
+    CryptoPP::RSA::PrivateKey hex_to_private(
+        const std::string& hex_rsa_private
     );
 
     std::string bq_to_hex(

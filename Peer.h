@@ -83,6 +83,9 @@ public:
 		QObject::connect(networking_->get_stun_client().get(), &StunClient::confirmed_newspaper,
 						 this, &Peer::newspaper_confirm);
 
+		QObject::connect(networking_->get_stun_client().get(), &StunClient::confirmed_newspaper_pk,
+						 this, &Peer::newspaper_confirm_public_key);
+
 		QObject::connect(networking_.get(), &Networking::newspaper_identified,
 						 this, &Peer::newspaper_identified);
 	}
@@ -118,7 +121,8 @@ public:
 	void add_new_newspaper(pk_t newspaper_key, const my_string &newspaper_name, const std::string &newspaper_ip, bool allocate_now = true);
 	void add_new_newspaper(pk_t newspaper_key, const my_string &newspaper_name, pk_t sender);
 	void add_new_newspaper(pk_t destination, pk_t news_id, my_string news_name);
-	NewspaperEntry &add_new_newspaper(pk_t newspaper_key, const my_string &newspaper_name, QHostAddress &&newspaper_ip_domain, bool allocate_now = false);
+	NewspaperEntry& add_new_newspaper(pk_t newspaper_key, const my_string &newspaper_name, QHostAddress &&newspaper_ip_domain, bool allocate_now = false);
+	NewspaperEntry& add_new_newspaper(NewspaperEntry&& newspaper_entry, QHostAddress&& address, bool allocate_now = false);
 	void add_new_newspaper_from_file(const std::string &path);
 	void add_new_newspaper_pk(pk_t pid);
 	size_t list_all_articles_from_news(article_container &articles, const std::set<category_t> &categories);
@@ -157,6 +161,7 @@ public:
 	void handle_credentials_request(shared_ptr_message message);
 	void handle_newspaper_entry_request(shared_ptr_message message);
 	void handle_newspaper_list_request(shared_ptr_message message);
+	void handle_journalist_request(shared_ptr_message message);
 
 	/* response */
 
@@ -168,6 +173,7 @@ public:
 	void handle_update_margin_response(shared_ptr_message message);
 	void handle_newspaper_entry_response(shared_ptr_message message);
 	void handle_newspaper_list_response(shared_ptr_message message);
+	void handle_journalist_response(shared_ptr_message message);
 
 	/* one way */
 
@@ -197,6 +203,7 @@ public:
 	void generate_newspaper_list_request(pk_t destination);
 	void generate_successful_download_message(pk_t reader, pk_t recv_article_id);
 	void generate_successful_download_message_all_readers(const user_container& readers, pk_t from, pk_t recv_article_id);
+	void generate_new_journalist(pk_t pid);
 
 	void send_stun_binding_request();
 	void removed_external_article(hash_t article, pk_t to);
@@ -254,6 +261,7 @@ public:
 	bool add_friend(pk_t id, QHostAddress ip);
 
 	void allocate_next_newspaper();
+	NewspaperEntry& get_my_newspaper();
 
 public slots:
 	void handle_message(shared_ptr_message message);
@@ -261,6 +269,8 @@ public slots:
 	void allocate_on_stun_server(pk_t target);
 
 	void newspaper_confirm(pk_t pid);
+
+	void newspaper_confirm_public_key(pk_t pid, rsa_public_optional public_key);
 
 	void newspaper_identified(pk_t newspaper_key, my_string newspaper_name, std::string newspaper_ip_domain);
 

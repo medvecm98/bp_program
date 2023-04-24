@@ -1,5 +1,7 @@
 #include "CryptoUtils.hpp"
 
+
+
 /**
  * @brief Sign key in string form and encode signature in hex-manner.
  * 
@@ -24,7 +26,7 @@ std::string CryptoUtils::sign_with_keys(
         new SignerFilter(
             prng,
             signer,
-            new HexEncoder(
+            new StringEncoder(
                 new StringSink(
                     signature
                 )
@@ -57,7 +59,7 @@ bool CryptoUtils::verify_signature_with_keys(
     std::string signature_to_verify_with_decoded;
     StringSource temp1(
         signature_to_verify_with_encoded,
-        new HexDecoder(
+        new StringDecoder(
             new StringSink(
                 signature_to_verify_with_decoded
             )
@@ -68,7 +70,7 @@ bool CryptoUtils::verify_signature_with_keys(
     try {
         StringSource temp2(
             to_verify + signature_to_verify_with_decoded,
-            new HexDecoder(
+            new StringDecoder(
                 new SignatureVerificationFilter(
                     verifier,
                     NULL,
@@ -91,7 +93,7 @@ bool CryptoUtils::verify_key(
 ) {
     using namespace CryptoPP;
     std::string hex_key;
-    HexEncoder encoder(
+    StringEncoder encoder(
         new StringSink(hex_key)
     );
     to_verify.CopyTo(encoder);
@@ -138,7 +140,7 @@ void CryptoUtils::decrypt_symmetric_key(
 	StringSource ss0(
 		enc_key,
 		true,
-		new HexDecoder(
+		new StringDecoder(
             new PK_DecryptorFilter(
                 rng,
                 rsa_decryptor,
@@ -178,7 +180,7 @@ std::string CryptoUtils::sign_key(
 ) {
     using namespace CryptoPP;
     std::string key;
-    HexEncoder encoder(
+    StringEncoder encoder(
         new StringSink(key)
     );
     to_sign.CopyTo(encoder);
@@ -202,7 +204,7 @@ std::string CryptoUtils::encrypt_key(
     CryptoPP::PK_EncryptorFilter filter(
         rng,
         rsa_encryptor,
-        new CryptoPP::HexEncoder (
+        new StringEncoder (
             new CryptoPP::StringSink(
                 encrypted_key
             )
@@ -222,7 +224,7 @@ std::string CryptoUtils::rsa_to_hex(
     ByteQueue queue;
     key.DEREncodePublicKey(queue);
 
-    HexEncoder encoder;
+    StringEncoder encoder;
     queue.CopyTo(encoder);
     encoder.MessageEnd();
 
@@ -239,7 +241,7 @@ CryptoPP::RSA::PublicKey CryptoUtils::hex_to_rsa(
     using namespace CryptoPP;
 
     ByteQueue queue;
-    HexDecoder decoder(new Redirector(queue));
+    StringDecoder decoder(new Redirector(queue));
     decoder.Put((const byte*)hex_rsa_public.data(), hex_rsa_public.size());
     decoder.MessageEnd();
 
@@ -255,7 +257,7 @@ std::string CryptoUtils::bq_to_hex(
     using namespace CryptoPP;
 
     std::string out;
-    HexEncoder hex_encoder(new StringSink(out));
+    StringEncoder hex_encoder(new StringSink(out));
     queue.CopyTo(hex_encoder);
 
     return out;
@@ -270,7 +272,7 @@ CryptoPP::ByteQueue CryptoUtils::hex_to_bq(
     StringSource temp(
         input,
         true,
-        new HexDecoder (
+        new StringDecoder (
             new Redirector(
                 queue
             )
@@ -279,4 +281,39 @@ CryptoPP::ByteQueue CryptoUtils::hex_to_bq(
     // queue.MessageEnd();
 
     return queue;
+}
+
+std::string CryptoUtils::private_to_hex(
+    const CryptoPP::RSA::PrivateKey& key
+) {
+    using namespace CryptoPP;
+
+    ByteQueue queue;
+    key.DEREncodePrivateKey(queue);
+
+    StringEncoder encoder;
+    queue.CopyTo(encoder);
+    encoder.MessageEnd();
+
+    std::string out;
+    StringSink ss(out);
+    encoder.CopyTo(ss);
+
+    return out;
+}
+
+CryptoPP::RSA::PrivateKey CryptoUtils::hex_to_private(
+    const std::string& hex_rsa_private
+) {
+    using namespace CryptoPP;
+
+    ByteQueue queue;
+    StringDecoder decoder(new Redirector(queue));
+    decoder.Put((const byte*)hex_rsa_private.data(), hex_rsa_private.size());
+    decoder.MessageEnd();
+
+    RSA::PrivateKey key;
+    key.BERDecodePrivateKey(queue, false, queue.MaxRetrievable());
+
+    return key;
 }

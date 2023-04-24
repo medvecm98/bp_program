@@ -243,9 +243,9 @@ void Networking::send_message_with_credentials(shared_ptr_message msg, bool send
  * @param pk_id Public identifier of user.
  * @param ip_map_ IP map of where to check.
  */
-void check_ip(QTcpSocket* tcp_socket, pk_t pk_id, IpMap& ip_map_) {
+void check_ip(QTcpSocket* tcp_socket, pk_t pk_id, IpMap& ip_map_, bool ignore_existing = false) {
 	try {
-		if (!ip_map_.have_ip4(pk_id)) {
+		if (ignore_existing || !ip_map_.have_ip4(pk_id)) {
 			std::cout << "Updating NP2PS IP: " << tcp_socket->peerAddress().toString().toStdString() << ", port: " << tcp_socket->peerPort() << std::endl;
 			ip_map_.update_ip(pk_id, tcp_socket->peerAddress(), tcp_socket->peerPort());
 		}
@@ -347,7 +347,7 @@ void PeerReceiver::start_server(QHostAddress address) {
 	}
 }
 
-void decrypt_message_using_symmetric_key(
+shared_ptr_message decrypt_message_using_symmetric_key(
 	std::string e_msg,
 	CryptoPP::SecByteBlock iv,
 	IpWrapper& ipw,
@@ -366,7 +366,7 @@ void decrypt_message_using_symmetric_key(
 	CryptoPP::StringSource s(
 		e_msg,
 		true,
-		new CryptoPP::HexDecoder(
+		new StringDecoder(
 			new CryptoPP::AuthenticatedDecryptionFilter (
 				dec,
 				new CryptoPP::StringSink(
@@ -381,14 +381,8 @@ void decrypt_message_using_symmetric_key(
 	shared_ptr_message m = std::make_shared<proto_message>();
 	m->ParseFromString(dec_msg);
 	print_message(m, "receiving");
-	if (m->msg_ctx() == np2ps::REQUEST) {
-		networking->add_to_received(std::move(m)); //message now can be read in GPB format
-		return;
-	}
-	else {
-		networking->add_to_received(std::move(m));
-		return;
-	}
+
+	return std::move(m); //message now can be read in GPB format
 
 }
 
@@ -430,8 +424,6 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		quint64 pid;
 		msg >> pid; //public identifier
 
-		networking_->ip_map_.enroll_new_np2ps_tcp_socket(pid, np2ps_socket); //enroll NP2PS socket for peers, that are not enrolled yet
-
 		quint64 iv_size;
 		msg >> iv_size;
 
@@ -447,18 +439,28 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		QByteArray msg_array;
 		msg_array.resize(msg_size);
 		msg >> msg_array;
+		msg.commitTransaction();
 
 		auto e_msg = extract_encrypted_message(msg_array); //encrypted message
 		
-		//we can check now, if the IP of sender is already in database and if not, we will add it
-		check_ip(np2ps_socket, pid, networking_->ip_map_);
-
 		//decrypt
 		auto& [ipw_pk, ipw] = *(networking_->ip_map_.get_wrapper_for_pk(pid));
 		if (ipw.key_pair.second.has_value()) {
-			decrypt_message_using_symmetric_key(e_msg, iv, ipw, networking_, np2ps_socket);
+			auto message = decrypt_message_using_symmetric_key(e_msg, iv, ipw, networking_, np2ps_socket);
+
+			bool updated_socket = false;
+			networking_->ip_map_.enroll_new_np2ps_tcp_socket(pid, np2ps_socket, &updated_socket); //enroll NP2PS socket for peers, that are not enrolled yet
+			//we can check now, if the IP of sender is already in database and if not, we will add it
+			check_ip(np2ps_socket, pid, networking_->ip_map_, updated_socket);
+
+			networking_->add_to_received(message);
 		}
 		else {
+			bool updated_socket = false;
+			networking_->ip_map_.enroll_new_np2ps_tcp_socket(pid, np2ps_socket, &updated_socket); //enroll NP2PS socket for peers, that are not enrolled yet
+			//we can check now, if the IP of sender is already in database and if not, we will add it
+			check_ip(np2ps_socket, pid, networking_->ip_map_, updated_socket);
+			
 			//common symmetric key for given sender isn't stored locally yet
 			
 			std::cout << "Symmetric key missing for " << pid << "!!!" << std::endl;
@@ -488,9 +490,9 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 			send_message_using_socket(np2ps_socket, msg_key_sstream_block);
 
 			//tcp_socket_->disconnectFromHost();
-			msg.commitTransaction();
-			return;
 		}
+
+		
 	}
 	else if (msg_class == PLAIN_MESSAGE) {
 		auto m = std::make_shared<proto_message>();
@@ -502,6 +504,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		QByteArray msg_array;
 		msg_array.resize(msg_size);
 		msg >> msg_array;
+		msg.commitTransaction();
 
 		m->ParseFromString(msg_array.toStdString());
 		print_message(m, "receiving");
@@ -527,9 +530,6 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		else {
 			throw other_error("Public key should be exchanged in credentials or using STUN.");
 		}
-
-		msg.commitTransaction();
-		return; 
 	}
 }
 
@@ -622,7 +622,7 @@ void encrypt_message_symmetrically(
 		true,
 		new AuthenticatedEncryptionFilter(
 			enc,
-			new HexEncoder(
+			new StringEncoder(
 				new StringSink(
 					encrypted_msg
 				)
@@ -697,12 +697,14 @@ void Networking::decrypt_encrypted_messages(pk_t original_sender) {
 	auto [emb, eme] = waiting_decrypt.equal_range(original_sender);
 	auto& [ipw_pk, ipw] = *(ip_map_.get_wrapper_for_pk(original_sender));
 	for (; emb != eme; emb++) {
-		decrypt_message_using_symmetric_key(
+		auto message = decrypt_message_using_symmetric_key(
 			emb->second.encrypted_message_or_symmetric_key,
 			emb->second.initialization_vector_or_signature,
 			ipw,
 			shared_from_this(),
-			NULL);
+			NULL
+		);
+		add_to_received(message);
 	}
 }
 

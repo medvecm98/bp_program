@@ -26,14 +26,15 @@ void Peer::newspaper_identified(pk_t newspaper_key, my_string newspaper_name, st
  */
 void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain, bool allocate_now) {
 	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
-	if (allocate_now) {
-		networking_->get_stun_client()->allocate_request(newspaper_key);
-	}
 
 	auto news = NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove);
 	news.await_confirmation = true;
 
 	newspapers_awaiting_confirmation.emplace(newspaper_key, std::move(news));
+	
+	if (allocate_now) {
+		networking_->get_stun_client()->allocate_request(newspaper_key);
+	}
 }
 
 /**
@@ -48,8 +49,7 @@ NewspaperEntry& Peer::add_new_newspaper(pk_t newspaper_key, const my_string& new
 		return newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove)).first->second;
 	}
 	else {
-		news_.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove));
-		return newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry()).first->second;
+		return news_.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove)).first->second;
 	}
 }
 
@@ -65,7 +65,26 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 	newspapers_awaiting_confirmation.emplace(newspaper_key, std::move(ne));
 }
 
+NewspaperEntry& Peer::add_new_newspaper(NewspaperEntry&& newspaper_entry, QHostAddress&& address, bool allocate_now) {
+	pk_t news_pid = newspaper_entry.get_id();
+	networking_->ip_map().add_to_map(news_pid, IpWrapper(address));
+	if (allocate_now) {
+		networking_->get_stun_client()->allocate_request(news_pid);
+		return newspapers_awaiting_confirmation.emplace(
+			news_pid,
+			std::move(newspaper_entry)
+		).first->second;
+	}
+	else {
+		return news_.emplace(news_pid, std::move(newspaper_entry)).first->second;
+	}
+}
+
 void Peer::newspaper_confirm(pk_t pid) {
+	newspaper_confirm_public_key(pid, rsa_public_optional());
+}
+
+void Peer::newspaper_confirm_public_key(pk_t pid, rsa_public_optional public_key) {
 	auto ne = newspapers_awaiting_confirmation.find(pid);
 	if (ne == newspapers_awaiting_confirmation.end()) { //no newspaper were awaiting confirmation with this pid
 		return;
@@ -73,10 +92,16 @@ void Peer::newspaper_confirm(pk_t pid) {
 
 	try {
 		NewspaperEntry& news = news_.at(pid);
+		if (public_key.has_value()) {
+			news.set_newspaper_public_key(public_key.value());
+		}
 		news.set_confirmation(true);
 	}
 	catch (std::out_of_range e) {
 		NewspaperEntry& news = news_.emplace(pid, ne->second).first->second;
+		if (public_key.has_value()) {
+			news.set_newspaper_public_key(public_key.value());
+		}
 		news.set_confirmation(true);
 	}
 	
@@ -436,6 +461,9 @@ void Peer::handle_requests(shared_ptr_message message) {
 	else if (type == np2ps::NEWSPAPER_LIST) {
 		handle_newspaper_list_request(message);
 	}
+	else if (type == np2ps::JOURNALIST) {
+		handle_journalist_request(message);
+	}
 	else {
 		throw unsupported_message_type_in_context("Peer received a message type that is unsupported in given context");
 	}
@@ -472,6 +500,9 @@ void Peer::handle_responses(shared_ptr_message message) {
 	}
 	else if (type == np2ps::NEWSPAPER_LIST) {
 		handle_newspaper_list_response(message);
+	}
+	else if (type == np2ps::JOURNALIST) {
+		handle_journalist_response(message);
 	}
 	else {
 		throw unsupported_message_type_in_context("Peer received a message type that is unsupported in given context");
@@ -918,6 +949,7 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 	if (message->has_article_all() && message->article_all().has_header() && message->article_all().has_article_actual()) {
 		hash_t recv_article_id = message->article_all().article_hash();
 		auto article_opt = find_article(recv_article_id);
+		auto& news = get_news(message->article_all().header().news_id());
 
 		if (article_opt.has_value()) {
 
@@ -926,7 +958,9 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 
 			Article& article = *(article_opt.value());
 
-			if (article.verify(message->article_all().article_actual())) {
+			if (article.verify(message->article_all().article_actual())
+				&& article.verify_news_signature(news.get_newspaper_public_key())
+			) {
 
 				/* Successful verification */
 
@@ -1528,6 +1562,18 @@ void Peer::print_contents() {
 			std::cout << "  Article: " << a.second.main_hash() << std::endl;
 			std::cout << "  - readers: " << a.second.readers().size() << std::endl;
 		}
+		if (n.second.has_newspaper_public_key()) {
+			std::cout << "  I have public key." << std::endl;
+		}
+		else {
+			std::cout << "  I do NOT have public key." << std::endl;
+		}
+		if (n.second.has_newspaper_private_key()) {
+			std::cout << "  I am journalist." << std::endl;
+		} 
+		else {
+			std::cout << "  I am NOT journalist." << std::endl;
+		}
 	}
 }
 
@@ -1563,7 +1609,10 @@ void Peer::handle_newspaper_list_response(shared_ptr_message message) {
 		};
 
 		if (!find_news(it->entry().news_id())) {
-			auto& news = add_new_newspaper(it->entry().news_id(), it->entry().news_name(), QHostAddress(it->network_info().ipv4()));
+			auto& news = add_new_newspaper(
+				NewspaperEntry(*it, &networking_->disconnected_readers_lazy_remove),
+				QHostAddress(it->network_info().ipv4())
+			);
 			check_articles(news);
 		}
 		else {
@@ -1801,7 +1850,7 @@ void Peer::stun_allocate() {
 }
 
 void Peer::add_journalist(pk_t j) {
-	journalists_.insert(j);
+	generate_new_journalist(j);
 }
 void Peer::remove_journalist(pk_t j) {
 	journalists_.erase(j);
@@ -1872,4 +1921,36 @@ void Peer::allocate_next_newspaper() {
 	if (newspapers_awaiting_confirmation.size() > 0) {
 		get_networking()->get_stun_client()->allocate_request(newspapers_awaiting_confirmation.begin()->first);
 	}
+}
+
+void Peer::generate_new_journalist(pk_t pid) {
+	auto& my_news = get_my_newspaper();
+	get_networking()->enroll_message_to_be_sent(
+		MFW::ReqJournalistFactory(
+			MFW::JournalistFactory(
+				public_identifier_,
+				pid
+			),
+			my_news.get_newspaper_private_key(),
+			my_news,
+			networking_->ip_map().my_ip()
+		)
+	);
+}
+
+void Peer::handle_journalist_request(shared_ptr_message message) {
+	NewspaperEntry& news = get_news(message->journalist().entry().entry().news_id());
+	news.set_newspaper_private_key(
+		CryptoUtils::instance().hex_to_private(
+			message->journalist().private_key()
+		)
+	);
+}
+
+void Peer::handle_journalist_response(shared_ptr_message message) {
+	
+}
+
+NewspaperEntry& Peer::get_my_newspaper() {
+	return get_news(newspaper_id_);
 }

@@ -59,21 +59,21 @@ public:
 
 	void fill_time_sorted_articles();
 
-	bool has_newspaper_public_key();
+	bool has_newspaper_public_key() const ;
 
-	void set_newspaper_public_key(CryptoPP::RSA::PublicKey& pk) ;
+	void set_newspaper_public_key(CryptoPP::RSA::PublicKey pk) ;
 
 	rsa_public_optional get_newspaper_public_key();
 
-	CryptoPP::RSA::PublicKey& get_newspaper_public_key_value();
+	CryptoPP::RSA::PublicKey get_newspaper_public_key_value() const;
 
-	bool has_newspaper_private_key();
+	bool has_newspaper_private_key() const;
 
-	void set_newspaper_private_key(CryptoPP::RSA::PrivateKey& pk);
+	void set_newspaper_private_key(CryptoPP::RSA::PrivateKey pk);
 
 	rsa_private_optional get_newspaper_private_key() ;
 
-	CryptoPP::RSA::PrivateKey& get_newspaper_private_key_value();
+	CryptoPP::RSA::PrivateKey get_newspaper_private_key_value() const;
 
 	void sign_article(hash_t id);
 
@@ -83,6 +83,7 @@ public:
 
 	void set_confirmation(bool c);
 
+
 	article_database_container& get_all_articles();
 
 	void remove_disconnected_readers(hash_t article);
@@ -90,6 +91,10 @@ public:
 	void remove_disconnected_readers_all(bool ignore_treshold);
 
 	bool await_confirmation = false;
+
+	void confirmed_journalist(pk_t pid);
+	const user_container& get_journalists();
+	void remove_journalist(pk_t pid);
 
 private:
 	pk_t news_id_;
@@ -100,6 +105,7 @@ private:
 	ArticleListWrapper article_list_wrapper_; //saving requested article list
 	timed_article_map time_sorted_articles;
 	user_container friends_; //friends, that can share the articles with you
+	user_container journalists_;
 	rsa_public_optional newspaper_public_key_; //newspaper public key to check article legitimacy
 	rsa_private_optional newspaper_private_key_;
 	DisconnectedUsersLazy* disconnected_readers_lazy_remove;

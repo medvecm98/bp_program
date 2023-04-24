@@ -239,9 +239,10 @@ public:
 	 * Update won't take place, if socket is already assigned.
 	 * 
 	 * @param id ID of peer whose NP2PS socket will be updated.
+	 * @param updated_socket True, if socket was updated to already existing peer.
 	 * @param socket Socket to use.
 	 */
-	void enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket);
+	void enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket, bool* updated_socket = NULL);
 
 	/**
 	 * @brief Gets the IpWrapper for given peer.

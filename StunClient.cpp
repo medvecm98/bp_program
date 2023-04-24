@@ -289,6 +289,7 @@ void StunClient::process_response_success_identify(stun_header_ptr stun_message)
         auto ip = QHostAddress(find_it_newspapers_awaiting_identification->first).toString().toStdString();
         networking_->newspapers_awaiting_identification.erase(find_it_newspapers_awaiting_identification);
         emit networking_->newspaper_identified(ria->get_public_identifier(), name, ip);
+        return;
     }
 
     emit confirmed_newspaper(pia->get_public_identifier());
@@ -352,6 +353,7 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
     XorMappedAddressAttribute* xma;
     LifetimeAttribute* la;
     PublicIdentifierAttribute* pia;
+    PublicKeyAttribute* pka = NULL;
     for (auto&& attr : message_orig->attributes) {
         if (attr->attribute_type == StunAttributeEnum::xor_mapped_address) {
             xma = (XorMappedAddressAttribute*)attr.get();
@@ -362,11 +364,19 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
         if (attr->attribute_type == StunAttributeEnum::public_identifier) {
             pia = (PublicIdentifierAttribute*)attr.get();
         }
+        if (attr->attribute_type == StunAttributeEnum::public_key) {
+            pka = (PublicKeyAttribute*)attr.get();
+        }
     }
     networking_->ip_map_.my_ip().ipv4 = QHostAddress(xma->get_address());
     networking_->ip_map_.my_ip().port = xma->get_port();
     add_stun_server(tcp_socket, pia->get_public_identifier());
-    emit confirmed_newspaper(pia->get_public_identifier());
+    if (pka) {
+        emit confirmed_newspaper_pk(pia->get_public_identifier(), rsa_public_optional(pka->get_value()));
+    }
+    else {
+        emit confirmed_newspaper(pia->get_public_identifier());
+    }
 }
 
 void StunClient::process_response_success_binding(stun_header_ptr stun_message, QTcpSocket* socket_) {

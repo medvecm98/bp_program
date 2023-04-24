@@ -114,6 +114,8 @@ public:
 		string_ptr_optional ip4, string_ptr_optional ip6, 
 		rsa_public_optional public_key, rsa_private_optional private_key,
 		eax_optional eax_key);
+	static shared_ptr_message ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, const NewspaperEntry& news, IpWrapper& wrapper);
+	static shared_ptr_message ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header);
 
 	/* Responses: */
 	static shared_ptr_message RespArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header, std::string&& article);
@@ -129,11 +131,13 @@ public:
 		CredentialsPayload payload
 	);
 	static shared_ptr_message RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news, IpWrapper& news_wrapper);
+	static shared_ptr_message RespJournalistFactory(shared_ptr_message&& msg);
 
-	static shared_ptr_message ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header);
 
 	static shared_ptr_message ErrorArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id);
 	static shared_ptr_message ErrorArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header);
+	static shared_ptr_message ErrorJournalistFactory(shared_ptr_message&& msg);
+
 	static shared_ptr_message RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news, IpMap& news_networking);
 	static shared_ptr_message OneWayCredentialsFactory(
 		shared_ptr_message&& msg,
@@ -159,6 +163,7 @@ public:
 	static shared_ptr_message PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::PublicKey& key);
 	static shared_ptr_message NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id, const std::string& name);
 	static shared_ptr_message NewspaperListFactory(pk_t from, pk_t to);
+	static shared_ptr_message JournalistFactory(pk_t from, pk_t to);
 
 	template<typename PeerContainer>
 	static shared_ptr_message ArticleSolicitationFactory(pk_t from, pk_t to, hash_t article_hash, const PeerContainer& peers, std::int32_t level = 127) {

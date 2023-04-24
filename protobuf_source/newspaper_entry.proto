@@ -15,8 +15,15 @@ message NetworkSerializedNewspaperEntry {
     repeated Article articles = 3;
 }
 
+message JournalistNewspaperEntry {
+    NetworkSerializedNewspaperEntry entry = 1;
+    string private_key = 2;
+}
+
 message LocalSerializedNewspaperEntry {
     NewspaperEntry entry = 1;
+    IpWrapper network_info = 4;
+    optional string private_key = 5;
     repeated SerializedArticle articles = 2;
     repeated uint64 friends = 3;
 }

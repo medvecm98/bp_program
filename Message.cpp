@@ -377,15 +377,15 @@ shared_ptr_message MFW::RespNewspaperEntryFactory(shared_ptr_message&& msg, News
 	return msg;
 }
 
-shared_ptr_message MFW::NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id, const std::string& name) {
+shared_ptr_message MFW::NewspaperEntryFactory(
+	pk_t from, pk_t to, pk_t newspaper_id, const std::string& name
+) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
 	msg->set_msg_type(np2ps::NEWSPAPER_ENTRY);
 
 	msg->mutable_newspaper_entry()->mutable_entry()->set_news_id(newspaper_id);
-	msg->mutable_newspaper_entry()->mutable_entry()->set_news_name(name);
-
 	return msg;
 }
 
@@ -416,4 +416,39 @@ shared_ptr_message MFW::ErrorArticleDownloadFactory(shared_ptr_message&& msg, ar
 	article_header->network_serialize_article(header_ptr);
 
 	return std::move(msg);
+}
+
+shared_ptr_message MFW::JournalistFactory(pk_t from, pk_t to) {
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
+	msg->set_msg_type(np2ps::JOURNALIST);
+
+	return msg;
+}
+
+shared_ptr_message MFW::ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, const NewspaperEntry& news, IpWrapper& wrapper) {
+	msg->set_msg_ctx(np2ps::REQUEST);
+
+	if (newspaper_private_key.has_value()) {
+		auto hex_private = CryptoUtils::instance().private_to_hex(newspaper_private_key.value());
+		msg->mutable_journalist()->set_private_key(hex_private);
+	}
+
+	news.network_serialize_entry(
+		msg->mutable_journalist()->mutable_entry(),
+		wrapper
+	);
+
+	return msg;
+}
+
+shared_ptr_message MFW::RespJournalistFactory(shared_ptr_message&& msg) {
+	msg->set_msg_ctx(np2ps::RESPONSE);
+	return msg;
+}
+
+shared_ptr_message MFW::ErrorJournalistFactory(shared_ptr_message&& msg) {
+	msg->set_msg_ctx(np2ps::ERROR);
+	return msg;
 }

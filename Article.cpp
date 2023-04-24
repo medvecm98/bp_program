@@ -265,7 +265,11 @@ void Article::calculate_crypto_hash() {
 			true,
 			new CryptoPP::HashFilter(
 				hash,
-				new CryptoPP::StringSink(crypto_hash_)
+				new StringEncoder(
+					new CryptoPP::StringSink(
+						crypto_hash_
+					)
+				)
 			)
 		);
 	}
@@ -274,9 +278,29 @@ void Article::calculate_crypto_hash() {
 bool Article::verify(const std::string& article_to_check) {
 	bool result;
 	CryptoPP::SHA3_256 hash;
-	CryptoPP::StringSource(crypto_hash_ + article_to_check, true, 
-		new CryptoPP::HashVerificationFilter(hash, 
-			new CryptoPP::ArraySink((CryptoPP::byte*)&result, sizeof(result))));
+	std::string pure_crypto_hash;
+
+	CryptoPP::StringSource temp1(
+		crypto_hash_,
+		true,
+		new StringDecoder(
+			new CryptoPP::StringSink(
+				pure_crypto_hash
+			)
+		)
+	);
+
+	CryptoPP::StringSource temp2(
+		pure_crypto_hash + article_to_check,
+		true,
+		new CryptoPP::HashVerificationFilter(
+			hash,
+			new CryptoPP::ArraySink(
+				(CryptoPP::byte *)&result,
+				sizeof(result)
+			)
+		)
+	);
 	return result;
 }
 
@@ -295,6 +319,7 @@ void Article::network_serialize_article(np2ps::Article* art) const {
 	art->set_crypto_hash(crypto_hash_);
 	art->set_creation_time(creation_time_);
 	art->set_modification_time(modification_time_);
+	art->set_news_signature(newspaper_signature_);
 	
 	auto [hi, hie] = hashes();
 	for (; hi != hie; hi++) {
@@ -326,8 +351,8 @@ void Article::local_serialize_article(np2ps::SerializedArticle* art) const {
 }
 
 std::string& Article::get_signature() {
-	if (!signature_.empty()) {
-		return signature_;
+	if (!newspaper_signature_.empty()) {
+		return newspaper_signature_;
 	}
 	else {
 		throw other_error("Missing article signature.");
@@ -335,7 +360,7 @@ std::string& Article::get_signature() {
 }
 
 void Article::set_signature(std::string signature) {
-	signature_ = signature;
+	newspaper_signature_ = signature;
 }
 
 void Article::lazy_remove_readers(user_container& disconnected_users) {
@@ -354,4 +379,19 @@ void Article::update_metadata(Article& other_article) {
 	for (auto&& reader : other_article.readers()) {
 		add_reader(reader);
 	}
+}
+
+void Article::sign_article_hash_newspaper(rsa_private_optional key) {
+	if (key.has_value()) {
+		auto &cu = CryptoUtils::instance();
+		newspaper_signature_ = cu.sign_with_keys(key, crypto_hash_);
+	}
+	else {
+		throw other_error("No newspaper key supplied!");
+	}
+}
+
+bool Article::verify_news_signature(rsa_public_optional key) {
+	auto& cu = CryptoUtils::instance();
+	return cu.verify_signature_with_keys(key, crypto_hash_, newspaper_signature_);
 }

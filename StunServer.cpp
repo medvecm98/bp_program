@@ -262,11 +262,14 @@ void StunServer::create_response_success_allocate(stun_header_ptr message_orig, 
     auto pia = std::make_shared<PublicIdentifierAttribute>();
     pia->initialize(networking_->get_peer_public_id(), message_new.get());
 
+    auto& news = networking_->news_db->at(networking_->get_peer_public_id());
+    auto pka = std::make_shared<PublicKeyAttribute>();
+    pka->initialize(news.get_newspaper_public_key_value(), message_new.get());
+
     message_new->append_attribute(xma);
     message_new->append_attribute(la);
     message_new->append_attribute(pia);
-
-    
+    message_new->append_attribute(pka);    
 }
 
 void StunServer::process_request_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t& to) {

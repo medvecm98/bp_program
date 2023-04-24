@@ -26,6 +26,18 @@ NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& seria
 	for (auto f : serialized_ne.friends()) {
 		add_friend(f);
 	}
+	set_newspaper_public_key(
+		CryptoUtils::instance().hex_to_rsa(
+			serialized_ne.network_info().rsa_public_key()
+		)
+	);
+	if (serialized_ne.has_private_key()) {
+		set_newspaper_private_key(
+			CryptoUtils::instance().hex_to_private(
+				serialized_ne.private_key()
+			)
+		);
+	}
 }
 
 NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy) :
@@ -33,6 +45,11 @@ NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& ser
 	news_name_(serialized_ne.entry().news_name()),
 	disconnected_readers_lazy_remove(disconnected_users_lazy)
 {
+	set_newspaper_public_key(
+		CryptoUtils::instance().hex_to_rsa(
+			serialized_ne.network_info().rsa_public_key()
+		)
+	);
 	// for(const np2ps::Article& gpb_articles : serialized_ne.articles()) {
 	// 	add_article(gpb_articles.main_hash(), Article(gpb_articles));
 	// }
@@ -211,6 +228,11 @@ void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEn
 	nserialized_ne->mutable_network_info()->set_ipv4(news_wrapper.ipv4.toIPv4Address());
 	nserialized_ne->mutable_network_info()->set_port(news_wrapper.port);
 	nserialized_ne->mutable_network_info()->set_publicid(news_id_);
+	nserialized_ne->mutable_network_info()->set_rsa_public_key(
+		CryptoUtils::instance().rsa_to_hex(
+			get_newspaper_public_key_value()
+		)
+	);
 }
 
 void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) const {
@@ -222,6 +244,20 @@ void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry*
 	for (auto&& f : friends_) {
 		lserialized_ne->add_friends(f);
 	}
+	if (has_newspaper_public_key()) {
+		lserialized_ne->mutable_network_info()->set_rsa_public_key(
+			CryptoUtils::instance().rsa_to_hex(
+				get_newspaper_public_key_value()
+			)
+		);
+	}
+	if (has_newspaper_private_key()) {
+		lserialized_ne->set_private_key(
+			CryptoUtils::instance().private_to_hex(
+				get_newspaper_private_key_value()
+			)
+		);
+	}
 }
 
 void NewspaperEntry::fill_time_sorted_articles() {
@@ -232,11 +268,11 @@ void NewspaperEntry::fill_time_sorted_articles() {
 	}
 }
 
-bool NewspaperEntry::has_newspaper_public_key() {
+bool NewspaperEntry::has_newspaper_public_key() const {
 	return newspaper_public_key_.has_value();
 }
 
-void NewspaperEntry::set_newspaper_public_key(CryptoPP::RSA::PublicKey& pk) {
+void NewspaperEntry::set_newspaper_public_key(CryptoPP::RSA::PublicKey pk) {
 	newspaper_public_key_ = {pk};
 }
 
@@ -244,18 +280,18 @@ rsa_public_optional NewspaperEntry::get_newspaper_public_key() {
 	return newspaper_public_key_;
 }
 
-CryptoPP::RSA::PublicKey& NewspaperEntry::get_newspaper_public_key_value() {
+CryptoPP::RSA::PublicKey NewspaperEntry::get_newspaper_public_key_value() const {
 	if (newspaper_public_key_.has_value())
 		return newspaper_public_key_.value();
 
 	throw other_error("No key for given newspaper found.");
 }
 
-bool NewspaperEntry::has_newspaper_private_key() {
+bool NewspaperEntry::has_newspaper_private_key() const {
 	return newspaper_private_key_.has_value();
 }
 
-void NewspaperEntry::set_newspaper_private_key(CryptoPP::RSA::PrivateKey& pk) {
+void NewspaperEntry::set_newspaper_private_key(CryptoPP::RSA::PrivateKey pk) {
 	newspaper_private_key_ = {pk};
 }
 
@@ -263,7 +299,7 @@ rsa_private_optional NewspaperEntry::get_newspaper_private_key() {
 	return newspaper_private_key_;
 }
 
-CryptoPP::RSA::PrivateKey& NewspaperEntry::get_newspaper_private_key_value() {
+CryptoPP::RSA::PrivateKey NewspaperEntry::get_newspaper_private_key_value() const {
 	if (newspaper_private_key_.has_value())
 		return newspaper_private_key_.value();
 
@@ -325,4 +361,16 @@ void NewspaperEntry::remove_disconnected_readers_all(bool ignore_treshold) {
 		}
 		disconnected_readers_lazy_remove->users.clear();
 	}
+}
+
+void NewspaperEntry::confirmed_journalist(pk_t pid) {
+	journalists_.emplace(pid);
+}
+
+const user_container& NewspaperEntry::get_journalists() {
+	return journalists_;
+}
+
+void NewspaperEntry::remove_journalist(pk_t pid) {
+	journalists_.erase(pid);
 }

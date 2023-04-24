@@ -29,8 +29,8 @@ message Article {
   repeated string categories = 9;
   map<uint64, Margins> margins = 10;
   uint32 type = 11;
-  bytes crypto_hash = 12;
-  bytes news_signature = 15; //signature of newspaper journalist to prove article legitimacy
+  string crypto_hash = 12;
+  string news_signature = 15; //signature of newspaper journalist to prove article legitimacy
   int64 creation_time = 13;
   int64 modification_time = 14;
   repeated uint64 readers = 16;

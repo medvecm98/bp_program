@@ -19,7 +19,7 @@
 #include <QDir>
 
 #include "StringSplitter.h"
-#include "GlobalUsing.h"
+#include "CryptoUtils.hpp"
 #include "Margins.h"
 
 #define COMMENT_ "[NScomment]:"
@@ -256,6 +256,7 @@ public:
 		article_present_ = true; //we provided the article file in function arguments, so the article's contents is 
 								 //... naturally present
 		calculate_crypto_hash();
+		sign_article_hash_newspaper(me.get_my_newspaper().get_newspaper_private_key());
 
 		readers_.emplace(me.get_public_key());
 	}
@@ -458,7 +459,8 @@ public:
 		return readers_.size();
 	}
 
-	void sign_hash();
+	void sign_article_hash_newspaper(rsa_private_optional key);
+	bool verify_news_signature(rsa_public_optional key);
 	std::string& get_signature();
 	void set_signature(std::string signature);
 	void lazy_remove_readers(user_container& disconnected_users);
@@ -484,7 +486,7 @@ private:
 	std::uint64_t modification_time_; //network, local
 	my_timepoint creation_time_timepoint_; //network, local
 	user_container readers_; //local, TODO: implement
-	std::string signature_;
+	std::string newspaper_signature_;
 };
 
 using article_ptr = Article*;
