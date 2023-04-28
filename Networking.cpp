@@ -437,10 +437,19 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		msg >> msg_size;
 
 		std::cout << "Received message payload size: " << msg_size << std::endl;
-		
+		qint64 read_size = 0;
 		QByteArray msg_array;
-		msg_array.resize(msg_size);
-		msg >> msg_array;
+		while (read_size < msg_size) {
+			msg_array += np2ps_socket->readAll();
+			read_size = msg_array.size();
+			if (read_size < msg_size) {
+				np2ps_socket->waitForReadyRead();
+			}
+		}
+		
+		// QByteArray msg_array;
+		// msg_array.resize(msg_size);
+		// msg >> msg_array;
 		msg.commitTransaction();
 
 		auto e_msg = extract_encrypted_message(msg_array); //encrypted message
