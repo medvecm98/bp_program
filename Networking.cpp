@@ -447,9 +447,6 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 			}
 		}
 		
-		// QByteArray msg_array;
-		// msg_array.resize(msg_size);
-		// msg >> msg_array;
 		msg.commitTransaction();
 
 		auto e_msg = extract_encrypted_message(msg_array); //encrypted message
