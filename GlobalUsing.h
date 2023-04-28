@@ -165,7 +165,7 @@ using my_timepoint = std::chrono::time_point<std::chrono::system_clock>;
 
 using timestamp_t = std::uint64_t;
 using timed_article_map = std::map<timestamp_t, pk_t>;
-using timed_article_map_iter = timed_article_map::iterator;
+using timed_article_map_iter = timed_article_map::reverse_iterator;
 using timed_article_map_citer = timed_article_map::const_iterator;
 using timed_article_map_pair = std::pair<timed_article_map_iter, timed_article_map_iter>;
 using timed_article_map_cpair = std::pair<timed_article_map_citer, timed_article_map_citer>;

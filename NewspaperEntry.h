@@ -26,6 +26,9 @@ public:
 	explicit NewspaperEntry(const std::string& path, DisconnectedUsersLazy* disconnected_users_lazy);
 	void add_article(hash_t article_hash, Article&& article);
 	timed_article_map_pair get_newest_articles(int count);
+	timed_article_map_pair get_newest_articles(int from, int to);
+	void get_newest_articles(article_container& articles, int count, timestamp_t timestamp);
+	void get_newest_articles(article_container& articles, int from, int to, timestamp_t timestamp);
 	timed_article_map_pair get_newest_articles(QDate date, int count);
 	bool remove_article(hash_t article_hash);
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
@@ -96,6 +99,11 @@ public:
 	const user_container& get_journalists();
 	void remove_journalist(pk_t pid);
 
+	void update();
+	timestamp_t last_updated() {
+		return last_updated_;
+	}
+
 private:
 	pk_t news_id_;
 	my_string news_name_;
@@ -109,6 +117,7 @@ private:
 	rsa_public_optional newspaper_public_key_; //newspaper public key to check article legitimacy
 	rsa_private_optional newspaper_private_key_;
 	DisconnectedUsersLazy* disconnected_readers_lazy_remove;
+	timestamp_t last_updated_ = 0;
 	bool confirmed = false;
 };
 

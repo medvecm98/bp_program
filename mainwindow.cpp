@@ -75,7 +75,10 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 	std::multimap<my_string, Article&> categories;
 	std::set<my_string> category_names;
 
-	for (auto&& [article_hash, article] : news_the_one.get_all_articles()) {
+	auto [bit, eit] = news_the_one.get_newest_articles(0);
+
+	for (; bit != eit; bit++) {
+		Article& article = news_the_one.get_article(bit->second);
 		for (auto&& cat : article.categories_ref()) {
 			categories.emplace(cat, article);
 			category_names.emplace(cat);
@@ -277,7 +280,9 @@ void MainWindow::set_newspaper_related_buttons(bool state) {
 }
 
 void MainWindow::check_selected_item() {
-	check_item(ui->treeWidget_newspaper->selectedItems()[0]);
+	if (ui->treeWidget_newspaper && ui->treeWidget_newspaper->selectedItems().size() > 0) {
+		check_item(ui->treeWidget_newspaper->selectedItems()[0]);
+	}
 }
 
 void MainWindow::check_item(QTreeWidgetItem* item) {

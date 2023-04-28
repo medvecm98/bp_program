@@ -92,7 +92,7 @@ public:
 	 * @return shared_ptr_message 
 	 */
 	template <typename CategoryContainer>
-	static shared_ptr_message ReqArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id, int count, const CategoryContainer& categories) {
+	static shared_ptr_message ReqArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id, int count, timestamp_t timestamp, const CategoryContainer& categories) {
 		msg->mutable_article_list()->set_all_articles(true);
 
 		msg->set_msg_ctx(np2ps::REQUEST);
@@ -104,7 +104,8 @@ public:
 
 		msg->mutable_article_list()->set_newspaper_id(newspaper_id);
 		msg->mutable_article_list()->set_count(count);
-
+		msg->mutable_article_list()->set_timestamp(timestamp);
+		
 		return std::move(msg);
 	}
 	

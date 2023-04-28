@@ -18,6 +18,7 @@ NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name, D
 NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy) : 
 	news_id_(serialized_ne.entry().news_id()),
 	news_name_(serialized_ne.entry().news_name()),
+	last_updated_(serialized_ne.last_updated()),
 	disconnected_readers_lazy_remove(disconnected_users_lazy)
 {
 	for(const np2ps::SerializedArticle& gpb_articles : serialized_ne.articles()) {
@@ -43,6 +44,7 @@ NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& seria
 NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy) :
 	news_id_(serialized_ne.entry().news_id()),
 	news_name_(serialized_ne.entry().news_name()),
+	last_updated_(0),
 	disconnected_readers_lazy_remove(disconnected_users_lazy)
 {
 	set_newspaper_public_key(
@@ -66,8 +68,8 @@ void NewspaperEntry::deserialize(const np2ps::NetworkSerializedNewspaperEntry& s
 }
 
 void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
-	time_sorted_articles.emplace(article_hash, article.creation_time());
-	_articles.insert_or_assign(article_hash, article);
+	_articles.emplace(article_hash, article);
+	time_sorted_articles.emplace(article.creation_time(), article_hash);
 }
 
 bool NewspaperEntry::remove_article(hash_t article_hash) {
@@ -107,8 +109,8 @@ article_data_vec NewspaperEntry::get_articles_for_time_span(my_clock::time_point
 }
 
 timed_article_map_pair NewspaperEntry::get_newest_articles(int count) {
-	timed_article_map_iter bit = time_sorted_articles.begin();
-	timed_article_map_iter eit = time_sorted_articles.end();
+	timed_article_map_iter bit = time_sorted_articles.rbegin();
+	timed_article_map_iter eit = time_sorted_articles.rend();
 
 	if (count <= 0) {
 		return { bit, eit };
@@ -125,14 +127,67 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(int count) {
 	return { bit, it };
 }
 
+timed_article_map_pair NewspaperEntry::get_newest_articles(int from, int to) {
+	timed_article_map_iter bit = time_sorted_articles.rbegin();
+	timed_article_map_iter eit = time_sorted_articles.rend();
+
+	if (to - from <= 0) {
+		return { bit, eit };
+	}
+
+	std::size_t i_skip = 0;
+
+	while (i_skip < from) {
+		if (bit == eit) {
+			return {bit, eit};
+		}
+		i_skip++;
+		bit++;
+	}
+
+	timed_article_map_iter it = bit;
+	std::size_t i_article = i_skip;
+
+	while (it != eit && i_article < to) {
+		i_article++;
+		it++;
+	}
+
+	return { bit, it };
+}
+
+void NewspaperEntry::get_newest_articles(article_container& articles, int count, timestamp_t timestamp) {
+	auto [bit, eit] = get_newest_articles(count);
+
+	for(; bit != eit; bit++) {
+		article_ptr article = &get_article(bit->second);
+		if (timestamp != 0 && article->creation_time() < timestamp) {
+			break;
+		}
+		articles.emplace(article);
+	}
+}
+
+void NewspaperEntry::get_newest_articles(article_container& articles, int from, int to, timestamp_t timestamp) {
+	auto [bit, eit] = get_newest_articles(from, to);
+
+	for(; bit != eit; bit++) {
+		article_ptr article = &get_article(bit->second);
+		if (timestamp != 0 && article->creation_time() < timestamp) {
+			break;
+		}
+		articles.emplace(article);
+	}
+}
+
 /** Get `count` newest articles from start of given day.
 */
 timed_article_map_pair NewspaperEntry::get_newest_articles(QDate date, int count) {
 	QDateTime date_time = date.startOfDay(Qt::LocalTime);
 	std::int64_t epoch = date_time.toMSecsSinceEpoch();
 
-	timed_article_map_iter bit = time_sorted_articles.begin();
-	timed_article_map_iter eit = time_sorted_articles.end();
+	timed_article_map_iter bit = time_sorted_articles.rbegin();
+	timed_article_map_iter eit = time_sorted_articles.rend();
 	timed_article_map_iter it = bit;
 
 	if (count <= 0) {
@@ -258,6 +313,7 @@ void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry*
 			)
 		);
 	}
+	lserialized_ne->set_last_updated(last_updated_);
 }
 
 void NewspaperEntry::fill_time_sorted_articles() {
@@ -373,4 +429,10 @@ const user_container& NewspaperEntry::get_journalists() {
 
 void NewspaperEntry::remove_journalist(pk_t pid) {
 	journalists_.erase(pid);
+}
+
+void NewspaperEntry::update() {
+	last_updated_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::system_clock::now().time_since_epoch()
+		).count();
 }

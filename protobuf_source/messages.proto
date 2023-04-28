@@ -89,6 +89,7 @@ message ArticleList {
 	repeated string categories = 2;
 	uint64 newspaper_id = 5;
 	int32 count = 4;
+	int64 timestamp = 7;
 	// response
 	repeated Article response = 3;
 }

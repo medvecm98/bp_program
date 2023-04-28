@@ -600,8 +600,8 @@ void Peer::generate_article_list_message(pk_t newspaper_id) {
 		getting_article_list.insert(newspaper_id);
 		emit check_selected_item();
 
-		auto& news = get_news_db();
-		const user_container& news_friends = news[newspaper_id].get_friends();
+		auto& news = get_news(newspaper_id);
+		const user_container& news_friends = news.get_friends();
 
 		networking_->enroll_message_to_be_sent(
 			MFW::ReqArticleListFactory(
@@ -611,6 +611,7 @@ void Peer::generate_article_list_message(pk_t newspaper_id) {
 				),
 				newspaper_id,
 				10,
+				news.last_updated(),
 				std::vector<my_string>()
 			)
 		);
@@ -624,6 +625,7 @@ void Peer::generate_article_list_message(pk_t newspaper_id) {
 					),
 					newspaper_id,
 					10,
+					news.last_updated(),
 					std::vector<my_string>()
 				)
 			);	
@@ -781,17 +783,26 @@ void Peer::handle_article_list_request(shared_ptr_message message) {
 		auto& news_ref = get_news(req_news_id);
 
 		article_container articles;
-		list_all_articles_from_news(articles);
+		// list_all_articles_from_news(articles);
+		for (std::size_t i = 0; i < news_ref.get_all_articles().size(); i += 5) {
+			news_ref.get_newest_articles(
+				articles,
+				i,
+				i + 5,
+				message->article_list().timestamp()
+			);
 
-		networking_->enroll_message_to_be_sent(
-			MFW::RespArticleListFactory(
-				MFW::ArticleListFactory(
-					public_identifier_,
-					message->from()
-				),
-				articles
-			)
-		);
+			networking_->enroll_message_to_be_sent(
+				MFW::RespArticleListFactory(
+					MFW::ArticleListFactory(
+						public_identifier_,
+						message->from()
+					),
+					articles
+				)
+			);
+			articles.clear();
+		}
 	}
 	catch (unknown_newspaper_error& e) {
 		networking_->enroll_message_to_be_sent(
@@ -1098,19 +1109,20 @@ void check_add_article_to_news(shared_ptr_message message, NewspaperEntry& news,
 void Peer::handle_article_list_response(shared_ptr_message message) {
 	auto list_size = message->article_list().response_size();
 	if (list_size != 0) {
+		std::cout << "Received article list size: " << list_size << std::endl;
 		pk_t list_news_id = message->article_list().response().begin()->news_id();
-
+		auto& news = get_news(list_news_id);
 		for (auto it = message->article_list().response().begin(); it != message->article_list().response().end(); it++) {
-			auto& news = get_news(list_news_id);
 			check_add_article_to_news(message, news, Article(*it));
 		}
-
+		news.update();
 		emit new_article_list(list_news_id);
 	}
 	else {
 		std::cout << "Article List response for " << message->from() << "; empty list" << std::endl;
 	}
 	getting_article_list.erase(message->from());
+	
 	emit check_selected_item();
 }
 

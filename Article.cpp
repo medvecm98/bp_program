@@ -32,6 +32,7 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 	_news_id(protobuf_article.news_id()),
 	_main_hash(protobuf_article.main_hash()),
 	_heading(protobuf_article.heading()),
+	creation_time_(protobuf_article.creation_time()),
 	article_present_(false)
 {
 	//load categories

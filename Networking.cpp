@@ -43,8 +43,8 @@ void send_message_using_turn(networking_ptr networking_, QByteArray& msg, pk_t t
  * @param block Message in QByteArray form.
  */
 void send_message_using_socket(QTcpSocket* tcp_socket, QByteArray& block) {
-	tcp_socket->write(block);
-	
+	std::cout << "Bytes written: " << tcp_socket->write(block) << std::endl;
+	tcp_socket->waitForBytesWritten();
 }
 
 bool Networking::enroll_message_to_be_sent(shared_ptr_message message) {
@@ -435,6 +435,8 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 
 		quint64 msg_size;
 		msg >> msg_size;
+
+		std::cout << "Received message payload size: " << msg_size << std::endl;
 		
 		QByteArray msg_array;
 		msg_array.resize(msg_size);
@@ -643,6 +645,10 @@ void write_encrypted_message(QDataStream& length_plus_msg, shared_ptr_message ms
 	length_plus_msg << (quint64)msg->from(); //public identifier won't be encrypted
 	length_plus_msg << (quint64)iv_str.size() << QByteArray::fromStdString(iv_str);
 	length_plus_msg << (quint64)encrypted_msg.size() << QByteArray::fromStdString(encrypted_msg); //initialization vector is written after size, but before message itself
+
+	if (msg->msg_type() == np2ps::ARTICLE_ALL) {
+		std::cout << "Size final: " << (quint64)8 + (quint64)iv_str.size() + (quint64)encrypted_msg.size() << std::endl;
+	}
 }
 
 void write_plain_message(QDataStream& length_plus_msg, const std::string& serialized_msg) {
@@ -680,6 +686,8 @@ void PeerSender::message_send(QTcpSocket* socket, shared_ptr_message msg, IpWrap
 		std::string iv_str = create_iv_string(iv);
 		write_encrypted_message(length_plus_msg, msg, iv_str, encrypted_msg);
 	}
+
+	
 
     //send message
 	if (!relay)

@@ -9,6 +9,10 @@
 #include <QFile>
 #include <filesystem>
 
+#include <chrono>
+#include <thread>
+#include <random>
+
 #include "Article.h"
 #include "Message.h"
 #include "Peer.h"
@@ -42,9 +46,14 @@ void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramCon
 		while (std::getline(input_sstream, token, ' ')) {
 			v.push_back(token);
 		}
-		
+
+		std::random_device dev;
+		std::mt19937 rng(dev());
+    	std::uniform_int_distribution<std::mt19937::result_type> dist(1,1000);
+
 		Article a;
-		a.initialize_article(v, article_file_path, ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id()), counter++);
+		a.initialize_article(v, article_file_path, ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id()), (counter++ + dist(rng)));
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		ctx->p.enroll_new_article(std::move(a), false);
 	}
 	file.close();

@@ -26,6 +26,7 @@ message LocalSerializedNewspaperEntry {
     optional string private_key = 5;
     repeated SerializedArticle articles = 2;
     repeated uint64 friends = 3;
+    int64 last_updated = 6;
 }
 
 message NewspaperList {
