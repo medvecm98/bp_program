@@ -1,24 +1,6 @@
 #include "Article.h"
 #include <QStandardPaths>
 
-void set_dir_path_and_root(QString& dir_path, QString& root_path) {
-#ifdef _WIN64
-	dir_path = "C:\\Program Files (x86)\\NewsP2PSharing\\Articles";
-	root_path = "C:\\";
-#elif defined(_WIN32)
-	dir_path = "C:\\Program Files\\NewsP2PSharing\\Articles";
-	root_path = "C:\\";
-#else
-	if (const char* env_p = std::getenv("XDG_DATA_HOME")) {
-		dir_path = QString(env_p).append("/news_p2p_sharing/Articles/");
-	}
-	else if (const char* env_p = std::getenv("HOME")) {
-		dir_path = QString(env_p).append("/.local/share/news_p2p_sharing/Articles/");
-	}
-	root_path = "/";
-#endif
-}
-
 /**
  * @brief Construct a new Article::Article object from protobuf Article.
  * 
@@ -116,49 +98,42 @@ Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_arti
 void Article::set_path(const std::string& article_actual) {
 	article_present_ = true;
 
-		/* name of the file, without path, with spaces replaced with underscores and with article hash appended */
-		QString file_name = QString::fromStdString(_heading).replace(' ', '_').append('-').append(QString::number(_main_hash));
+	/* name of the file, without path, with spaces replaced with underscores and with article hash appended */
+	QString file_name = QString::fromStdString(_heading).replace(' ', '_').append('-').append(QString::number(_main_hash));
 
-		switch (_format) //set correct file suffix
-		{
-		case article_format::PlainText:
-			file_name.append(".txt");
-			break;
-		case article_format::Markdown:
-			file_name.append(".md");
-			break;
-		case article_format::Html:
-			file_name.append(".html");
-			break;
-		
-		default:
-			file_name.append(".txt"); //`.txt` is the default one
-			break;
-		}
+	switch (_format) //set correct file suffix
+	{
+	case article_format::PlainText:
+		file_name.append(".txt");
+		break;
+	case article_format::Markdown:
+		file_name.append(".md");
+		break;
+	case article_format::Html:
+		file_name.append(".html");
+		break;
+	
+	default:
+		file_name.append(".txt"); //`.txt` is the default one
+		break;
+	}
 
-		QFile file;
+	QFile file;
 
-		QString dir_path, root_path;
+	QString dir_path;
 
-		/* sets correct path, some support for MS Windows is provided */
-		set_dir_path_and_root(dir_path, root_path);
-		// dir_path = QStandardPaths::displayName(QStandardPaths::AppDataLocation);
-		// std::cout << "Setting path: " << dir_path.toStdString() << std::endl;
+	/* sets correct path, corss-platform */
+	dir_path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+	std::cout << "Setting path: " << dir_path.toStdString() << std::endl;
 
-		QDir dir(dir_path); //directory, where we want to place our article
-		QDir rdir(root_path); //root of path of dir variable
-		if (!dir.exists()) {
-			rdir.mkpath(dir.path()); //create the directory if it doesn't exist
-		}
+	file_name.prepend(dir_path); //form full path together with file name
 
-		file_name.prepend(dir_path); //form full path together with file name
-
-		file.setFileName(file_name);
-		file.open(QIODevice::ReadWrite);
-		QTextStream qts(&file);
-		qts << QString::fromStdString(article_actual); //write article's contents into the file
-		file.close();
-		_path_to_article_file = file_name.toStdString();
+	file.setFileName(file_name);
+	file.open(QIODevice::ReadWrite);
+	QTextStream qts(&file);
+	qts << QString::fromStdString(article_actual); //write article's contents into the file
+	file.close();
+	_path_to_article_file = file_name.toStdString();
 }
 
 /**
