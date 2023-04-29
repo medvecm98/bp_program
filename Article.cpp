@@ -1,4 +1,5 @@
 #include "Article.h"
+#include <QStandardPaths>
 
 void set_dir_path_and_root(QString& dir_path, QString& root_path) {
 #ifdef _WIN64
@@ -141,6 +142,8 @@ void Article::set_path(const std::string& article_actual) {
 
 		/* sets correct path, some support for MS Windows is provided */
 		set_dir_path_and_root(dir_path, root_path);
+		// dir_path = QStandardPaths::displayName(QStandardPaths::AppDataLocation);
+		// std::cout << "Setting path: " << dir_path.toStdString() << std::endl;
 
 		QDir dir(dir_path); //directory, where we want to place our article
 		QDir rdir(root_path); //root of path of dir variable
