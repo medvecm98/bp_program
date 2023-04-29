@@ -44,13 +44,14 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 
 	//load paragraph hashes
 	for (auto it = protobuf_article.paragraph_hashes().begin(); it != protobuf_article.paragraph_hashes().end(); it++) {
-		_hashes.insert(std::make_pair<int32_t, HashWrapper>((int32_t)it->first, HashWrapper(it->second.hash(), it->second.level())));
+		//_hashes.insert(std::make_pair<int32_t, HashWrapper>((int32_t)it->first, HashWrapper(it->second.hash(), it->second.level())));
 	}
 
 	//load margins
 	for (auto it = protobuf_article.margins().begin(); it != protobuf_article.margins().end(); it++) {
 		for (auto jt = it->second.margins().begin(); jt != it->second.margins().end(); jt++) {
-			_margins.insert(std::make_pair<pk_t, Margin>((pk_t)it->first, Margin(jt->type(), jt->content(), jt->id())));
+			//_margins.insert(std::make_pair<pk_t, Margin>((pk_t)it->first, Margin(jt->type(), jt->content(), jt->id())));
+			_margins.insert({ (pk_t)it->first, Margin(jt->type(), jt->content(), jt->id()) });
 		}
 	}
 

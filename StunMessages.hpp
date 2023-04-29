@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <exception>
+#include <array>
 #include "GlobalUsing.h"
 #include "CryptoUtils.hpp"
 

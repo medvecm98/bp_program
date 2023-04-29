@@ -3,7 +3,7 @@ project(news_p2p_sharing)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_compile_options(-pedantic -O0 -g)
+# add_compile_options(-pedantic -O0 -g)
 # set(CMAKE_CXX_CLANG_TIDY
 # 	clang-tidy;
 # 	-header-filter=${CMAKE_CURRENT_SOURCE_DIR};
@@ -14,13 +14,13 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 
-include(FindProtobuf)
 find_package(Protobuf REQUIRED)
+include_directories(${Protobuf_INCLUDE_DIRS})
+
+find_package(cryptopp CONFIG REQUIRED)
+
 find_package(Qt5 COMPONENTS Core Network Widgets REQUIRED)
 #find_package(Doxygen REQUIRED dot)
-include_directories( ${Boost_INCLUDE_DIRS} )
-
-find_library(CryptoPP cryptopp)
 
 add_subdirectory(protobuf_source)
 add_dependencies(proto_msg proto_art)
@@ -39,8 +39,8 @@ add_executable(news_p2p_sharing main.cpp newarticleform.h newarticleform.cpp new
 	PublicIdentifierAttribute.hpp PublicIdentifierAttribute.cpp StunTags.hpp CryptoUtils.hpp CryptoUtils.cpp
 	DataAttribute.hpp DataAttribute.cpp PublicKeyAttribute.hpp PublicKeyAttribute.cpp LazyWrappers.hpp
 	RelayedPublicIdentifierAttribute.hpp RelayedPublicIdentifierAttribute.cpp addmargin.h addmargin.cpp addmargin.ui)
-target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art proto_nee proto_per proto_ipm ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
-	Qt5::Widgets Qt5::Network Qt5::Core)
+# target_link_libraries(news_p2p_sharing stdc++fs ${Protobuf_LIBRARIES} proto_msg proto_art proto_nee proto_per proto_ipm cryptopp Qt5::Widgets Qt5::Network Qt5::Core)
+target_link_libraries(news_p2p_sharing ${Protobuf_LIBRARIES} proto_msg proto_art proto_nee proto_per proto_ipm Qt5::Widgets Qt5::Network Qt5::Core cryptopp::cryptopp)
 
 #if (DOXYGEN_FOUND)
 #	doxygen_add_docs(news_p2p_sharing_docs
