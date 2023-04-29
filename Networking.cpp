@@ -309,7 +309,10 @@ pk_t extract_public_identifier(const QByteArray& s_msg) {
  * @return std::string 
  */
 std::string extract_encrypted_message(const QByteArray& s_msg) {
-	return s_msg.toStdString();
+	std::cout << "  byte array: " << s_msg.size() << std::endl;
+	std::string s_msg_string = s_msg.mid(4).toStdString();
+	std::cout << "  string: " << s_msg_string.size() << std::endl;
+	return s_msg_string;
 }
 
 /**
@@ -408,6 +411,15 @@ void PeerReceiver::message_receive(QTcpSocket* tcp_socket_) {
 	process_received_np2ps_message(in_, tcp_socket_);
 }
 
+QByteArray read_bytes_socket(QTcpSocket* socket, qint64 bytes) {
+	QByteArray rv;
+	while (socket->bytesAvailable() < bytes) {
+		if (!socket->waitForReadyRead()) {}
+	}
+	rv = socket->read(bytes);
+	return rv;
+}
+
 void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* np2ps_socket) {
 
 	quint16 msg_version;
@@ -440,12 +452,13 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		qint64 read_size = 0;
 		QByteArray msg_array;
 		while (read_size < msg_size) {
-			msg_array += np2ps_socket->readAll();
+			msg_array += np2ps_socket->read(msg_size + 4);
 			read_size = msg_array.size();
 			if (read_size < msg_size) {
 				np2ps_socket->waitForReadyRead();
 			}
 		}
+		std::cout << "Message received: " << msg_array.toHex().toStdString() << std::endl;
 		
 		msg.commitTransaction();
 
@@ -646,14 +659,17 @@ std::string create_iv_string(CryptoPP::SecByteBlock& iv) {
 void write_encrypted_message(QDataStream& length_plus_msg, shared_ptr_message msg, 
 						  const std::string& iv_str, const std::string& encrypted_msg) 
 {
+	QByteArray iv_byte_array = QByteArray::fromStdString(iv_str);
+	QByteArray encrypted_msg_byte_array = QByteArray::fromStdString(encrypted_msg);
 	length_plus_msg << VERSION;
 	length_plus_msg << ENCRYPTED_MESSAGE;
 	length_plus_msg << (quint64)msg->from(); //public identifier won't be encrypted
-	length_plus_msg << (quint64)iv_str.size() << QByteArray::fromStdString(iv_str);
-	length_plus_msg << (quint64)encrypted_msg.size() << QByteArray::fromStdString(encrypted_msg); //initialization vector is written after size, but before message itself
+	length_plus_msg << (quint64)iv_byte_array.size() << iv_byte_array;
+	length_plus_msg << (quint64)encrypted_msg_byte_array.size() << encrypted_msg_byte_array; //initialization vector is written after size, but before message itself
 
 	if (msg->msg_type() == np2ps::ARTICLE_ALL) {
 		std::cout << "Size final: " << (quint64)8 + (quint64)iv_str.size() + (quint64)encrypted_msg.size() << std::endl;
+		std::cout << "Message final: " << encrypted_msg_byte_array.toHex().toStdString() << std::endl;
 	}
 }
 
