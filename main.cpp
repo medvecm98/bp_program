@@ -107,7 +107,8 @@ int main(int argc, char *argv[]) {
 	/* Connect slots and signals in-between various widgets of the windows and windows and peer */
 	QObject::connect(&ctx->p, &Peer::got_newspaper_confirmation, &w, &MainWindow::newspaper_added_to_db);
 	QObject::connect(&ctx->p, &Peer::newspaper_list_received, &w, &MainWindow::newspaper_added_to_db_noarg);
-	QObject::connect(&ctx->p, &Peer::new_article_list, &w, &MainWindow::article_list_received);
+	QObject::connect(&ctx->p, &Peer::new_article_list, &w, &MainWindow::article_list_regenerate);
+	QObject::connect(&ctx->p, &Peer::checked_display_article, &w, &MainWindow::checked_display_article);
 	QObject::connect(ctx->p.get_networking(), &Networking::got_network_interfaces, &w, &MainWindow::got_network_interfaces);
 	QObject::connect(&w, &MainWindow::start_server, ctx->p.get_networking()->get_peer_receiver(), &PeerReceiver::start_server);
 	QObject::connect(&w, &MainWindow::start_server, ctx->p.get_networking()->get_stun_server(), &StunServer::start_server);
@@ -139,7 +140,7 @@ int main(int argc, char *argv[]) {
 	ctx->p.get_networking()->get_network_interfaces(); //gets networking interfaces for displaying them in the comboBox_networking
 
 	if (loaded) {
-		w.generate_article_list();
+		w.all_newspaper_updated();
 		w.enable_print_peer();
 		w.enable_add_article();
 		w.enable_add_news();

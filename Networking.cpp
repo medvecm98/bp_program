@@ -153,6 +153,28 @@ void print_message(shared_ptr_message msg, std::string recv_send) {
 		case np2ps::ARTICLE_DATA_UPDATE:
 			std::cout << "  article data update" << std::endl;
 			break;
+		case np2ps::USER_INFO:
+			std::cout << "  user info" << std::flush;
+			switch(msg->user_info().method()) {
+				case np2ps::ADVERT_UI:
+					std::cout << " advert" << std::endl;
+					break;
+				case np2ps::REQUEST_UI:
+					std::cout << " request" << std::endl;
+					break;
+				case np2ps::RESPONSE_UI:
+					std::cout << " response" << std::endl;
+					break;
+				default:
+					break;
+			}
+			break;
+		case np2ps::NEW_JOURNALIST:
+			std::cout << "  new journalist" << std::endl;
+			break;
+		case np2ps::JOURNALIST:
+			std::cout << "  journalist" << std::endl;
+			break;
 		default:
 			std::cout << "  <<unknown type>>" << std::endl;
 			break;
@@ -458,7 +480,6 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 				np2ps_socket->waitForReadyRead();
 			}
 		}
-		std::cout << "Message received: " << msg_array.toHex().toStdString() << std::endl;
 		
 		msg.commitTransaction();
 
@@ -666,11 +687,6 @@ void write_encrypted_message(QDataStream& length_plus_msg, shared_ptr_message ms
 	length_plus_msg << (quint64)msg->from(); //public identifier won't be encrypted
 	length_plus_msg << (quint64)iv_byte_array.size() << iv_byte_array;
 	length_plus_msg << (quint64)encrypted_msg_byte_array.size() << encrypted_msg_byte_array; //initialization vector is written after size, but before message itself
-
-	if (msg->msg_type() == np2ps::ARTICLE_ALL) {
-		std::cout << "Size final: " << (quint64)8 + (quint64)iv_str.size() + (quint64)encrypted_msg.size() << std::endl;
-		std::cout << "Message final: " << encrypted_msg_byte_array.toHex().toStdString() << std::endl;
-	}
 }
 
 void write_plain_message(QDataStream& length_plus_msg, const std::string& serialized_msg) {
@@ -769,7 +785,6 @@ void Networking::peer_process_disconnected_users() {
 			disconnected_readers_lazy_remove.users.emplace(user);
 			disconnected_user.clean_np2ps_socket();
 			disconnected_user.clean_turn_socket();
-			journalists_->erase(user);
 		}
 	}
 	

@@ -33,12 +33,12 @@ void MainWindow::on_pushButton_print_peer_released()
 }
 
 void MainWindow::newspaper_added_to_db_noarg() {
-	generate_article_list();
+	all_newspaper_updated();
 	ctx->p.allocate_next_newspaper();
 }
 
 void MainWindow::newspaper_added_to_db(pk_t news_id) {
-	generate_article_list();
+	all_newspaper_updated();
 	ctx->p.allocate_next_newspaper();
 }
 
@@ -49,6 +49,7 @@ void MainWindow::on_pushButton_add_news_released()
 
 void MainWindow::generate_article_list() {
 	ui->treeWidget_newspaper->clear();
+	ui->comboBox_news_select->clear();
 	for (auto&& news : ctx->p.get_news()) { //for all newspapers in database
 		if (news.second.await_confirmation && !news.second.confirmation()) { // skip news that require confirmation, but aren't confirmed
 			continue;
@@ -61,6 +62,10 @@ void MainWindow::generate_article_list() {
 					QString::number(news.second.get_id())
 				})
 			);
+		ui->comboBox_news_select->addItem(
+			QString::fromStdString(news.second.get_name()),
+			QVariant(QString::number(news.second.get_id()))
+		);
 		ui->treeWidget_newspaper->addTopLevelItem( //adds newspaper into Newspaper tree
 				newspaper_tree_entry
 		);
@@ -84,6 +89,8 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 			category_names.emplace(cat);
 		}
 	}
+
+	
 
 	QString news_name = QString::fromStdString(news_the_one.get_name());
 	QString id_in_string = QString::number(news_the_one.get_id());
@@ -127,12 +134,134 @@ void MainWindow::article_list_received(pk_t newspaper_id) {
 			requested_newspaper->addChild(category_tree);
 		}
 	}
+
+	auto [it2, eit2] = categories.equal_range(ui->comboBox_categories->currentText().toStdString());	
+	for (; it2 != eit2; it2++) {
+		Article& article = it2->second;
+
+		QListWidgetItem* list_item =
+			new QListWidgetItem(
+				QString::fromStdString(
+					article.heading()
+				)
+			);
+
+		list_item->setData(Qt::UserRole, QVariant((qulonglong)article.main_hash()));
+		ui->listWidget_articles->addItem(list_item);
+	}
+}
+
+void MainWindow::all_newspaper_updated() {
+	ui->comboBox_news_select->clear();
+	for (auto&& news : ctx->p.get_news()) { //for all newspapers in database
+		if (news.second.await_confirmation && !news.second.confirmation()) { // skip news that require confirmation, but aren't confirmed
+			continue;
+		}
+		ui->comboBox_news_select->addItem(
+			QString::fromStdString(news.second.get_name()),
+			QVariant((qulonglong)news.second.get_id())
+		);
+	}
+	int current_index = ui->comboBox_news_select->currentIndex();
+	if (ui->comboBox_news_select->currentIndex() != -1) {
+		if (ui->comboBox_news_select->count() <= current_index) {
+			current_index -= 1;
+		}
+		ui->comboBox_news_select->setCurrentIndex(current_index);
+		newspaper_updated(ui->comboBox_news_select->currentData().toUInt()); //generate the article list for given newspaper
+	}
+}
+
+void MainWindow::newspaper_updated(pk_t nid) {
+	auto& news_the_one  = ctx->p.get_news(nid); //find requested new in database
+	
+	std::multimap<my_string, Article&> categories;
+	std::set<my_string> category_names;
+
+	auto [bit, eit] = news_the_one.get_newest_articles(0);
+
+	for (; bit != eit; bit++) {
+		Article& article = news_the_one.get_article(bit->second);
+		for (auto&& cat : article.categories_ref()) {
+			categories.emplace(cat, article);
+			category_names.emplace(cat);
+		}
+	}
+
+	ui->comboBox_categories->clear();
+	ui->comboBox_categories->addItem(tr("All categories"));
+	for (auto&& cn : category_names) {
+		ui->comboBox_categories->addItem(QString::fromStdString(cn));
+	}
+	ui->comboBox_categories->setCurrentIndex(0);
+	article_list_create(nid);
+}
+
+void MainWindow::article_list_create(pk_t nid) {
+	auto& news = ctx->p.get_news(nid); //find requested new in database
+	
+	std::multimap<my_string, Article&> categories;
+	std::set<my_string> category_names;
+
+	auto [bit, eit] = news.get_newest_articles(0);
+
+	ui->listWidget_articles->clear();
+	for (; bit != eit; bit++) {
+		Article& article = news.get_article(bit->second);
+
+		QListWidgetItem* list_item =
+			new QListWidgetItem(
+				QString::fromStdString(
+					article.heading()
+				)
+			);
+
+		list_item->setData(Qt::UserRole, QVariant((qulonglong)article.main_hash()));
+		ui->listWidget_articles->addItem(list_item);
+	}
+}
+
+void MainWindow::article_list_create_category(pk_t nid, std::string category) {
+	auto& news = ctx->p.get_news(nid); //find requested new in database
+	std::vector<std::reference_wrapper<Article>> category_articles;
+	auto [bit, eit] = news.get_newest_articles(0);
+	for (; bit != eit; bit++) {
+		Article& article = news.get_article(bit->second);
+		for (auto&& cat : article.categories_ref()) {
+			if (cat == category) {
+				category_articles.push_back(article);
+			}
+		}
+	}
+	ui->listWidget_articles->clear();
+	for (auto&& article : category_articles) {
+		QListWidgetItem* list_item =
+			new QListWidgetItem(
+				QString::fromStdString(
+					article.get().heading()
+				)
+			);
+
+		list_item->setData(Qt::UserRole, QVariant((qulonglong)article.get().main_hash()));
+		ui->listWidget_articles->addItem(list_item);
+	}
+}
+
+void MainWindow::article_list_regenerate(pk_t nid) {
+	if (ui->comboBox_news_select->currentData().toUInt() == nid) {
+		if (ui->comboBox_categories->currentText() == "All categories") {
+			article_list_create(nid);
+		}
+		else {
+			article_list_create_category(nid, ui->comboBox_categories->currentText().toStdString());
+		}
+	}
 }
 
 void MainWindow::on_pushButton_add_article_released()
 {
 	const char* env_p = std::getenv("HOME");
-	auto fileName = QFileDialog::getOpenFileName(this, "Select files", env_p, "Text Files (*.txt);;Markdown (*.md)"); //open file selection dialog for plain text files and markdown
+	auto fileName = QFileDialog::getOpenFileName(this, "Select files", env_p, "Markdown (*.md);;Text Files (*.txt)"); //open file selection dialog for plain text files and markdown
 	if (!fileName.isNull()) {
 		if (std::filesystem::is_regular_file(fileName.toStdString())) {
 			emit add_new_article(fileName); //we selected a regular file and new article now may be added
@@ -331,7 +460,7 @@ void MainWindow::on_pushButton_delete_article_clicked()
 
 			}
 			ui->treeWidget_newspaper->clear();
-			generate_article_list(); //article is deleted from Newspaper tree when the tree is regenerated
+			all_newspaper_updated(); //article is deleted from Newspaper tree when the tree is regenerated
 		}
 		else {
 			ui->textEdit_article->setText("Invalid article hash or article was not found in database.");
@@ -352,7 +481,7 @@ void MainWindow::on_pushButton_addJournalist_clicked()
 }
 
 void MainWindow::newspaper_created() {
-	generate_article_list();
+	all_newspaper_updated();
 }
 
 void MainWindow::got_network_interfaces(address_vec_ptr addresses_and_interfaces) {
@@ -566,4 +695,130 @@ void MainWindow::on_pushButtonFriends_clicked()
 		throw other_error("Adding friend failed for some reason.");
 	}
 	ctx->p.generate_newspaper_list_request(pid);
+}
+
+void MainWindow::on_comboBox_categories_currentIndexChanged(int index)
+{
+
+}
+
+void MainWindow::on_comboBox_news_select_currentIndexChanged(int index)
+{
+
+}
+
+void MainWindow::on_comboBox_categories_activated(int index)
+{
+    if (index != -1) {
+        QVariant data = ui->comboBox_news_select->itemData(
+            ui->comboBox_news_select->currentIndex()
+        );
+		if (ui->comboBox_categories->currentText() == "All categories") {
+        	article_list_create(data.toUInt());
+		}
+		else {
+			article_list_create_category(
+				data.toUInt(),
+				ui->comboBox_categories->currentText().toStdString()
+			);
+		}
+    }
+}
+
+
+void MainWindow::on_comboBox_news_select_activated(int index)
+{
+    QVariant data = ui->comboBox_news_select->currentData();
+	NewspaperEntry& news = ctx->p.get_news(data.toUInt());
+    if (index != -1) {
+        newspaper_updated(data.toUInt());
+    }
+	if (data.toUInt() != ctx->p.get_public_key()
+		// && (news.last_updated() + 300000) > GlobalMethods::get_time_now()
+	) {
+		ctx->p.generate_article_list_message(news.get_id());
+	}
+}
+
+void MainWindow::checked_display_article(pk_t news_id, hash_t article)
+{
+	if (ui->comboBox_news_select->currentData().toUInt() == news_id
+		&& ui->listWidget_articles->currentItem()->data(Qt::UserRole).toUInt() == article
+	) {
+		display_article(news_id, article);
+	}
+}
+
+
+void MainWindow::display_article(pk_t news_id, hash_t article)
+{
+	NewspaperEntry& news = ctx->p.get_news(news_id);
+	Article& article_header = news.get_article(article);
+
+	if (!article_header.article_present()) { //check if article contains its contents
+		ctx->p.generate_article_all_message(
+			ctx->p.check_destination_valid(
+				article_header.author_id(),
+				news.get_id()
+			),
+			article_header.main_hash()
+		); //no, and so it needs to be requested
+	}
+	else {
+		ui->textBrowser->clear();
+
+		//article content is present and we may print it
+
+		ui->textBrowser->clear();
+		QString contents = QString::fromStdString(article_header.read_contents());
+
+		switch (article_header.get_format()) //sets the correct format for Article field
+		{
+		case article_format::Markdown:
+			ui->textBrowser->setMarkdown(contents);
+			break;
+		case article_format::Html:
+			ui->textBrowser->setHtml(contents);
+			break;
+
+		default:
+			ui->textBrowser->setPlainText(contents);
+			break;
+		}
+	}
+}
+
+void MainWindow::on_listWidget_articles_itemClicked(QListWidgetItem *item)
+{
+	display_article(
+		ui->comboBox_news_select->currentData().toUInt(),
+		item->data(Qt::UserRole).toUInt()
+	);
+}
+
+void MainWindow::on_pushButton_add_news_clicked()
+{
+
+}
+
+
+void MainWindow::on_toolButton_addNewspaper_clicked()
+{
+    subWindows["add_news"]->show();
+}
+
+
+void MainWindow::on_toolButton_removeNewspaper_clicked()
+{
+	// ctx->p.news
+}
+
+void MainWindow::on_pushButton_informCoworkers_clicked()
+{
+	ctx->p.inform_coworkers();
+}
+
+void MainWindow::on_pushButton_gossip_clicked()
+{
+	ctx->p.generate_gossip_one_way();
 }

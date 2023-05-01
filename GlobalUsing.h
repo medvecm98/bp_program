@@ -139,6 +139,25 @@ struct PeerInfo {
 	level_t peer_level = 0; //usused
 };
 
+struct PeerConfig {
+    std::size_t list_size_default = 15;
+    std::size_t list_size_first = 30;
+    int gossip_randoms = 4;
+};
+
+struct NewspaperGlobalConfig {
+    std::size_t article_limit = 50;
+};
+
+using timestamp_t = std::uint64_t;
+struct GlobalMethods {
+    static timestamp_t get_time_now() {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()
+            ).count();
+    }
+};
+
 // pk_t string_to_pid(std::string input) {
 //     return std::stoull(input);
 // }
@@ -160,10 +179,10 @@ using user_container = std::unordered_set<pk_t>;
 using user_container_citer = user_container::const_iterator;
 using user_level_map = std::unordered_map<pk_t, PeerInfo>;
 using user_level_map_citer = user_level_map::const_iterator;
+using journalist_container = std::map<pk_t, user_container>;
 
 using my_timepoint = std::chrono::time_point<std::chrono::system_clock>;
 
-using timestamp_t = std::uint64_t;
 using timed_article_map = std::map<timestamp_t, pk_t>;
 using timed_article_map_iter = timed_article_map::reverse_iterator;
 using timed_article_map_citer = timed_article_map::const_iterator;

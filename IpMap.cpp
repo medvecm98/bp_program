@@ -338,3 +338,39 @@ bool IpMap::has_wrapper(pk_t id) {
 
 	return true;
 }
+
+std::set<pk_t> IpMap::my_mapped_users() {
+	std::set<pk_t> rv;
+	for (auto&& [pid, wrap] : map_) {
+		rv.emplace(pid);
+	}
+	return rv;
+}
+
+void IpMap::add_to_ip_map(pk_t pid, const IpWrapper& wrapper) {
+	map_.emplace(pid, wrapper);
+}
+
+void IpMap::add_to_ip_map(pk_t pid, IpWrapper&& wrapper) {
+	map_.emplace(pid, wrapper);
+}
+
+std::list<std::pair<pk_t, IpWrapper>> IpMap::select_connected_randoms(int count) {
+	std::list<std::pair<pk_t, IpWrapper>> rv;
+	std::vector<std::pair<pk_t, IpWrapper>> connected;
+	for (auto&& wrapper : map_) {
+		if (wrapper.second.np2ps_socket_connected()) {
+			connected.push_back({wrapper.first, wrapper.second});
+		}
+	}
+	std::random_device dev;
+    std::mt19937 rng(dev());
+	if (count > connected.size()) {
+		count = connected.size();
+	}
+    std::shuffle(connected.begin(), connected.end(), rng);
+	for (int i = 0; i < count; i++) {
+		rv.push_back(connected[i]);
+	}
+	return rv;
+}

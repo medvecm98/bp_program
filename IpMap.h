@@ -5,6 +5,7 @@
 #include <cryptopp/files.h>
 #include <filesystem>
 #include <optional>
+#include <random>
 
 /**
  * @brief Very important class, that creates the interface to
@@ -294,6 +295,13 @@ public:
 	IpWrapper& my_ip() {
 		return map_.at(my_public_id);
 	}
+
+	std::set<pk_t> my_mapped_users();
+
+	void add_to_ip_map(pk_t pid, const IpWrapper& wrapper);
+	void add_to_ip_map(pk_t pid, IpWrapper&& wrapper);
+
+	std::list<std::pair<pk_t, IpWrapper>> select_connected_randoms(int count);
 
 	// IpWrapper my_ip; //IpWrapper containing information related to my networking
 	pk_t my_public_id; //my public identifier, set by Peer

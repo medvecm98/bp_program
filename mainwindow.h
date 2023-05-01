@@ -72,6 +72,14 @@ public:
 	 */
 	void generate_article_list();
 
+	void all_newspaper_updated();
+	void newspaper_updated(pk_t nid);
+	void article_list_regenerate(pk_t nid);
+	void article_list_create(pk_t nid);
+	void article_list_create_category(pk_t nid, std::string category);
+	void display_article(pk_t news_id, hash_t article);
+	void checked_display_article(pk_t news_id, hash_t article);
+
 	void check_on_article(NewspaperEntry& news, hash_t article_selected_hash, article_optional& article_header);
 
 public slots:
@@ -277,6 +285,26 @@ private slots:
     void on_treeWidget_newspaper_itemDoubleClicked(QTreeWidgetItem *item, int column);
 
     void on_pushButtonFriends_clicked();
+
+    void on_comboBox_categories_currentIndexChanged(int index);
+
+    void on_comboBox_news_select_currentIndexChanged(int index);
+
+    void on_comboBox_categories_activated(int index);
+
+    void on_comboBox_news_select_activated(int index);
+
+    void on_listWidget_articles_itemClicked(QListWidgetItem *item);
+
+    void on_pushButton_add_news_clicked();
+
+    void on_toolButton_addNewspaper_clicked();
+
+    void on_toolButton_removeNewspaper_clicked();
+
+    void on_pushButton_informCoworkers_clicked();
+
+    void on_pushButton_gossip_clicked();
 
 signals:
 	/**

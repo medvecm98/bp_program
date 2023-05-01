@@ -162,6 +162,7 @@ public:
 	void handle_newspaper_entry_request(shared_ptr_message message);
 	void handle_newspaper_list_request(shared_ptr_message message);
 	void handle_journalist_request(shared_ptr_message message);
+	void handle_gossip_request(shared_ptr_message message);
 
 	/* response */
 
@@ -174,6 +175,7 @@ public:
 	void handle_newspaper_entry_response(shared_ptr_message message);
 	void handle_newspaper_list_response(shared_ptr_message message);
 	void handle_journalist_response(shared_ptr_message message);
+	void handle_gossip_response(shared_ptr_message message);
 
 	/* one way */
 
@@ -182,6 +184,12 @@ public:
 	void handle_public_key_one_way(shared_ptr_message message);
 	void handle_article_data_update_one_way(shared_ptr_message message);
 	void handle_credentials_one_way(shared_ptr_message message);
+	void handle_user_info_message_one_way(shared_ptr_message message);
+	void handle_user_info_message_one_way_advert(shared_ptr_message message);
+	void handle_user_info_message_one_way_request(shared_ptr_message message);
+	void handle_user_info_message_one_way_response(shared_ptr_message message);
+	void handle_new_journalist_one_way(shared_ptr_message message);
+	void handle_gossip_one_way(shared_ptr_message message);
 
 	/* error */
 
@@ -190,6 +198,7 @@ public:
 	void handle_article_list_error(shared_ptr_message message);
 	void handle_article_all_error(shared_ptr_message message);
 	void handle_newspaper_entry_error(shared_ptr_message message);
+	void handle_journalist_error(shared_ptr_message message);
 
 	/* ------------ */
 	/*  generators  */
@@ -204,6 +213,12 @@ public:
 	void generate_successful_download_message(pk_t reader, pk_t recv_article_id);
 	void generate_successful_download_message_all_readers(const user_container& readers, pk_t from, pk_t recv_article_id);
 	void generate_new_journalist(pk_t pid);
+	void generate_user_info_message(pk_t to);
+	void generate_gossip_request(pk_t to);
+	void generate_gossip_one_way(pk_t to);
+	void generate_gossip_one_way();
+
+	void inform_coworkers();
 
 	void send_stun_binding_request();
 	void removed_external_article(hash_t article, pk_t to);
@@ -262,6 +277,7 @@ public:
 
 	void allocate_next_newspaper();
 	NewspaperEntry& get_my_newspaper();
+	void remove_news(pk_t to_remove);
 
 public slots:
 	void handle_message(shared_ptr_message message);
@@ -341,7 +357,11 @@ signals:
 
 	void check_selected_item();
 
+	void checked_display_article(pk_t news_id, hash_t article);
+
 private:
+	PeerConfig config;
+
 	// reader part
 	pk_t public_identifier_;				 // public identifier of my peer
 	my_string name_;						 // name of my peer
@@ -355,6 +375,7 @@ private:
 
 	// journalist part
 	//  reader_database readers_; //list of article readers
+	user_container journalist_of;
 
 	// chief editor
 	user_multimap_container newspaper_all_readers;	  // TODO: delete //list of all readers of all articles

@@ -70,6 +70,10 @@ void NewspaperEntry::deserialize(const np2ps::NetworkSerializedNewspaperEntry& s
 void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
 	_articles.emplace(article_hash, article);
 	time_sorted_articles.emplace(article.creation_time(), article_hash);
+	if (_articles.size() > config.article_limit) {
+		remove_article(time_sorted_articles.begin()->second);
+		time_sorted_articles.erase(time_sorted_articles.begin());
+	}
 }
 
 bool NewspaperEntry::remove_article(hash_t article_hash) {
@@ -274,20 +278,26 @@ void NewspaperEntry::serialize_entry(np2ps::NewspaperEntry* entry) const {
 	entry->set_news_id(news_id_);
 }
 
-void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpWrapper& news_wrapper) const {
+void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper) const {
 	serialize_entry(nserialized_ne->mutable_entry());
 	for (auto& [hash, art] : _articles) {
 		np2ps::Article* pa = nserialized_ne->add_articles();
 		art.network_serialize_article(pa);
 	}
-	nserialized_ne->mutable_network_info()->set_ipv4(news_wrapper.ipv4.toIPv4Address());
-	nserialized_ne->mutable_network_info()->set_port(news_wrapper.port);
+	IpWrapper& my_wrapper = news_wrapper.my_ip();
+	nserialized_ne->mutable_network_info()->set_ipv4(my_wrapper.ipv4.toIPv4Address());
+	nserialized_ne->mutable_network_info()->set_port(my_wrapper.port);
 	nserialized_ne->mutable_network_info()->set_publicid(news_id_);
 	nserialized_ne->mutable_network_info()->set_rsa_public_key(
 		CryptoUtils::instance().rsa_to_hex(
 			get_newspaper_public_key_value()
 		)
 	);
+	for (pk_t journalist : journalists_) {
+		IpWrapper j_wrapper = news_wrapper.get_wrapper_ref(journalist);
+		auto* gpb_wrapper = nserialized_ne->add_journalists();
+		j_wrapper.serialize_wrapper(gpb_wrapper, false);
+	}
 }
 
 void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) const {
@@ -435,4 +445,21 @@ void NewspaperEntry::update() {
 	last_updated_ = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::system_clock::now().time_since_epoch()
 		).count();
+}
+
+std::size_t NewspaperEntry::get_article_count() {
+	return _articles.size();
+}
+
+pk_t NewspaperEntry::get_next_coworker() {
+	if (coworkers_.size() == 0) {
+		coworkers_.push_back(get_id());
+		for (auto&& journalist : journalists_) {
+			coworkers_.push_back(journalist);
+		}
+	}
+	pk_t rv = coworkers_.front();
+	coworkers_.pop_front();
+	coworkers_.push_back(rv);
+	return rv;
 }

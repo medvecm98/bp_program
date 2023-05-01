@@ -12,6 +12,7 @@ message NewspaperEntry {
 message NetworkSerializedNewspaperEntry {
     NewspaperEntry entry = 1;
     IpWrapper network_info = 2;
+    repeated IpWrapper journalists = 4;
     repeated Article articles = 3;
 }
 

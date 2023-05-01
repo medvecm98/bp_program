@@ -40,6 +40,7 @@ public:
 	std::size_t friend_count() const;
 	void remove_friend(pk_t id);
 	Article& get_article(hash_t id);
+	std::size_t get_article_count();
 	void deserialize(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
 
 	user_container_citer get_first_authority() const;
@@ -56,7 +57,7 @@ public:
 
 	void serialize_entry(np2ps::NewspaperEntry* entry) const;
 
-	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpWrapper& news_wrapper) const;
+	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper) const;
 
 	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) const;
 
@@ -104,6 +105,20 @@ public:
 		return last_updated_;
 	}
 
+	void set_article_limit(std::size_t limit) {
+		config.article_limit = limit;
+	}
+
+	std::size_t get_article_limit() {
+		return config.article_limit;
+	}
+
+	void emplace_journalist(pk_t pid) {
+		journalists_.emplace(pid);
+	}
+
+	pk_t get_next_coworker();
+
 private:
 	pk_t news_id_;
 	my_string news_name_;
@@ -114,10 +129,12 @@ private:
 	timed_article_map time_sorted_articles;
 	user_container friends_; //friends, that can share the articles with you
 	user_container journalists_;
+	std::list<pk_t> coworkers_;
 	rsa_public_optional newspaper_public_key_; //newspaper public key to check article legitimacy
 	rsa_private_optional newspaper_private_key_;
 	DisconnectedUsersLazy* disconnected_readers_lazy_remove;
 	timestamp_t last_updated_ = 0;
+	NewspaperGlobalConfig config;
 	bool confirmed = false;
 };
 

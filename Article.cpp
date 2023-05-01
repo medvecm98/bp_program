@@ -120,10 +120,17 @@ void Article::set_path(const std::string& article_actual) {
 
 	QFile file;
 
-	QString dir_path;
+	QString dir_path, root_path;
 
 	/* sets correct path, corss-platform */
 	dir_path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+	root_path = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+	QDir dir(dir_path);
+	QDir rdir(root_path);
+	if (!dir.exists()) {
+		rdir.mkpath(dir.path());
+	}
+	dir_path += "/";
 	std::cout << "Setting path: " << dir_path.toStdString() << std::endl;
 
 	file_name.prepend(dir_path); //form full path together with file name

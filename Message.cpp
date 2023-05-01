@@ -371,7 +371,7 @@ void MFW::SetMessageContextError(shared_ptr_message& msg) {
 	msg->set_msg_ctx(np2ps::ERROR);
 }
 
-shared_ptr_message MFW::RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news, IpWrapper& news_wrapper) {
+shared_ptr_message MFW::RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news, IpMap& news_wrapper) {
 	news.network_serialize_entry(msg->mutable_newspaper_entry(), news_wrapper);
 	msg->set_msg_ctx(np2ps::RESPONSE);
 	return msg;
@@ -403,8 +403,7 @@ shared_ptr_message MFW::RespNewspaperListFactory(shared_ptr_message&& msg, const
 
 	for (auto&& [nid, news] : news_db) {
 		np2ps::NetworkSerializedNewspaperEntry* gpb_news = msg->mutable_newspaper_list()->add_news();
-		IpWrapper& news_wrapper = networking_map.get_wrapper_ref(nid);
-		news.network_serialize_entry(gpb_news, news_wrapper);
+		news.network_serialize_entry(gpb_news, networking_map);
 	}
 
 	return msg;
@@ -427,7 +426,7 @@ shared_ptr_message MFW::JournalistFactory(pk_t from, pk_t to) {
 	return msg;
 }
 
-shared_ptr_message MFW::ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, const NewspaperEntry& news, IpWrapper& wrapper) {
+shared_ptr_message MFW::ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, const NewspaperEntry& news, IpMap& wrapper) {
 	msg->set_msg_ctx(np2ps::REQUEST);
 
 	if (newspaper_private_key.has_value()) {
@@ -450,5 +449,97 @@ shared_ptr_message MFW::RespJournalistFactory(shared_ptr_message&& msg) {
 
 shared_ptr_message MFW::ErrorJournalistFactory(shared_ptr_message&& msg) {
 	msg->set_msg_ctx(np2ps::ERROR);
+	return msg;
+}
+
+shared_ptr_message MFW::UserInfoFactory(pk_t from, pk_t to) {
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
+	msg->set_msg_type(np2ps::USER_INFO);
+
+	return msg;
+}
+
+shared_ptr_message MFW::AdvertUserInfoFactory(shared_ptr_message&& msg, std::set<pk_t> users) {
+	msg->set_msg_ctx(np2ps::ONE_WAY);
+	msg->mutable_user_info()->set_method(np2ps::ADVERT_UI);
+	for (auto&& user : users) {
+		msg->mutable_user_info()->add_peers(user);
+	}
+	return msg;
+}
+
+shared_ptr_message MFW::ReqUserInfoFactory(shared_ptr_message&& msg, std::set<pk_t> users) {
+	msg->set_msg_ctx(np2ps::ONE_WAY);
+	msg->mutable_user_info()->set_method(np2ps::REQUEST_UI);
+	for (auto&& user : users) {
+		msg->mutable_user_info()->add_peers(user);
+	}
+	return msg;
+}
+
+shared_ptr_message MFW::RespUserInfoFactory(shared_ptr_message&& msg, std::list<std::pair<pk_t, IpWrapper>> users) {
+	msg->set_msg_ctx(np2ps::ONE_WAY);
+	msg->mutable_user_info()->set_method(np2ps::RESPONSE_UI);
+	for (auto&& user : users) {
+		IpWrapper ip = user.second;
+		auto* gpb_ipw = msg->mutable_user_info()->add_peer_ip_wrappers();
+		ip.serialize_wrapper(gpb_ipw, false);
+		gpb_ipw->set_publicid(user.first);
+	}
+	return msg;
+}
+
+shared_ptr_message MFW::GossipFactory(pk_t from, pk_t to) {
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
+	msg->set_msg_type(np2ps::GOSSIP);
+
+	return msg;
+}
+
+shared_ptr_message MFW::ReqGossipFactory(shared_ptr_message&& msg) {
+	msg->set_msg_ctx(np2ps::REQUEST);
+	return msg;	
+}
+
+shared_ptr_message MFW::OneWayGossipFactory(shared_ptr_message&& msg, std::list<std::pair<pk_t, IpWrapper>> users) {
+	msg->set_msg_ctx(np2ps::ONE_WAY);
+	for (auto&& user : users) {
+		IpWrapper ip = user.second;
+		auto* gpb_ipw = msg->mutable_gossip()->add_peer_ip_wrappers();
+		ip.serialize_wrapper(gpb_ipw);
+		gpb_ipw->set_publicid(user.first);
+	}
+	return msg;	
+}
+
+shared_ptr_message MFW::RespGossipFactory(shared_ptr_message&& msg, std::list<std::pair<pk_t, IpWrapper>> users) {
+	msg->set_msg_ctx(np2ps::RESPONSE);
+	for (auto&& user : users) {
+		IpWrapper ip = user.second;
+		auto* gpb_ipw = msg->mutable_gossip()->add_peer_ip_wrappers();
+		ip.serialize_wrapper(gpb_ipw);
+		gpb_ipw->set_publicid(user.first);
+	}
+	return msg;	
+}
+
+shared_ptr_message MFW::NewJournalistFactory(pk_t from, pk_t to) {
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
+	msg->set_msg_type(np2ps::NEW_JOURNALIST);
+
+	return msg;
+}
+
+shared_ptr_message MFW::OneWayNewJournalistFactory(shared_ptr_message&& msg, pk_t journalist_id, IpWrapper journalist) {
+	msg->set_msg_ctx(np2ps::ONE_WAY);
+	auto* gpb_ipw = msg->mutable_new_journalist()->mutable_journalist_ip_wrapper();
+	journalist.serialize_wrapper(gpb_ipw, false);
+	gpb_ipw->set_publicid(journalist_id);
 	return msg;
 }

@@ -217,11 +217,31 @@ struct IpWrapper {
 		tcp_socket_ = NULL;
 	}
 
-	void serialize_wrapper(np2ps::IpWrapper* wrapper) {
+	bool np2ps_socket_connected() {
+		if (np2ps_tcp_socket_ &&
+			np2ps_tcp_socket_->isValid() &&
+			np2ps_tcp_socket_->state() == QAbstractSocket::ConnectedState)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	bool stun_socket_connected() {
+		if (tcp_socket_ &&
+			tcp_socket_->isValid() &&
+			tcp_socket_->state() == QAbstractSocket::ConnectedState)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	void serialize_wrapper(np2ps::IpWrapper* wrapper, bool serialize_eax = true) {
 		wrapper->set_ipv4(ipv4.toIPv4Address());
 		wrapper->set_port(port);
 
-		if (key_pair.second.has_value()) {
+		if (key_pair.second.has_value() && serialize_eax) {
 			std::string shared_key_b64 = get_eax_hex_string();
 			wrapper->set_eax_key(shared_key_b64);
 		}

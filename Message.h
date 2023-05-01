@@ -115,7 +115,7 @@ public:
 		string_ptr_optional ip4, string_ptr_optional ip6, 
 		rsa_public_optional public_key, rsa_private_optional private_key,
 		eax_optional eax_key);
-	static shared_ptr_message ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, const NewspaperEntry& news, IpWrapper& wrapper);
+	static shared_ptr_message ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, const NewspaperEntry& news, IpMap& wrapper);
 	static shared_ptr_message ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header);
 
 	/* Responses: */
@@ -131,7 +131,7 @@ public:
 		eax_optional eax_key,
 		CredentialsPayload payload
 	);
-	static shared_ptr_message RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news, IpWrapper& news_wrapper);
+	static shared_ptr_message RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news, IpMap& news_map);
 	static shared_ptr_message RespJournalistFactory(shared_ptr_message&& msg);
 
 
@@ -165,6 +165,21 @@ public:
 	static shared_ptr_message NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id, const std::string& name);
 	static shared_ptr_message NewspaperListFactory(pk_t from, pk_t to);
 	static shared_ptr_message JournalistFactory(pk_t from, pk_t to);
+
+	static shared_ptr_message UserInfoFactory(pk_t from, pk_t to);
+	static shared_ptr_message AdvertUserInfoFactory(shared_ptr_message&& msg, std::set<pk_t> users);
+	static shared_ptr_message ReqUserInfoFactory(shared_ptr_message&& msg, std::set<pk_t> users);
+	static shared_ptr_message RespUserInfoFactory(shared_ptr_message&& msg, std::list<std::pair<pk_t, IpWrapper>> users);
+
+	static shared_ptr_message GossipFactory(pk_t from, pk_t to);
+	static shared_ptr_message ReqGossipFactory(shared_ptr_message&& msg);
+	static shared_ptr_message OneWayGossipFactory(shared_ptr_message&& msg, std::list<std::pair<pk_t, IpWrapper>> users);
+	static shared_ptr_message RespGossipFactory(shared_ptr_message&& msg, std::list<std::pair<pk_t, IpWrapper>> users);
+
+	static shared_ptr_message NewJournalistFactory(pk_t from, pk_t to);
+	static shared_ptr_message OneWayNewJournalistFactory(shared_ptr_message&& msg, pk_t journalist_id, IpWrapper journalist);
+
+
 
 	template<typename PeerContainer>
 	static shared_ptr_message ArticleSolicitationFactory(pk_t from, pk_t to, hash_t article_hash, const PeerContainer& peers, std::int32_t level = 127) {
