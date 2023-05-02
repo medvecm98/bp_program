@@ -919,7 +919,7 @@ void Peer::handle_credentials_request(shared_ptr_message message) {
 	CryptoPP::RSA::PublicKey resp_rsa_public;
 	eax_optional resp_eax;
 
-	if (get_networking()->ip_map().have_rsa_public(message->from())) {
+	if (!get_networking()->ip_map().have_rsa_public(message->from())) {
 		networking_->enroll_message_to_be_sent(
 			MFW::SetMessageContextError(
 				MFW::CredentialsFactory(
@@ -1651,7 +1651,7 @@ void Peer::handle_newspaper_list_response(shared_ptr_message message) {
 				}
 			}	
 		};
-
+		std::cout << "Entry in list " << it->entry().news_id() << std::endl;
 		if (!find_news(it->entry().news_id())) {
 			auto& news = add_new_newspaper(
 				NewspaperEntry(*it, &networking_->disconnected_readers_lazy_remove),
@@ -1981,7 +1981,7 @@ void Peer::generate_new_journalist(pk_t pid) {
 		)
 	);
 	for (auto&& journalist : my_news.get_journalists()) {
-		if (journalist == public_identifier_) {
+		if (journalist == public_identifier_ || journalist == pid) {
 			continue;
 		}
 		get_networking()->enroll_message_to_be_sent(
@@ -1990,12 +1990,12 @@ void Peer::generate_new_journalist(pk_t pid) {
 					public_identifier_,
 					journalist
 				),
-				journalist,
+				pid,
 				get_networking()->ip_map().get_wrapper_ref(journalist)
 			)
 		);
 	}
-	my_news.emplace_journalist(pid);
+	// my_news.emplace_journalist(pid);
 }
 
 void Peer::handle_journalist_request(shared_ptr_message message) {
@@ -2007,6 +2007,10 @@ void Peer::handle_journalist_request(shared_ptr_message message) {
 			)
 		);
 		for (auto&& journalist : message->journalist().entry().journalists()) {
+			std::cout << "Found journalist " << journalist.publicid() << std::endl;
+			if (journalist.publicid() == 0) {
+				continue;
+			}
 			news.emplace_journalist(journalist.publicid());
 			IpWrapper wrapper(journalist);
 			get_networking()->ip_map().add_to_ip_map(journalist.publicid(), wrapper);
@@ -2140,6 +2144,7 @@ void Peer::handle_new_journalist_one_way(shared_ptr_message message) {
 	news.emplace_journalist(message->new_journalist().journalist_ip_wrapper().publicid());
 	IpWrapper wrapper(message->new_journalist().journalist_ip_wrapper());
 	get_networking()->ip_map().add_to_ip_map(message->new_journalist().journalist_ip_wrapper().publicid(), wrapper);
+	std::cout << "Got new journalist: " << message->new_journalist().journalist_ip_wrapper().publicid() << std::endl;
 }
 
 void Peer::handle_gossip_request(shared_ptr_message message) {

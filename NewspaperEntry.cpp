@@ -278,13 +278,13 @@ void NewspaperEntry::serialize_entry(np2ps::NewspaperEntry* entry) const {
 	entry->set_news_id(news_id_);
 }
 
-void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper) const {
+void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper, pk_t id) const {
 	serialize_entry(nserialized_ne->mutable_entry());
 	for (auto& [hash, art] : _articles) {
 		np2ps::Article* pa = nserialized_ne->add_articles();
 		art.network_serialize_article(pa);
 	}
-	IpWrapper& my_wrapper = news_wrapper.my_ip();
+	IpWrapper& my_wrapper = id == 0 ? news_wrapper.my_ip() : news_wrapper.get_wrapper_ref(id);
 	nserialized_ne->mutable_network_info()->set_ipv4(my_wrapper.ipv4.toIPv4Address());
 	nserialized_ne->mutable_network_info()->set_port(my_wrapper.port);
 	nserialized_ne->mutable_network_info()->set_publicid(news_id_);

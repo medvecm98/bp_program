@@ -173,7 +173,7 @@ void MainWindow::all_newspaper_updated() {
 }
 
 void MainWindow::newspaper_updated(pk_t nid) {
-	auto& news_the_one  = ctx->p.get_news(nid); //find requested new in database
+	auto& news_the_one  = ctx->p.get_news(nid); //find requested news in database
 	
 	std::multimap<my_string, Article&> categories;
 	std::set<my_string> category_names;

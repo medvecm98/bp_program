@@ -57,7 +57,7 @@ public:
 
 	void serialize_entry(np2ps::NewspaperEntry* entry) const;
 
-	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper) const;
+	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper, pk_t id) const;
 
 	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) const;
 

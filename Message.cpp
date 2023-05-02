@@ -371,8 +371,8 @@ void MFW::SetMessageContextError(shared_ptr_message& msg) {
 	msg->set_msg_ctx(np2ps::ERROR);
 }
 
-shared_ptr_message MFW::RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news, IpMap& news_wrapper) {
-	news.network_serialize_entry(msg->mutable_newspaper_entry(), news_wrapper);
+shared_ptr_message MFW::RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news, IpMap& news_map) {
+	news.network_serialize_entry(msg->mutable_newspaper_entry(), news_map, news.get_id());
 	msg->set_msg_ctx(np2ps::RESPONSE);
 	return msg;
 }
@@ -403,7 +403,7 @@ shared_ptr_message MFW::RespNewspaperListFactory(shared_ptr_message&& msg, const
 
 	for (auto&& [nid, news] : news_db) {
 		np2ps::NetworkSerializedNewspaperEntry* gpb_news = msg->mutable_newspaper_list()->add_news();
-		news.network_serialize_entry(gpb_news, networking_map);
+		news.network_serialize_entry(gpb_news, networking_map, nid);
 	}
 
 	return msg;
@@ -426,7 +426,7 @@ shared_ptr_message MFW::JournalistFactory(pk_t from, pk_t to) {
 	return msg;
 }
 
-shared_ptr_message MFW::ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, const NewspaperEntry& news, IpMap& wrapper) {
+shared_ptr_message MFW::ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, NewspaperEntry& news, IpMap& map) {
 	msg->set_msg_ctx(np2ps::REQUEST);
 
 	if (newspaper_private_key.has_value()) {
@@ -436,8 +436,17 @@ shared_ptr_message MFW::ReqJournalistFactory(shared_ptr_message&& msg, rsa_priva
 
 	news.network_serialize_entry(
 		msg->mutable_journalist()->mutable_entry(),
-		wrapper
+		map,
+		news.get_id()
 	);
+
+	for (auto&& journalist : news.get_journalists()) {
+		std::cout << "Sending journalist: " << journalist << std::endl;
+		auto journalist_wrapper = msg->mutable_journalist()->mutable_entry()->add_journalists();
+		auto& wrapper = map.get_wrapper_ref(journalist);
+		wrapper.serialize_wrapper(journalist_wrapper);
+		journalist_wrapper->set_publicid(journalist);
+	}
 
 	return msg;
 }

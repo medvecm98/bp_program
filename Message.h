@@ -115,7 +115,7 @@ public:
 		string_ptr_optional ip4, string_ptr_optional ip6, 
 		rsa_public_optional public_key, rsa_private_optional private_key,
 		eax_optional eax_key);
-	static shared_ptr_message ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, const NewspaperEntry& news, IpMap& wrapper);
+	static shared_ptr_message ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, NewspaperEntry& news, IpMap& wrapper);
 	static shared_ptr_message ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header);
 
 	/* Responses: */
