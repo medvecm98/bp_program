@@ -16,7 +16,10 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 	_main_hash(protobuf_article.main_hash()),
 	_heading(protobuf_article.heading()),
 	creation_time_(protobuf_article.creation_time()),
-	article_present_(false)
+	modification_time_(protobuf_article.modification_time()),
+	article_present_(false),
+	version_(protobuf_article.version()),
+	ancestor_(protobuf_article.ancestor())
 {
 	//load categories
 	if (!protobuf_article.categories().empty()) {
@@ -79,6 +82,7 @@ Article::Article(const np2ps::SerializedArticle& protobuf_article) : Article(pro
 	_path_to_article_file = protobuf_article.path_to_article_file();
 	article_present_ = protobuf_article.article_present();
 	_notes = protobuf_article.notes();
+	read_ = protobuf_article.article_was_read();
 }
 
 /**
@@ -305,7 +309,10 @@ void Article::network_serialize_article(np2ps::Article* art) const {
 	art->set_crypto_hash(crypto_hash_);
 	art->set_creation_time(creation_time_);
 	art->set_modification_time(modification_time_);
+	art->set_modification_time(modification_time_);
 	art->set_news_signature(newspaper_signature_);
+	art->set_version(version_);
+	art->set_ancestor(ancestor_);
 	
 	auto [hi, hie] = hashes();
 	for (; hi != hie; hi++) {
@@ -334,6 +341,7 @@ void Article::local_serialize_article(np2ps::SerializedArticle* art) const {
 	art->set_path_to_article_file(_path_to_article_file);
 	art->set_article_present(article_present_);
 	art->set_notes(_notes);
+	art->set_article_was_read(read_);
 }
 
 std::string& Article::get_signature() {

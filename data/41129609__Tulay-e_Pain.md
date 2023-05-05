@@ -1,0 +1,419 @@
+# Tulay-e Pain
+
+**Tulay-e Pain**  (Persian: , also Romanized as **Ţūlāy-e Pā’īn** ; also known as **Ţīūlā-ye Pā’īn** ) is a village in Eshkevar-e Sofla Rural District, Rahimabad District, Rudsar County, Gilan Province, Iran. At the 2006 census, its population was 58, in 23 families.
+
+## References
+
+ 1. ^ Tulay-e Pain can be found at GEOnet Names Server, at this link, by opening the Advanced Search box, entering "10978343"  in the "Unique Feature Id" form, and clicking on "Search Database".
+
+ 2. ^ "Census of the Islamic Republic of Iran, 1385 (2006)" (Excel). Statistical Center of Iran. Archived from the original on 2011-11-11.
+
+
+ - v
+ - t
+ - e
+
+ - Rudsar
+
+ - Rudsar
+
+ - Ahmadabad
+ - Aliabad
+ - Allah Rud
+ - Bala Gava Sara
+ - Chafjir
+ - Chini Jan
+ - Div Darreh
+ - Gava Sara-ye Olya
+ - Hoseynabad
+ - Khalifeh Mahalleh
+ - Kishakajan
+ - Kolka Sara
+ - Lehdarbon
+ - Mazandaran Mahalleh
+ - Mian Poshteh
+ - Naser Sara
+ - Pain Gava Sara
+ - Sahneh Sara
+ - Tamijan
+ - Valiseh
+
+ - Afermejan-e Olya
+ - Afermejan-e Sofla
+ - Ali Kalayeh
+ - Arus Mahalleh
+ - Bahador Mahalleh
+ - Balalam
+ - Bazargan Mahalleh
+ - Bazokol
+ - Chalak Sara
+ - Chavar Kalayeh
+ - Chavar Kalayeh
+ - Darugar Mahalleh
+ - Davi Sara
+ - Dustkuh
+ - Ganjarud
+ - Garmejan
+ - Gilakajan
+ - Gol Mahalleh
+ - Hasan Sara
+ - Jow Poshtan
+ - Kaldarreh-ye Olya
+ - Kaldarreh-ye Sofla
+ - Keyvan Poshteh
+ - Khomeyr Mahalleh
+ - Khvor Gardan
+ - Kurcheh Posht
+ - Kuyeh-ye Olya
+ - Kuyeh-ye Sofla
+ - Lakalayeh
+ - Lasbu Mahalleh
+ - Lashkajan-e Olya
+ - Lashkajan-e Sofla
+ - Mahsayeh
+ - Mirag Mahalleh
+ - Mordab Bon
+ - Mordab Sar
+ - Pas Chavar
+ - Pijan
+ - Pir Mahalleh
+ - Reza Mahalleh
+ - Rowshanabsar-e Bala
+ - Rowshanabsar-e Pain
+ - Salu Mahalleh
+ - Saraydasht
+ - Sarmastan
+ - Selakjan
+ - Shirayeh
+ - Siavan Mahalleh
+ - Surchan Mahalleh
+ - Torshayeh
+ - Tut Kaleh-ye Olya
+ - Tut Kaleh-ye Sofla
+ - Zarkolam
+ - Ziaz Mahalleh
+
+ - Chaboksar
+
+ - Bala Mahalleh-ye Qasemabad
+ - Bandbon-e Qasemabad
+ - Do Gol Sar
+ - Fekejur
+ - Halu Kaleh
+ - Harat Bar
+ - Jong Sara
+ - Kabutar Abkesh
+ - Kand Sar
+ - Khaneh Sar
+ - Lih Kolam
+ - Limeh Sara
+ - Mazikaleh Poshteh
+ - Miandeh
+ - Molk-e Mian
+ - Owshiyan
+ - Pain Mahalleh-ye Qasemabad
+ - Qasemabad-e Sofla
+ - Sarvelat
+ - Shemshad Poshteh
+ - Sheykh Zahed Mahalleh
+ - Sorkhani
+ - Tuska Mahalleh-ye Qasemabad
+
+ - Baji Gavaber
+ - Chayjan
+ - Chaykhansar
+ - Gol Mahalleh
+ - Javaher Dasht
+ - Jowr Mahalleh
+ - Khanollah
+ - Khayyat Mahalleh
+ - Khoshk Lat
+ - Merseh
+ - Nahar-e Khurlat
+ - Pelt-e Kalleh Sar
+ - Sajidan
+ - Sara Gavabar
+ - Shad Morad Mahalleh
+ - Siah Kesh
+ - Siahkalrud
+ - Taleh Mian
+
+ - Kelachay
+ - Vajargah
+
+ - Aliabad
+ - Asgarabad
+ - Baghdasht
+ - Bala Gazaf Rud
+ - Bala Lamin Jub
+ - Bala Now Deh
+ - Bandbon-e Ujargah
+ - Bibalan
+ - Bijar Poshteh
+ - Boz Kuyeh
+ - Chomaqestan
+ - Dehkadeh Qods
+ - Dugol-e Sara
+ - Fashkol Poshteh
+ - Gav Mast
+ - Gilamolk
+ - Jowr Sara
+ - Kandsar-e Bibalan
+ - Khana Poshtan
+ - Lateh
+ - Marim Dasht
+ - Mazukaleh Poshteh
+ - Nemat Sara
+ - Pain Lamin Jub
+ - Reza Mahalleh
+ - Salim Sara
+ - Sarsar
+ - Selakjan
+ - Siah Koleh
+ - Tazehabad
+
+ - Ali Owsat Mahalleh
+ - Arbeh Langeh
+ - Bijargah-e Olya
+ - Bijargah-e Sofla
+ - Bozastan
+ - Chenar Bon
+ - Dada Mahalleh
+ - Darzi Mahalleh
+ - Hadi Gavaber
+ - Hadi Kiashar
+ - Hajjiabad
+ - Janbaz Mahalleh
+ - Kalan Kalayeh
+ - Kaljar
+ - Kand-e Bon
+ - Kandsar
+ - Kaveh Langeh
+ - Khasadan-e Olya
+ - Khasadan-e Sofla
+ - Khomeyr Mahalleh
+ - Kia Sara
+ - Kiasaj Mahalleh
+ - Kudakan
+ - Kugah
+ - Kureh Tasheh
+ - Machian
+ - Miran Mahalleh
+ - Mirza Hasan Lengeh
+ - Narenj Kola-ye Olya
+ - Narenj Kola-ye Sofla
+ - Pain Kola Mahalleh
+ - Qazi Mahalleh
+ - Rud Mianeh
+ - Sar Sar
+ - Sayyad Mahalleh
+ - Sejubsar
+ - Shad Morad Mahalleh
+ - Shahi Sara
+ - Shir Ali Beyk Mahalleh
+ - Shir Mahalleh
+ - Siah Lat
+ - Soltan Sara
+ - Zangulbareh
+
+ - Rahimabad
+
+ - Abdu Chal
+ - Aghuzbon Kand Sar
+ - Asiab Darreh
+ - Bala Lam Beshkest
+ - Chalman Rud
+ - Chamtu Kesh
+ - Choshan
+ - Div Rud
+ - Ezzatabad
+ - Ezzatabad-e Sharm Dasht
+ - Faksh
+ - Garmab Dasht
+ - Gereh Govabar
+ - Halu Bon Darreh
+ - Jir Kal
+ - Kakerud
+ - Kalayeh Pahlu
+ - Khorasan Poshteh
+ - Kiaramesh
+ - Lam Beshkest-e Pain
+ - Lima
+ - Lima Chal
+ - Lima Gavabar
+ - Mazi Bon
+ - Mian Lengeh
+ - Milash
+ - Narki
+ - Nilu Pardeh Sar
+ - Nilu
+ - Parch Kuh
+ - Peram Kuh
+ - Razeh Gardan
+ - Riab
+ - Rudbarak
+ - Sajiran
+ - Sang Bonag
+ - Seljeh
+ - Shuk
+ - Siah Keshan
+ - Soleyman Chapar
+ - Tarpu
+ - Tavasankesh
+ - Tulay-e Bala
+ - Tulay-e Pain
+ - Ziaz
+ - Zurzemeh
+
+ - Akhund Melk
+ - Amir Gavabor
+ - Arbu Sara
+ - Azar Key
+ - Baldeh Sara
+ - Balengah
+ - Bandbon-e Beneksar
+ - Bazneshin-e Olya
+ - Bazneshin-e Sofla
+ - Benek Sar
+ - Deraz Lat-e Bala
+ - Dezli
+ - Dimabon
+ - Dula Gavabar
+ - Fabil Sara
+ - Gugah
+ - Gusfand Guyeh
+ - Guzalbon
+ - Guzeh Lengeh
+ - Harat Bar
+ - Kaj-e Mohammad Gavabor
+ - Karbas Saray-e Olya
+ - Karbas Saray-e Sofla
+ - Kashkuh
+ - Khan Kasaray-e Olya
+ - Khompateh Arbu Sara
+ - Khurtab Sara
+ - Kushkuh
+ - Latak
+ - Lat-e Parshu
+ - Lerdarabon
+ - Lerudbon
+ - Lu Sara
+ - Mazi Gavabar
+ - Narmash
+ - Pain Derazlat
+ - Palam
+ - Palatdasht
+ - Parshu
+ - Qaleh Gardan
+ - Rejah Sara
+ - Shemshad Sara
+ - Si Sara
+ - Siah Chal
+ - Siah Gol Chal
+ - Su Gavabor
+ - Tabtus
+ - Torshkuh
+ - Tul Lat
+ - Vapar Sar
+
+ - Akbarabad
+ - Ayzdin
+ - Balkut
+ - Bargam
+ - Berm Kuh
+ - Chamtu
+ - Dashtak
+ - Datvarsar
+ - Do Ab
+ - Gilayeh
+ - Hasni Kuh
+ - Ini
+ - Ir Mahalleh
+ - Kalkamus
+ - Khaneh Sarek
+ - Khorasan Sar
+ - Khursand Kalayeh
+ - Kiaseh
+ - Kuji
+ - Lardeh
+ - Lasbu
+ - Lat Rud
+ - Lilaki
+ - Mazgah
+ - Mazu Darreh
+ - Mowmen Zamin
+ - Piaghuzbon
+ - Risan
+ - Rum Dasht
+ - Samadabad
+ - Saravarsu
+ - Shafiabad
+ - Sheram Dasht
+ - Shuil
+ - Soluk Bon-e Olya
+ - Soluk Bon-e Sofla
+ - Soluk Bon-e Vosta
+ - Sorkh Taleh
+ - Sukhteh Kosh
+ - Talabonak
+ - Taleh Sar
+ - Talikan
+ - Talisin
+ - Tazehabad
+ - Tukas
+ - Tuseh Chaleh
+ - Vagalkhani
+ - Varbon
+ - Zaraki
+
+ - Aghuz Kalleh
+ - Areh Chak
+ - Bal Tark
+ - Bazar Mahalleh
+ - Chakal
+ - Chakanak
+ - Chakrud
+ - Dargah
+ - Darsanak
+ - Delijan
+ - Dowgal
+ - Giri
+ - Gugah
+ - Jir Deh
+ - Jur Deh
+ - Kalayeh
+ - Kalrud
+ - Keshayeh
+ - Lashkan
+ - Lat Mahalleh
+ - Liasi
+ - Mayestan-e Bala
+ - Mayestan-e Pain
+ - Mianrud
+ - Niasan
+ - Orkom
+ - Parandan
+ - Parviz Khani
+ - Patanak
+ - Pudeh
+ - Qazi Chak
+ - Sangsarud
+ - Sardeh
+ - Sarem
+ - Sezarud
+ - Shadraj-e Olya
+ - Siarastaq
+ - Talabon
+ - Tukamjan
+ - Valani
+ - Vishki
+ - Yasur
+ - Zeydi
+
+ - Iran portal
+
+This Rudsar County location article is a stub. You can help Wikipedia by expanding it.
+ - v
+ - t
+ - e
+

@@ -65,6 +65,8 @@ public:
 				newspaper_name_ = ne.entry().news_name();
 			}
 		}
+		
+		deserialize_config(peer_serialized.config());
 		qobject_connect_peer();
 		peer_init();
 	}
@@ -179,6 +181,7 @@ public:
 
 	/* one way */
 
+	void handle_article_all_one_way(shared_ptr_message message);
 	void handle_article_solicitation_one_way(shared_ptr_message message);
 	void handle_symmetric_key_one_way(shared_ptr_message message);
 	void handle_public_key_one_way(shared_ptr_message message);
@@ -217,6 +220,7 @@ public:
 	void generate_gossip_request(pk_t to);
 	void generate_gossip_one_way(pk_t to);
 	void generate_gossip_one_way();
+	void generate_news_refresh();
 
 	void inform_coworkers();
 
@@ -279,6 +283,17 @@ public:
 	NewspaperEntry& get_my_newspaper();
 	void remove_news(pk_t to_remove);
 
+	void serialize_config(np2ps::PeerConfig* serialized_peer);
+	void deserialize_config(const np2ps::PeerConfig& serialized_peer) {
+		config.gossip_randoms = serialized_peer.gossip_randoms();
+		config.list_size_default = serialized_peer.list_size_default();
+		config.list_size_first = serialized_peer.list_size_first();
+	}
+
+	user_container& get_journalist_of() {
+		return journalist_of;
+	}
+
 public slots:
 	void handle_message(shared_ptr_message message);
 
@@ -308,6 +323,24 @@ public slots:
 			throw new other_error("Invalid form od ID inserted.");
 		}
 	}
+
+	/* slots for config setters */
+
+	void slot_set_config_peer_gossips(int value);
+	void slot_set_config_peer_article_list_first(int value);
+	void slot_set_config_peer_article_list_default(int value);
+
+	void slot_set_config_news_no_read_articles(pk_t news_id, int value);
+	void slot_set_config_news_no_unread_articles(pk_t news_id, int value);
+
+	/* slots for config getters */
+
+	int slot_get_config_peer_gossips();
+	int slot_get_config_peer_article_list_first();
+	int slot_get_config_peer_article_list_default();
+
+	int slot_get_config_news_no_read_articles(pk_t news_id);
+	int slot_get_config_news_no_unread_articles(pk_t news_id);
 
 signals:
 	void newspaper_list_received();

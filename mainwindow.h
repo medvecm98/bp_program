@@ -102,21 +102,6 @@ public slots:
 	void newspaper_added_to_db(pk_t news_id);
 
 	/**
-	 * @brief Article list for given newspaper was received from network.
-	 * 
-	 * Creates a union of categories of all atricles found in article list for
-	 * given newspaper.
-	 * 
-	 * Adds the categories into the Newspaper tree, if they aren't already
-	 * present.
-	 * 
-	 * Adds the articles into Newspaper tree, if they aren't already present.
-	 * 
-	 * @param newspaper_id ID of newspaper this article list belongs to.
-	 */
-	void article_list_received(pk_t newspaper_id);
-
-	/**
 	 * @brief Enable Add article button.
 	 * 
 	 */
@@ -174,6 +159,10 @@ public slots:
 	 */
 	void check_selected_item();
 
+	void enable_save_cancel_disable_news_select();
+	void disable_save_cancel_enable_news_select();
+	void fill_spinboxes();
+
 private slots:
     void on_pushButton_loadFromFile_clicked();
 
@@ -211,24 +200,10 @@ private slots:
 	void on_pushButton_add_article_released();
 
 	/**
-	 * @brief Requests article list for selected newspaper in Newspaper tree.
-	 * 
-	 */
-	void on_pushButton_article_list_released();
-
-	/**
 	 * @brief Sets the IP based on selection made in comboBox_interfaces.
 	 * 
 	 */
 	void on_pushButton_set_ip_released();
-
-	/**
-	 * @brief Shows the article selected in Newspaper tree in Article textView.
-	 * 
-	 * If article is not locally present, it will be requested.
-	 * 
-	 */
-	void on_pushButton_external_article_released();
 
 	/**
 	 * @brief Calls the `check_item` function for item that was selected in the
@@ -282,8 +257,6 @@ private slots:
 
 	void on_pushButton_testPeer2_clicked();
 
-    void on_treeWidget_newspaper_itemDoubleClicked(QTreeWidgetItem *item, int column);
-
     void on_pushButtonFriends_clicked();
 
     void on_comboBox_categories_currentIndexChanged(int index);
@@ -305,6 +278,32 @@ private slots:
     void on_pushButton_informCoworkers_clicked();
 
     void on_pushButton_gossip_clicked();
+
+    void on_toolButton_articleList_clicked();
+
+	void set_config_from_app();
+
+    void on_tabWidget_currentChanged(int index);
+
+    void on_comboBox_newsConfigSelect_activated(int index);
+
+    void on_pushButton_config_save_clicked();
+
+    void on_spinBox_readToKeep_valueChanged(int arg1);
+
+    void on_spinBox_unreadToKeep_valueChanged(int arg1);
+
+    void on_spinBox_gossipRandoms_valueChanged(int arg1);
+
+    void on_spinBox_listSizeFirst_valueChanged(int arg1);
+
+    void on_spinBox_listSizeDefault_valueChanged(int arg1);
+
+    void on_pushButton_config_cancel_clicked();
+
+    void on_comboBox_news_journalist_currentIndexChanged(int index);
+
+    void on_pushButton_edit_article_clicked();
 
 signals:
 	/**
@@ -336,6 +335,8 @@ signals:
 	void signal_add_new_newspaper_from_file(QString path);
 
 	void signal_add_new_newspaper_pk(QString id_qstring);
+
+	void signal_edit_article(qulonglong news_pid, qulonglong article_hash);
 
 private:
 	/**
@@ -372,6 +373,11 @@ private:
 	 * @param state What state should the newspaper related buttons be set.
 	 */
 	void set_newspaper_related_buttons(bool state);
+
+	void fill_config_news();
+
+	void fill_journalist_news();
+	void print_journalist_articles();
 
 	Ui::MainWindow *ui;
 	ProgramContext* ctx;

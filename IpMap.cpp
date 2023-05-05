@@ -360,12 +360,12 @@ std::list<std::pair<pk_t, IpWrapper>> IpMap::select_connected_randoms(int count)
 	std::vector<std::pair<pk_t, IpWrapper>> connected;
 	for (auto&& wrapper : map_) {
 		if (wrapper.second.np2ps_socket_connected()) {
-			connected.push_back({wrapper.first, wrapper.second});
+			connected.push_back({wrapper.first, IpWrapper(wrapper.second.ipv4)});
 		}
 	}
 	std::random_device dev;
     std::mt19937 rng(dev());
-	if (count > connected.size()) {
+	if (count > connected.size() || count <= 0) {
 		count = connected.size();
 	}
     std::shuffle(connected.begin(), connected.end(), rng);
@@ -373,4 +373,14 @@ std::list<std::pair<pk_t, IpWrapper>> IpMap::select_connected_randoms(int count)
 		rv.push_back(connected[i]);
 	}
 	return rv;
+}
+
+std::list<std::pair<pk_t, IpWrapper>> IpMap::select_connected(int count) {
+	std::list<std::pair<pk_t, IpWrapper>> connected;
+	for (auto&& wrapper : map_) {
+		if (wrapper.second.np2ps_socket_connected()) {
+			connected.push_back({wrapper.first, wrapper.second});
+		}
+	}
+	return connected;
 }

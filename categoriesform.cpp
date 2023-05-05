@@ -48,12 +48,8 @@ void CategoriesForm::on_pushButton_accept_clicked()
 	Article a;
 	pk_t news_id = ui->comboBox_newspapers->currentText().split(':').last().trimmed().toULongLong(); //ID of news that this article will be inserted into
 	a.initialize_article(categories, path.toStdString(), ctx->p, ctx->p.get_news_db().at(news_id)); //intializes the article (partly) using data from listWidget_categories
-	if (news_id == ctx->p.get_public_key()) {
-		ctx->p.enroll_new_article(std::move(a), false); //insert new article into the map of my newspaper, including the article's contents
-	}
-	else {
-		ctx->p.upload_external_article(a); //uploads article's header to chief editor
-	}
+	ctx->p.upload_external_article(a); //upload article to newspaper readers and other (chief) editors
+	ctx->p.enroll_new_article(std::move(a), false); //insert new article into the map of my newspaper, including the article's contents
 	this->close();
 }
 
@@ -98,4 +94,3 @@ void CategoriesForm::on_listWidget_categories_itemSelectionChanged()
 		ui->pushButton_remove_category->setEnabled(false);
 	}
 }
-

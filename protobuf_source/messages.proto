@@ -139,6 +139,8 @@ message Credentials {
 	bool req_eax_key = 8;
 	// in request: advertising your information
 	// in response: response to requested fields
+	uint64 target = 11;
+
 	optional string ipv4 = 1;
 	optional string ipv6 = 2;
 	optional PublicKey rsa_public_key = 3;

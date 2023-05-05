@@ -16,6 +16,7 @@ using msg_ctx_t = np2ps::MessageContext;
 using proto_message = np2ps::Message;
 using shared_ptr_message = std::shared_ptr< proto_message>;
 
+using string_optional = std::optional<std::string>;
 using string_ptr_optional = std::optional<std::shared_ptr<std::string>>;
 using rsa_public_ptr_optional = std::optional<std::shared_ptr<CryptoPP::RSA::PublicKey>>;
 using eax_ptr_optional = std::optional<std::shared_ptr<CryptoPP::SecByteBlock>>;
@@ -112,11 +113,13 @@ public:
 	static shared_ptr_message ReqUserIsMemberFactory(shared_ptr_message&& msg, level_t level);
 	static shared_ptr_message ReqCredentialsFactory(shared_ptr_message&& msg, 
 		bool req_ip4, bool req_ip6, bool req_public_key, bool req_eax_key,
-		string_ptr_optional ip4, string_ptr_optional ip6, 
+		std::size_t target,
+		string_optional ip4, string_optional ip6, 
 		rsa_public_optional public_key, rsa_private_optional private_key,
 		eax_optional eax_key);
 	static shared_ptr_message ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, NewspaperEntry& news, IpMap& wrapper);
 	static shared_ptr_message ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header);
+	static shared_ptr_message ReqNewspaperListFactory(shared_ptr_message&& msg, const news_database& news);
 
 	/* Responses: */
 	static shared_ptr_message RespArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header, std::string&& article);
@@ -137,6 +140,7 @@ public:
 
 	static shared_ptr_message ErrorArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id);
 	static shared_ptr_message ErrorArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header);
+	static shared_ptr_message ErrorArticleDownloadFactory(shared_ptr_message&& msg, hash_t article_hash);
 	static shared_ptr_message ErrorJournalistFactory(shared_ptr_message&& msg);
 
 	static shared_ptr_message RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news, IpMap& news_networking);
@@ -148,10 +152,12 @@ public:
 		int method
 	);
 
+	static shared_ptr_message OneWayArticleAllFactory(shared_ptr_message&& msg, Article& article);
+
 	/* Basic factories: */
 	
 	static shared_ptr_message ArticleDataChangeFactory(pk_t from, pk_t to, hash_t article_hash, bool download);
-	static shared_ptr_message ArticleDownloadFactory(pk_t from, pk_t to, hash_t article_hash, level_t level);
+	static shared_ptr_message ArticleDownloadFactory(pk_t from, pk_t to, article_ptr article);
 	static shared_ptr_message ArticleHeaderFactory(pk_t from, pk_t to, hash_t article_hash);
 	static shared_ptr_message ArticleListFactory(pk_t from, pk_t to);
 	static shared_ptr_message UserIsMemberFactory(pk_t from, pk_t to, pk_t user_pk);

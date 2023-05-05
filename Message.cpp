@@ -19,14 +19,16 @@ shared_ptr_message MFW::ArticleDataChangeFactory(pk_t from, pk_t to, hash_t arti
 	return std::move(msg);
 }
 
-shared_ptr_message MFW::ArticleDownloadFactory(pk_t from, pk_t to, hash_t article_hash, level_t level) {
+shared_ptr_message MFW::ArticleDownloadFactory(pk_t from, pk_t to, article_ptr article) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
 	msg->set_msg_type(np2ps::ARTICLE_ALL);
 
-	msg->mutable_article_all()->set_article_hash(article_hash);
-	msg->mutable_article_all()->set_level(level);
+	auto article_gpb = msg->mutable_article_all()->mutable_header();
+	article->network_serialize_article(article_gpb);
+
+	msg->mutable_article_all()->set_article_hash(article->main_hash());
 
 	return std::move(msg);
 }
@@ -141,11 +143,13 @@ shared_ptr_message MFW::ReqUserIsMemberFactory(shared_ptr_message&& msg, level_t
 shared_ptr_message MFW::ReqCredentialsFactory(shared_ptr_message&& msg, 
 	bool req_ip4, bool req_ip6,
 	bool req_public_key, bool req_eax_key,
-	string_ptr_optional ip4, string_ptr_optional ip6,
+	std::size_t target,
+	string_optional ip4, string_optional ip6,
 	rsa_public_optional public_key, rsa_private_optional private_key,
 	eax_optional eax_key)
 {
 	msg->set_msg_ctx(np2ps::REQUEST);
+	msg->mutable_credentials()->set_target(target);
 
 	msg->mutable_credentials()->set_req_ipv4(req_ip4);
 	msg->mutable_credentials()->set_req_ipv6(req_ip6);
@@ -153,11 +157,11 @@ shared_ptr_message MFW::ReqCredentialsFactory(shared_ptr_message&& msg,
 	msg->mutable_credentials()->set_req_eax_key(req_eax_key);
 
 	if (ip4.has_value()) {
-		msg->mutable_credentials()->set_ipv4(*ip4.value());
+		msg->mutable_credentials()->set_ipv4(ip4.value());
 	}
 
 	if (ip6.has_value()) {
-		msg->mutable_credentials()->set_ipv6(*ip6.value());
+		msg->mutable_credentials()->set_ipv6(ip6.value());
 	}
 
 	if (public_key.has_value()) {
@@ -417,6 +421,13 @@ shared_ptr_message MFW::ErrorArticleDownloadFactory(shared_ptr_message&& msg, ar
 	return std::move(msg);
 }
 
+shared_ptr_message MFW::ErrorArticleDownloadFactory(shared_ptr_message&& msg, hash_t article_hash) {
+	msg->set_msg_ctx(np2ps::ERROR);
+	msg->mutable_article_all()->set_article_hash(article_hash);
+
+	return std::move(msg);
+}
+
 shared_ptr_message MFW::JournalistFactory(pk_t from, pk_t to) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
@@ -519,7 +530,7 @@ shared_ptr_message MFW::OneWayGossipFactory(shared_ptr_message&& msg, std::list<
 	for (auto&& user : users) {
 		IpWrapper ip = user.second;
 		auto* gpb_ipw = msg->mutable_gossip()->add_peer_ip_wrappers();
-		ip.serialize_wrapper(gpb_ipw);
+		ip.serialize_wrapper(gpb_ipw, false);
 		gpb_ipw->set_publicid(user.first);
 	}
 	return msg;	
@@ -530,7 +541,7 @@ shared_ptr_message MFW::RespGossipFactory(shared_ptr_message&& msg, std::list<st
 	for (auto&& user : users) {
 		IpWrapper ip = user.second;
 		auto* gpb_ipw = msg->mutable_gossip()->add_peer_ip_wrappers();
-		ip.serialize_wrapper(gpb_ipw);
+		ip.serialize_wrapper(gpb_ipw, false);
 		gpb_ipw->set_publicid(user.first);
 	}
 	return msg;	
@@ -551,4 +562,22 @@ shared_ptr_message MFW::OneWayNewJournalistFactory(shared_ptr_message&& msg, pk_
 	journalist.serialize_wrapper(gpb_ipw, false);
 	gpb_ipw->set_publicid(journalist_id);
 	return msg;
+}
+
+shared_ptr_message MFW::ReqNewspaperListFactory(shared_ptr_message&& msg, const news_database& news) {
+	for (auto&& one_news : news) {
+		msg->mutable_newspaper_list()->add_requested_ids(one_news.first);
+	}
+	return msg;
+}
+
+shared_ptr_message MFW::OneWayArticleAllFactory(shared_ptr_message&& msg, Article& article) {
+	auto header_ptr = msg->mutable_article_all()->mutable_header();
+	msg->set_msg_ctx(np2ps::ONE_WAY);
+	article.network_serialize_article(header_ptr);
+
+	msg->mutable_article_all()->set_article_actual(article.read_contents());
+
+
+	return std::move(msg);
 }

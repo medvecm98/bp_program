@@ -302,6 +302,7 @@ public:
 	void add_to_ip_map(pk_t pid, IpWrapper&& wrapper);
 
 	std::list<std::pair<pk_t, IpWrapper>> select_connected_randoms(int count);
+	std::list<std::pair<pk_t, IpWrapper>> select_connected(int count);
 
 	// IpWrapper my_ip; //IpWrapper containing information related to my networking
 	pk_t my_public_id; //my public identifier, set by Peer

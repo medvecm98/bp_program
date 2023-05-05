@@ -146,7 +146,8 @@ struct PeerConfig {
 };
 
 struct NewspaperGlobalConfig {
-    std::size_t article_limit = 50;
+    std::size_t article_limit_read = 50;
+    std::size_t article_limit_unread = 15;
 };
 
 using timestamp_t = std::uint64_t;
@@ -167,6 +168,8 @@ struct GlobalMethods {
 // }
 
 using seq_t = std::size_t;
+
+
 
 using symmetric_cipher = CryptoPP::EAX< CryptoPP::AES>;
 using asymmetric_cipher = CryptoPP::RSA;

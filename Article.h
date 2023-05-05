@@ -465,6 +465,12 @@ public:
 	void set_signature(std::string signature);
 	void lazy_remove_readers(user_container& disconnected_users);
 	void update_metadata(Article& other_article);
+	void set_read() {
+		read_ = true;
+	}
+	bool get_read() {
+		return read_;
+	}
 
 private:
 	my_string _author_name; //network, local
@@ -487,6 +493,9 @@ private:
 	my_timepoint creation_time_timepoint_; //network, local
 	user_container readers_; //local, TODO: implement
 	std::string newspaper_signature_;
+	bool read_ = false;
+	std::size_t version_;
+	hash_t ancestor_;
 };
 
 using article_ptr = Article*;

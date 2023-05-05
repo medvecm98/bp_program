@@ -24,8 +24,8 @@ NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& seria
 	for(const np2ps::SerializedArticle& gpb_articles : serialized_ne.articles()) {
 		add_article(gpb_articles.article().main_hash(), Article(gpb_articles));
 	}
-	for (auto f : serialized_ne.friends()) {
-		add_friend(f);
+	for (auto f : serialized_ne.readers()) {
+		add_reader(f);
 	}
 	set_newspaper_public_key(
 		CryptoUtils::instance().hex_to_rsa(
@@ -39,6 +39,14 @@ NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& seria
 			)
 		);
 	}
+	for (auto&& journalist : serialized_ne.journalists()) {
+		emplace_journalist(journalist);
+	}
+}
+
+void NewspaperEntry::deserialize_config(const np2ps::NewspaperConfig& serialized_config) {
+	config.article_limit_read = serialized_config.limit_read();
+	config.article_limit_unread = serialized_config.limit_unread();
 }
 
 NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy) :
@@ -69,11 +77,8 @@ void NewspaperEntry::deserialize(const np2ps::NetworkSerializedNewspaperEntry& s
 
 void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
 	_articles.emplace(article_hash, article);
-	time_sorted_articles.emplace(article.creation_time(), article_hash);
-	if (_articles.size() > config.article_limit) {
-		remove_article(time_sorted_articles.begin()->second);
-		time_sorted_articles.erase(time_sorted_articles.begin());
-	}
+	time_created_sorted_articles.emplace(article.creation_time(), article_hash);
+	time_modified_sorted_articles.emplace(article.modification_time(), article_hash);
 }
 
 bool NewspaperEntry::remove_article(hash_t article_hash) {
@@ -113,8 +118,8 @@ article_data_vec NewspaperEntry::get_articles_for_time_span(my_clock::time_point
 }
 
 timed_article_map_pair NewspaperEntry::get_newest_articles(int count) {
-	timed_article_map_iter bit = time_sorted_articles.rbegin();
-	timed_article_map_iter eit = time_sorted_articles.rend();
+	timed_article_map_iter bit = time_created_sorted_articles.rbegin();
+	timed_article_map_iter eit = time_created_sorted_articles.rend();
 
 	if (count <= 0) {
 		return { bit, eit };
@@ -132,8 +137,8 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(int count) {
 }
 
 timed_article_map_pair NewspaperEntry::get_newest_articles(int from, int to) {
-	timed_article_map_iter bit = time_sorted_articles.rbegin();
-	timed_article_map_iter eit = time_sorted_articles.rend();
+	timed_article_map_iter bit = time_created_sorted_articles.rbegin();
+	timed_article_map_iter eit = time_created_sorted_articles.rend();
 
 	if (to - from <= 0) {
 		return { bit, eit };
@@ -190,8 +195,8 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(QDate date, int count
 	QDateTime date_time = date.startOfDay(Qt::LocalTime);
 	std::int64_t epoch = date_time.toMSecsSinceEpoch();
 
-	timed_article_map_iter bit = time_sorted_articles.rbegin();
-	timed_article_map_iter eit = time_sorted_articles.rend();
+	timed_article_map_iter bit = time_created_sorted_articles.rbegin();
+	timed_article_map_iter eit = time_created_sorted_articles.rend();
 	timed_article_map_iter it = bit;
 
 	if (count <= 0) {
@@ -220,19 +225,19 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(QDate date, int count
 	return { bit, it };
 }
 
-const user_container& NewspaperEntry::get_friends() {
-	return friends_;
+const user_container& NewspaperEntry::get_readers() {
+	return readers_;
 }
 
-void NewspaperEntry::remove_friend(pk_t id) {
-	auto it = friends_.find(id);
-	if (it != friends_.end()) {
-		friends_.erase(it);
+void NewspaperEntry::remove_reader(pk_t id) {
+	auto it = readers_.find(id);
+	if (it != readers_.end()) {
+		readers_.erase(it);
 	}
 }
 
-void NewspaperEntry::add_friend(pk_t id) {
-	friends_.emplace(id);
+void NewspaperEntry::add_reader(pk_t id) {
+	readers_.emplace(id);
 }
 
 Article& NewspaperEntry::get_article(hash_t id) {
@@ -245,8 +250,8 @@ Article& NewspaperEntry::get_article(hash_t id) {
 	throw article_not_found_database("Article not found in user database.");
 }
 
-std::size_t NewspaperEntry::friend_count() const {
-	return friends_.size();
+std::size_t NewspaperEntry::reader_count() const {
+	return readers_.size();
 }
 
 user_container_citer NewspaperEntry::get_first_authority() const {
@@ -306,8 +311,8 @@ void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry*
 		np2ps::SerializedArticle* pa = lserialized_ne->add_articles();
 		art.local_serialize_article(pa);
 	}
-	for (auto&& f : friends_) {
-		lserialized_ne->add_friends(f);
+	for (auto&& reader : readers_) {
+		lserialized_ne->add_readers(reader);
 	}
 	if (has_newspaper_public_key()) {
 		lserialized_ne->mutable_network_info()->set_rsa_public_key(
@@ -324,12 +329,18 @@ void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry*
 		);
 	}
 	lserialized_ne->set_last_updated(last_updated_);
+	serialize_entry_config(lserialized_ne->mutable_config());
+}
+
+void NewspaperEntry::serialize_entry_config(np2ps::NewspaperConfig* serialized_config) const {
+	serialized_config->set_limit_read(config.article_limit_read);
+	serialized_config->set_limit_unread(config.article_limit_unread);
 }
 
 void NewspaperEntry::fill_time_sorted_articles() {
-	if (time_sorted_articles.empty()) {
+	if (time_created_sorted_articles.empty()) {
 		for (auto&& article : _articles) {
-			time_sorted_articles.emplace(article.first, article.second.creation_time());
+			time_created_sorted_articles.emplace(article.first, article.second.creation_time());
 		}
 	}
 }
@@ -451,15 +462,86 @@ std::size_t NewspaperEntry::get_article_count() {
 	return _articles.size();
 }
 
-pk_t NewspaperEntry::get_next_coworker() {
-	if (coworkers_.size() == 0) {
+void NewspaperEntry::init_coworkers() {
+	if (journalists_.count(get_id()) == 0) {
 		coworkers_.push_back(get_id());
-		for (auto&& journalist : journalists_) {
-			coworkers_.push_back(journalist);
-		}
 	}
+	for (auto&& journalist : journalists_) {
+		coworkers_.push_back(journalist);
+	}
+}
+
+pk_t NewspaperEntry::get_next_coworker() {
 	pk_t rv = coworkers_.front();
 	coworkers_.pop_front();
 	coworkers_.push_back(rv);
 	return rv;
+}
+
+void NewspaperEntry::update_metadata(NewspaperEntry& second_entry) {
+	for (auto&& journalist : second_entry.get_journalists()) {
+		emplace_journalist(journalist);
+	}
+}
+
+std::list<pk_t>& NewspaperEntry::get_coworkers() {
+	return coworkers_;
+}
+
+void NewspaperEntry::set_article_limit_read(std::size_t limit) {
+	config.article_limit_read = limit;
+}
+
+std::size_t NewspaperEntry::get_article_limit_read() {
+	return config.article_limit_read;
+}
+
+void NewspaperEntry::set_article_limit_unread(std::size_t limit) {
+	config.article_limit_unread = limit;
+}
+
+std::size_t NewspaperEntry::get_article_limit_unread() {
+	return config.article_limit_unread;
+}
+
+void NewspaperEntry::clear_abundant_articles() {
+	std::size_t found_read = 0, found_unread = 0;
+	std::set<hash_t> articles_to_remove;
+	for (auto&& [article_hash, article] : get_all_articles()) {
+		if (article.get_read()) {
+			if (found_read > config.article_limit_read) {
+				articles_to_remove.emplace(article_hash);
+			}
+			else {
+				found_read++;
+			}
+		}
+		else {
+			if (found_unread > config.article_limit_unread) {
+				articles_to_remove.emplace(article_hash);
+			}
+			else {
+				found_unread++;
+			}
+		}
+	}
+	for (auto&& article_hash : articles_to_remove) {
+		remove_article(article_hash);
+	}
+}
+
+void NewspaperEntry::set_config_read_articles_to_keep(int value) {
+	config.article_limit_read = value;
+}
+
+void NewspaperEntry::set_config_unread_articles_to_keep(int value) {
+	config.article_limit_unread = value;
+}
+
+int NewspaperEntry::get_config_read_articles_to_keep() {
+	return config.article_limit_read;
+}
+
+int NewspaperEntry::get_config_unread_articles_to_keep() {
+	return config.article_limit_unread;
 }

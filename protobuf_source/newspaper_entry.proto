@@ -4,6 +4,11 @@ package np2ps;
 import "articles.proto";
 import "ip_map.proto";
 
+message NewspaperConfig {
+    uint64 limit_read = 1;
+    uint64 limit_unread = 2;
+}
+
 message NewspaperEntry {
     uint64 news_id = 1;
     string news_name = 2;
@@ -26,10 +31,13 @@ message LocalSerializedNewspaperEntry {
     IpWrapper network_info = 4;
     optional string private_key = 5;
     repeated SerializedArticle articles = 2;
-    repeated uint64 friends = 3;
+    repeated uint64 readers = 3;
+    repeated uint64 journalists = 7;
     int64 last_updated = 6;
+    NewspaperConfig config = 8;
 }
 
 message NewspaperList {
     repeated NetworkSerializedNewspaperEntry news = 1;
+    repeated uint64 requested_ids = 2;
 }

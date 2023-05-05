@@ -22,6 +22,7 @@
 #include "add_newspaper.h"
 #include "categoriesform.h"
 #include "addmargin.h"
+#include "editarticle.h"
 
 void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramContext> ctx) {
 	std::ifstream file(path.c_str());
@@ -53,7 +54,7 @@ void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramCon
 
 		Article a;
 		a.initialize_article(v, article_file_path, ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id()), (counter++ + dist(rng)));
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		ctx->p.enroll_new_article(std::move(a), false);
 	}
 	file.close();
@@ -68,6 +69,7 @@ int main(int argc, char *argv[]) {
 	add_newspaper* w_add_newspaper = new add_newspaper(); //Add newspaper window
 	CategoriesForm* cf = new CategoriesForm(); //Add article window
 	AddMargin* am = new AddMargin(); //Add margin window
+	EditArticle* ea = new EditArticle();
 	
 
 	std::shared_ptr<ProgramContext> ctx; //program context that contains the Peer class
@@ -126,6 +128,8 @@ int main(int argc, char *argv[]) {
 	QObject::connect(am, &AddMargin::new_margin, &w, &MainWindow::new_margin);
 	QObject::connect(&w, &MainWindow::add_new_article, cf, &CategoriesForm::add_new_article);
 
+	QObject::connect(&w, &MainWindow::signal_edit_article, ea, &EditArticle::showa);
+
 	f->setProgramContext(ctx.get());
 	w.addForm("new_peer", f);
 
@@ -136,6 +140,7 @@ int main(int argc, char *argv[]) {
 	w.addForm("categories", cf);
 
 	am->set_program_context(ctx.get());
+	ea->set_program_context(ctx.get());
 
 	ctx->p.get_networking()->get_network_interfaces(); //gets networking interfaces for displaying them in the comboBox_networking
 

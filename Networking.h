@@ -31,6 +31,8 @@ using MFW = MessageFactoryWrapper;
 using msg_queue = std::queue< shared_ptr_message>;
 using msg_queue_ptr = std::shared_ptr< msg_queue>;
 using msg_map = std::unordered_map< std::size_t, shared_ptr_message>;
+using message_map = std::map<pk_t, shared_ptr_message>;
+using message_mmap = std::multimap<pk_t, shared_ptr_message>;
 
 class StunClient;
 class StunServer;
@@ -465,9 +467,10 @@ public:
 
 	IpMap ip_map_; //map of all IPs, ports and RSA public keys
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles; //articles waiting to be found in the network
-	std::unordered_multimap<pk_t, shared_ptr_message> waiting_symmetric_exchange; //messages waiting to be sent while symmetric key is exchanged
-	std::map<pk_t, shared_ptr_message> waiting_symmetric_key_messages;
-	std::multimap<pk_t, shared_ptr_message> messages_waiting_for_credentials;
+	message_mmap waiting_symmetric_exchange; //messages waiting to be sent while symmetric key is exchanged
+	message_map waiting_symmetric_key_messages;
+	message_mmap messages_waiting_for_credentials;
+	message_mmap messages_waiting_for_connection;
 	std::map<quint32, std::string> newspapers_awaiting_identification;
 	DisconnectedUsersLazy disconnected_readers_lazy_remove;
 

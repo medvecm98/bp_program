@@ -4,9 +4,16 @@ package np2ps;
 import "newspaper_entry.proto";
 import "ip_map.proto";
 
+message PeerConfig {
+    uint64 list_size_default = 1;
+    uint64 list_size_first = 2;
+    int32 gossip_randoms = 3;
+}
+
 message Peer {
     uint64 public_identifier = 1;
     string name = 2;
     IpMap ip_map = 4; //networking
     repeated LocalSerializedNewspaperEntry news = 3;
+    PeerConfig config = 5;
 }

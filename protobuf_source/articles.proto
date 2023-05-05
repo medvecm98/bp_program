@@ -34,6 +34,8 @@ message Article {
   int64 creation_time = 13;
   int64 modification_time = 14;
   repeated uint64 readers = 16;
+  uint64 version = 17;
+  uint64 ancestor = 18;
   /*
     Left out `notes` and `article path`, since those are only relevant for client.
     Length could be irrelevant as well, we'll see about that.
@@ -45,4 +47,5 @@ message SerializedArticle {
   string path_to_article_file = 2;
   bool article_present = 3;
   string notes = 4;
+  bool article_was_read = 5;
 }
