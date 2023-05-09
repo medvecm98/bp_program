@@ -60,7 +60,7 @@ public:
 
 	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper, pk_t id) const;
 
-	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) const;
+	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne, bool serialize_articles = true) const;
 
 	void serialize_entry_config(np2ps::NewspaperConfig* serialized_config) const;
 

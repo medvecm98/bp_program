@@ -317,11 +317,13 @@ void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEn
 	nserialized_ne->mutable_entry()->set_last_updated(last_updated_);
 }
 
-void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) const {
+void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne, bool serialize_articles) const {
 	serialize_entry(lserialized_ne->mutable_entry());
-	for (auto& [hash, art] : _articles) {
-		np2ps::SerializedArticle* pa = lserialized_ne->add_articles();
-		art.local_serialize_article(pa);
+	if (serialize_articles) {
+		for (auto& [hash, art] : _articles) {
+			np2ps::SerializedArticle* pa = lserialized_ne->add_articles();
+			art.local_serialize_article(pa);
+		}
 	}
 	for (auto&& reader : readers_) {
 		lserialized_ne->add_readers(reader);

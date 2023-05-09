@@ -2404,13 +2404,14 @@ void Peer::load_news_from_file(std::string path) {
 		QHostAddress(gpb_news.network_info().ipv4()),
 		false
 	);
+	generate_article_list_message(gpb_news.entry().news_id());
 	emit newspaper_list_received();
 }
 
 void Peer::save_news_to_file(std::string path, pk_t news_id, QHostAddress address) {
 	NewspaperEntry& entry = get_news(news_id);
 	np2ps::LocalSerializedNewspaperEntry gpb_news;
-	entry.local_serialize_entry(&gpb_news);
+	entry.local_serialize_entry(&gpb_news, false);
 	gpb_news.mutable_network_info()->set_ipv4(address.toIPv4Address());
 	std::ofstream news_file(path);
 	std::string gpb_news_string;
