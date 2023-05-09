@@ -216,6 +216,7 @@ public:
 	void generate_successful_download_message(pk_t reader, pk_t recv_article_id);
 	void generate_successful_download_message_all_readers(const user_container& readers, pk_t from, pk_t recv_article_id);
 	void generate_new_journalist(pk_t pid);
+	void generate_journalist_request(pk_t news_id);
 	void generate_user_info_message(pk_t to);
 	void generate_gossip_request(pk_t to);
 	void generate_gossip_one_way(pk_t to);
@@ -249,7 +250,7 @@ public:
 	pk_t get_public_key();
 	my_string get_name();
 
-	my_string name();
+	my_string& name();
 
 	void print_contents();
 
@@ -294,7 +295,14 @@ public:
 		return journalist_of;
 	}
 
+	std::map<std::string, pk_t>& get_pending_journalists();
+
+	void load_news_from_file(std::string path);
+	void save_news_to_file(std::string path, pk_t news_id, QHostAddress address);
+
 public slots:
+	void update_article(pk_t news_id, hash_t article_hash, std::string new_text);
+
 	void handle_message(shared_ptr_message message);
 
 	void allocate_on_stun_server(pk_t target);
@@ -329,6 +337,8 @@ public slots:
 	void slot_set_config_peer_gossips(int value);
 	void slot_set_config_peer_article_list_first(int value);
 	void slot_set_config_peer_article_list_default(int value);
+	void slot_set_config_peer_article_list_first_percent(int value);
+	void slot_set_config_peer_article_list_default_percent(int value);
 
 	void slot_set_config_news_no_read_articles(pk_t news_id, int value);
 	void slot_set_config_news_no_unread_articles(pk_t news_id, int value);
@@ -338,6 +348,10 @@ public slots:
 	int slot_get_config_peer_gossips();
 	int slot_get_config_peer_article_list_first();
 	int slot_get_config_peer_article_list_default();
+	int slot_get_config_peer_article_list_first_percent();
+	int slot_get_config_peer_article_list_default_percent();
+	int slot_get_config_peer_article_list_first_total();
+	int slot_get_config_peer_article_list_default_total();
 
 	int slot_get_config_news_no_read_articles(pk_t news_id);
 	int slot_get_config_news_no_unread_articles(pk_t news_id);
@@ -392,6 +406,10 @@ signals:
 
 	void checked_display_article(pk_t news_id, hash_t article);
 
+	void signal_article_updated();
+
+	void new_journalist_request(pk_t pid, std::string name);
+
 private:
 	PeerConfig config;
 
@@ -419,6 +437,7 @@ private:
 	user_container journalists_;					  // list of journalists
 	std::unordered_set<hash_t> downloading_articles;
 	std::unordered_set<pk_t> getting_article_list;
+	std::map<std::string, pk_t> pending_journalist_requests;
 
 	article_optional find_article_in_database(hash_t article_hash);
 };

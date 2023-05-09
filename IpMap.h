@@ -301,6 +301,8 @@ public:
 	void add_to_ip_map(pk_t pid, const IpWrapper& wrapper);
 	void add_to_ip_map(pk_t pid, IpWrapper&& wrapper);
 
+	void add_or_update_to_ip_map(pk_t pid, const IpWrapper& wrapper);
+
 	std::list<std::pair<pk_t, IpWrapper>> select_connected_randoms(int count);
 	std::list<std::pair<pk_t, IpWrapper>> select_connected(int count);
 

@@ -53,7 +53,7 @@ void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramCon
     	std::uniform_int_distribution<std::mt19937::result_type> dist(1,1000);
 
 		Article a;
-		a.initialize_article(v, article_file_path, ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id()), (counter++ + dist(rng)));
+		a.initialize_article(v, article_file_path, ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id()), 1, (counter++ + dist(rng)));
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		ctx->p.enroll_new_article(std::move(a), false);
 	}
@@ -129,6 +129,8 @@ int main(int argc, char *argv[]) {
 	QObject::connect(&w, &MainWindow::add_new_article, cf, &CategoriesForm::add_new_article);
 
 	QObject::connect(&w, &MainWindow::signal_edit_article, ea, &EditArticle::showa);
+	QObject::connect(ea, &EditArticle::signal_article_updated, &ctx->p, &Peer::update_article);
+	QObject::connect(&ctx->p, &Peer::signal_article_updated, &w, &MainWindow::slot_article_updated);
 
 	f->setProgramContext(ctx.get());
 	w.addForm("new_peer", f);

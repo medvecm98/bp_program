@@ -43,8 +43,15 @@ void send_message_using_turn(networking_ptr networking_, QByteArray& msg, pk_t t
  * @param block Message in QByteArray form.
  */
 void send_message_using_socket(QTcpSocket* tcp_socket, QByteArray& block) {
-	std::cout << "Bytes written: " << tcp_socket->write(block) << std::endl;
-	tcp_socket->waitForBytesWritten();
+	std::size_t to_write = block.size();
+	std::size_t written = 0;
+	while (written < to_write) {
+		written += tcp_socket->write(block);
+		if (written < to_write) {
+			tcp_socket->waitForBytesWritten();
+		}
+	}
+	std::cout << "Bytes written: " << written << std::endl;
 }
 
 bool Networking::enroll_message_to_be_sent(shared_ptr_message message) {
@@ -133,7 +140,7 @@ void print_message(shared_ptr_message msg, std::string recv_send) {
 
 	switch(msg->msg_type()) {
 		case np2ps::ARTICLE_ALL:
-			std::cout << "  article all" << std::endl;
+			std::cout << "  article all " << msg->article_all().header().heading() << " " << msg->article_all().header().main_hash() << std::endl;
 			break;
 		case np2ps::ARTICLE_LIST:
 			std::cout << "  article list" << std::endl;
@@ -323,7 +330,7 @@ QString read_meta_message(const QString& message) {
  * @return Initialization vector CryptoPP::SecByteBlock.
  */
 CryptoPP::SecByteBlock extract_init_vector(const QByteArray& s_msg) {
-	std::string iv_str = s_msg.toStdString();
+	std::string iv_str = s_msg.mid(4).toStdString();
 	CryptoPP::SecByteBlock iv(reinterpret_cast<const CryptoPP::byte*>(&iv_str[0]), iv_str.size());
 	return std::move(iv);
 }
@@ -475,8 +482,16 @@ void write_plain_message(QDataStream& length_plus_msg, const std::string& serial
 	length_plus_msg << (quint64)msg_array.size() << msg_array;
 }
 
+template<typename T>
+void socket_wait_for_read(QTcpSocket* np2ps_socket) {
+	while(np2ps_socket->bytesAvailable() < sizeof(T)) {
+		np2ps_socket->waitForReadyRead();
+	}
+}
+
 void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* np2ps_socket) {
 	do {
+		socket_wait_for_read<quint16>(np2ps_socket);
 		quint16 msg_version;
 		msg >> msg_version;
 
@@ -484,37 +499,47 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 			throw other_error("Version mismatch");
 		}
 
+		socket_wait_for_read<quint16>(np2ps_socket);
 		quint16 msg_class;
 		msg >> msg_class;
 
 		if (msg_class == ENCRYPTED_MESSAGE) {
+			socket_wait_for_read<quint64>(np2ps_socket);
 			quint64 pid;
 			msg >> pid; //public identifier
 
+			socket_wait_for_read<quint64>(np2ps_socket);
 			quint64 iv_size;
 			msg >> iv_size;
 
 			QByteArray iv_array;
-			iv_array.resize(iv_size);
-			msg >> iv_array;
+			qint64 read_size = 0;
+			while (read_size < iv_size) {
+				iv_array += np2ps_socket->read(iv_size + 4);
+				read_size = iv_array.size();
+				if (read_size < iv_size) {
+					np2ps_socket->waitForReadyRead();
+				}
+			}
 
 			auto iv = extract_init_vector(iv_array); //init. vector
 
+			socket_wait_for_read<quint64>(np2ps_socket);
 			quint64 msg_size;
 			msg >> msg_size;
 
 			std::cout << "Received message payload size: " << msg_size << std::endl;
-			qint64 read_size = 0;
+			read_size = 0;
 			QByteArray msg_array;
 			while (read_size < msg_size) {
-				msg_array += np2ps_socket->read(msg_size + 4);
+				msg_array += np2ps_socket->read(msg_size - read_size + 4);
 				read_size = msg_array.size();
 				if (read_size < msg_size) {
 					np2ps_socket->waitForReadyRead();
 				}
 			}
 			
-			msg.commitTransaction();
+			// msg.commitTransaction();
 
 			auto e_msg = extract_encrypted_message(msg_array); //encrypted message
 			
@@ -570,7 +595,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		else if (msg_class == PLAIN_MESSAGE) {
 			auto m = std::make_shared<proto_message>();
 
-
+			socket_wait_for_read<quint64>(np2ps_socket);
 			quint64 msg_size;
 			msg >> msg_size;
 
@@ -584,7 +609,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 				}
 			}
 
-			msg.commitTransaction();
+			
 
 			m->ParseFromString(msg_array.mid(4).toStdString());
 			print_message(m, "receiving");
@@ -613,6 +638,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 		}
 		std::cout << "\nRecived message consumed." << std::endl;
 	} while (np2ps_socket->bytesAvailable() > 0);
+	msg.commitTransaction();
 	std::cout << "All subsequent messages consumed.\n" << std::endl;
 }
 
@@ -883,4 +909,13 @@ shared_ptr_message Networking::generate_symmetric_key_message(shared_ptr_message
 	shared_ptr_message key_message = sign_and_encrypt_key(wrapper.get_eax(), msg->from(), msg->to());
 
 	return key_message;
+}
+
+void Networking::add_stun_server(pk_t pid) {
+	stun_client->add_stun_server(pid);
+}
+
+void Networking::add_stun_server(pk_t pid, IpWrapper& wrapper) {
+	ip_map().add_or_update_to_ip_map(pid, wrapper);
+	add_stun_server(pid);
 }

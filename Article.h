@@ -178,10 +178,11 @@ public:
 	 * @param news_entry Reference to newspaper entry that this article will be inserted in.
 	 */
 	template<class Container, class Peer_t, class NewspaperEntry_t>
-	void initialize_article(const Container &categories, const std::string& file_path, Peer_t& me, NewspaperEntry_t& news_entry, hash_t hash__ = 0 )
+	void initialize_article(const Container &categories, const std::string& file_path, Peer_t& me, NewspaperEntry_t& news_entry, std::size_t version__ = 1, hash_t hash__ = 0 )
 	{
 
 		_path_to_article_file = file_path;
+		ancestor_ = 0;
 
 		{
 			//parse article type from provided article file extension
@@ -218,8 +219,10 @@ public:
 		_author_id = me.get_public_key();
 		_heading = "";
 
+		set_version(version__);
 		QFile article_file;
-		article_file.setFileName(QString::fromStdString(_path_to_article_file));
+		QString qfile_name = QString::fromStdString(_path_to_article_file);
+		article_file.setFileName(qfile_name);
 		article_file.open(QIODevice::ReadOnly);
 		QTextStream file_stream(&article_file);
 		QString qline = file_stream.readLine();
@@ -237,15 +240,19 @@ public:
 		}
 		article_file.close();
 
+
 		/* main hash, is calculated and found here: */
 
+		std::string article_full = normalize_article_and_calculate_crypto_hash().toStdString();
 		CryptoPP::AutoSeededRandomPool prng;
 		if (hash__ == 0) {
-			_main_hash = prng.GenerateWord32();
+			std::hash<std::string> hasher;
+			_main_hash = hasher(article_full);
 		}
 		else {
 			_main_hash = hash__;
 		}
+		set_path(article_full, get_version());
 
 		creation_time_ = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::system_clock::now().time_since_epoch()
@@ -255,10 +262,12 @@ public:
 
 		article_present_ = true; //we provided the article file in function arguments, so the article's contents is 
 								 //... naturally present
-		calculate_crypto_hash();
+		
+
 		sign_article_hash_newspaper(me.get_my_newspaper().get_newspaper_private_key());
 
 		readers_.emplace(me.get_public_key());
+
 	}
 
 	/**
@@ -383,9 +392,9 @@ public:
 		return _margins.equal_range(pk);
 	}
 
-	void set_path(const std::string& article_actual);
+	void set_path(const std::string& article_actual, std::size_t version = 1);
 
-	void calculate_crypto_hash();
+	QString normalize_article_and_calculate_crypto_hash();
 
 	bool verify(const std::string& to_check);
 
@@ -470,6 +479,22 @@ public:
 	}
 	bool get_read() {
 		return read_;
+	}
+
+	std::size_t get_version() {
+		return version_;
+	}
+
+	void set_version(std::size_t ver) {
+		version_ = ver;
+	}
+
+	std::size_t get_ancestor() {
+		return ancestor_;
+	}
+
+	void set_ancestor(std::size_t ancestor) {
+		ancestor_ = ancestor;
 	}
 
 private:

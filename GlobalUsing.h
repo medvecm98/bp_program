@@ -142,6 +142,8 @@ struct PeerInfo {
 struct PeerConfig {
     std::size_t list_size_default = 15;
     std::size_t list_size_first = 30;
+    int default_percent_autodownload = 50;
+    int first_percent_autodownload = 25;
     int gossip_randoms = 4;
 };
 

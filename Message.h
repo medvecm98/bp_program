@@ -117,7 +117,7 @@ public:
 		string_optional ip4, string_optional ip6, 
 		rsa_public_optional public_key, rsa_private_optional private_key,
 		eax_optional eax_key);
-	static shared_ptr_message ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, NewspaperEntry& news, IpMap& wrapper);
+	static shared_ptr_message ReqJournalistFactory(shared_ptr_message&& msg, std::string& name);
 	static shared_ptr_message ReqArticleHeaderFactory(shared_ptr_message&& msg, Article* article_header);
 	static shared_ptr_message ReqNewspaperListFactory(shared_ptr_message&& msg, const news_database& news);
 
@@ -135,7 +135,7 @@ public:
 		CredentialsPayload payload
 	);
 	static shared_ptr_message RespNewspaperEntryFactory(shared_ptr_message&& msg, NewspaperEntry& news, IpMap& news_map);
-	static shared_ptr_message RespJournalistFactory(shared_ptr_message&& msg);
+	static shared_ptr_message RespJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, NewspaperEntry& news, IpMap& wrapper);
 
 
 	static shared_ptr_message ErrorArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id);

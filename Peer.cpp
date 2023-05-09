@@ -5,10 +5,16 @@
  * 
  * @param a Article to add.
  */
-void Peer::enroll_new_article(Article a, bool header_only) {
-	news_[a.news_id()].add_article(a.main_hash(),std::move(a));
-	emit checked_display_article(a.news_id(), a.main_hash());
-	emit new_article_list(a.news_id());
+void Peer::enroll_new_article(Article article, bool header_only) {
+	auto news_id = article.news_id();
+	NewspaperEntry& news = get_news(news_id);
+	if (article.get_ancestor() != 0) {
+		news.remove_article(article.get_ancestor());
+	}
+	auto main_hash = article.main_hash();
+	news_[news_id].add_article(main_hash, std::move(article));
+	emit checked_display_article(news_id, main_hash);
+	emit new_article_list(news_id);
 }
 
 void Peer::identify_newspaper(QHostAddress address, const std::string& newspaper_name) {
@@ -825,7 +831,7 @@ void Peer::handle_article_list_request(shared_ptr_message message) {
 
 		article_container articles;
 		// list_all_articles_from_news(articles);
-		for (std::size_t i = 0; i < news_ref.get_all_articles().size(); i += config.list_size_default) {
+		for (std::size_t i = 0; i < message->article_list().count(); i += config.list_size_default) {
 			news_ref.get_newest_articles(
 				articles,
 				i,
@@ -989,6 +995,27 @@ void Peer::handle_credentials_request(shared_ptr_message message) {
 	);
 }
 
+bool verify_article_hash(Article& article, shared_ptr_message message) {
+	std::cout << "Article " << article.main_hash() << " verification " << std::flush;
+	if (article.verify(message->article_all().article_actual())) {
+		std::cout << " succeeded." << std::endl;
+		return true;
+	}
+
+	std::cout << " failed." << std::endl;
+	return false;
+}
+
+bool verify_article_news_signature(Article& article, NewspaperEntry& news) {
+	std::cout << "Article " << article.main_hash() << " verification for news " << news.get_id() << std::flush;
+	if (article.verify_news_signature(news.get_newspaper_public_key())) {
+		std::cout << " succeeded." << std::endl;
+		return true;
+	}
+
+	std::cout << " failed." << std::endl;
+	return false;
+}
 
 void Peer::handle_article_all_response(shared_ptr_message message) {
 	if (message->has_article_all() && message->article_all().has_header() && message->article_all().has_article_actual()) {
@@ -1003,9 +1030,9 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 
 			Article& article = *(article_opt.value());
 
-			if (article.verify(message->article_all().article_actual())
-				&& article.verify_news_signature(news.get_newspaper_public_key())
-			) {
+			if (verify_article_hash(article, message)
+				&& verify_article_news_signature(article, news)) 
+			{
 
 				/* Successful verification */
 
@@ -1021,15 +1048,15 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 					article.update_metadata(article_from_message);
 					article.set_path(message->article_all().article_actual());
 
-					generate_successful_download_message_all_readers(
-						article.const_readers(),
-						message->from(),
-						recv_article_id
-					);
+					// generate_successful_download_message_all_readers(
+					// 	article.const_readers(),
+					// 	message->from(),
+					// 	recv_article_id
+					// );
 
 					emit checked_display_article(message->article_all().header().news_id(), article.main_hash());
 				}
-				else if (article.modification_time() <= message->article_all().header().modification_time()) {
+				else if (article.modification_time() < message->article_all().header().modification_time()) {
 
 					/* Received article is newer than one in database */
 
@@ -1067,19 +1094,23 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 		}
 		else {
 
-			/* Article not found in database. */
-
 			Article recv_article(message->article_all().header(), message->article_all().article_actual());
-			recv_article.lazy_remove_readers(networking_->disconnected_readers_lazy_remove.users);
+			/* Article not found in database. */
+			if (recv_article.get_ancestor() != 0) {
+				news.remove_article(recv_article.get_ancestor());
+			}
+			else {
+				recv_article.lazy_remove_readers(networking_->disconnected_readers_lazy_remove.users);
 
-			/* Inform every reader, that we downloaded article successfully */
+				/* Inform every reader, that we downloaded article successfully */
 
-			generate_successful_download_message_all_readers(
-				recv_article.const_readers(),
-				message->from(),
-				recv_article_id
-			);
+				// generate_successful_download_message_all_readers(
+				// 	recv_article.const_readers(),
+				// 	message->from(),
+				// 	recv_article_id
+				// );
 
+			}
 			enroll_new_article(recv_article, false);
 		}
 
@@ -1148,16 +1179,23 @@ void Peer::handle_article_list_response(shared_ptr_message message) {
 		std::cout << "Received article list size: " << list_size << std::endl;
 		pk_t list_news_id = message->article_list().response().begin()->news_id();
 		auto& news = get_news(list_news_id);
+		int counter = 0;
 		for (auto it = message->article_list().response().begin(); it != message->article_list().response().end(); it++) {
 			check_add_article_to_news(message, news, Article(*it));
 		}
 		news.update();
+		auto [bit,eit] = news.get_newest_articles(slot_get_config_peer_article_list_default_total());
+		for (; bit != eit; bit++) {
+			generate_article_all_message(list_news_id, bit->second);
+		}
 		emit new_article_list(list_news_id);
 	}
 	else {
 		std::cout << "Article List response for " << message->from() << "; empty list" << std::endl;
 	}
 	getting_article_list.erase(message->from());
+
+	
 	
 	emit check_selected_item();
 }
@@ -1457,7 +1495,6 @@ void Peer::removed_external_article(hash_t article, pk_t to) {
 
 void Peer::upload_external_article(Article article) {
 	NewspaperEntry& news = get_news(article.news_id());
-	enroll_new_article(article, false);
 	for (auto&& coworker : news.get_coworkers()) {
 		if (coworker == public_identifier_ || news.get_readers().count(coworker) > 0) {
 			continue;
@@ -1715,7 +1752,9 @@ void Peer::handle_newspaper_list_response(shared_ptr_message message) {
 		}
 		else {
 			auto& news = get_news(it->entry().news_id());
-			news.update_metadata(received_news_entry);
+			if (received_news_entry.last_updated() > news.last_updated()) {
+				news.update_metadata(received_news_entry);
+			}
 			check_articles(news);
 		}
 	}
@@ -1915,7 +1954,7 @@ my_string Peer::get_name() {
 	return name_;
 }
 
-my_string Peer::name() {
+my_string& Peer::name() {
 	return name_;
 }
 
@@ -2031,8 +2070,9 @@ void Peer::allocate_next_newspaper() {
 
 void Peer::generate_new_journalist(pk_t pid) {
 	auto& my_news = get_my_newspaper();
+	my_news.emplace_journalist(pid);
 	get_networking()->enroll_message_to_be_sent(
-		MFW::ReqJournalistFactory(
+		MFW::RespJournalistFactory(
 			MFW::JournalistFactory(
 				public_identifier_,
 				pid
@@ -2057,53 +2097,42 @@ void Peer::generate_new_journalist(pk_t pid) {
 			)
 		);
 	}
-	// my_news.emplace_journalist(pid);
 }
 
-void Peer::handle_journalist_request(shared_ptr_message message) {
-	try {
-		NewspaperEntry& news = get_news(message->journalist().entry().entry().news_id());
-		news.set_newspaper_private_key(
-			CryptoUtils::instance().hex_to_private(
-				message->journalist().private_key()
-			)
-		);
-		for (auto&& journalist : message->journalist().entry().journalists()) {
-			std::cout << "Found journalist " << journalist.publicid() << std::endl;
-			if (journalist.publicid() == 0) {
-				continue;
-			}
-			news.emplace_journalist(journalist.publicid());
-			IpWrapper wrapper(journalist);
-			get_networking()->ip_map().add_to_ip_map(journalist.publicid(), wrapper);
-		}
-		news.emplace_journalist(public_identifier_);
-		journalist_of.emplace(news.get_id());
-		get_networking()->enroll_message_to_be_sent(
-			MFW::RespJournalistFactory(
-				MFW::JournalistFactory(
-					public_identifier_,
-					message->from()
-				)
-			)
-		);
-	}
-	catch (unknown_newspaper_error& err) {
-		std::cout << err.what() << std::endl;
-		get_networking()->enroll_message_to_be_sent(
-			MFW::ErrorJournalistFactory(
-				MFW::JournalistFactory(
-					public_identifier_,
-					message->from()
-				)
-			)
-		);
-	}
+void Peer::generate_journalist_request(pk_t news_id) {
+	get_networking()->enroll_message_to_be_sent(
+		MFW::ReqJournalistFactory(
+			MFW::JournalistFactory(
+				public_identifier_,
+				news_id
+			),
+			name()
+		)
+	);
 }
 
 void Peer::handle_journalist_response(shared_ptr_message message) {
-	auto& my_news = get_my_newspaper();
-	my_news.emplace_journalist(message->from());
+	NewspaperEntry& news = get_news(message->journalist().entry().entry().news_id());
+	news.set_newspaper_private_key(
+		CryptoUtils::instance().hex_to_private(
+			message->journalist().private_key()
+		)
+	);
+	for (auto&& journalist : message->journalist().entry().journalists()) {
+		std::cout << "Found journalist " << journalist.publicid() << std::endl;
+		if (journalist.publicid() == 0) {
+			continue;
+		}
+		news.emplace_journalist(journalist.publicid());
+		IpWrapper wrapper(journalist);
+		get_networking()->ip_map().add_to_ip_map(journalist.publicid(), wrapper);
+	}
+	news.emplace_journalist(public_identifier_);
+	journalist_of.emplace(news.get_id());
+}
+
+void Peer::handle_journalist_request(shared_ptr_message message) {
+	pending_journalist_requests.emplace(message->journalist().peer_name(), message->from());
 }
 
 void Peer::handle_journalist_error(shared_ptr_message message) {
@@ -2287,6 +2316,7 @@ void Peer::generate_news_refresh() {
 void Peer::handle_article_all_one_way(shared_ptr_message message) {
 	Article recv_article(message->article_all().header(), message->article_all().article_actual());
 	recv_article.lazy_remove_readers(networking_->disconnected_readers_lazy_remove.users);
+	NewspaperEntry& news = get_news(recv_article.news_id());
 
 	/* Inform every reader, that we downloaded article successfully */
 
@@ -2295,6 +2325,10 @@ void Peer::handle_article_all_one_way(shared_ptr_message message) {
 	// 	message->from(),
 	// 	message->article_all().article_hash()
 	// );
+
+	// if (recv_article.get_ancestor() != 0) {
+	// 	news.remove_article(recv_article.get_ancestor());
+	// }
 
 	enroll_new_article(recv_article, false);
 }
@@ -2342,4 +2376,68 @@ int Peer::slot_get_config_news_no_read_articles(pk_t news_id) {
 int Peer::slot_get_config_news_no_unread_articles(pk_t news_id) {
 	NewspaperEntry& news = get_news(news_id);
 	return news.get_config_unread_articles_to_keep();
+}
+
+void Peer::update_article(pk_t news_id, hash_t article_hash, std::string path_to_tmp_file) {
+	NewspaperEntry& news = get_news(news_id);
+	Article& ancestor = news.get_article(article_hash);
+	Article new_article;
+	new_article.initialize_article(ancestor.categories_ref(), path_to_tmp_file, *this, news, ancestor.get_version() + 1);
+	new_article.set_ancestor(article_hash);
+	upload_external_article(new_article);
+	enroll_new_article(new_article, false);
+	emit signal_article_updated();
+}
+
+std::map<std::string, pk_t>& Peer::get_pending_journalists() {
+	return pending_journalist_requests;
+}
+
+void Peer::load_news_from_file(std::string path) {
+	std::ifstream news_file(path);
+	std::stringstream gpb_news_stringstream;
+	gpb_news_stringstream << news_file.rdbuf();
+	np2ps::LocalSerializedNewspaperEntry gpb_news;
+	gpb_news.ParseFromString(gpb_news_stringstream.str());
+	add_new_newspaper(
+		NewspaperEntry(gpb_news, &get_networking()->disconnected_readers_lazy_remove),
+		QHostAddress(gpb_news.network_info().ipv4()),
+		false
+	);
+	emit newspaper_list_received();
+}
+
+void Peer::save_news_to_file(std::string path, pk_t news_id, QHostAddress address) {
+	NewspaperEntry& entry = get_news(news_id);
+	np2ps::LocalSerializedNewspaperEntry gpb_news;
+	entry.local_serialize_entry(&gpb_news);
+	gpb_news.mutable_network_info()->set_ipv4(address.toIPv4Address());
+	std::ofstream news_file(path);
+	std::string gpb_news_string;
+	gpb_news.SerializeToString(&gpb_news_string);
+	news_file << gpb_news_string;
+}
+
+void Peer::slot_set_config_peer_article_list_first_percent(int value) {
+	config.first_percent_autodownload = value;
+}
+
+void Peer::slot_set_config_peer_article_list_default_percent(int value) {
+	config.default_percent_autodownload = value;
+}
+
+int Peer::slot_get_config_peer_article_list_first_percent() {
+	return config.first_percent_autodownload;
+}
+
+int Peer::slot_get_config_peer_article_list_default_percent() {
+	return config.default_percent_autodownload;
+}
+
+int Peer::slot_get_config_peer_article_list_first_total() {
+	return config.list_size_default * config.default_percent_autodownload / 100;
+}
+
+int Peer::slot_get_config_peer_article_list_default_total() {
+	return config.list_size_first * config.first_percent_autodownload / 100;
 }

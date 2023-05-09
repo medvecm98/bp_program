@@ -162,6 +162,9 @@ public slots:
 	void enable_save_cancel_disable_news_select();
 	void disable_save_cancel_enable_news_select();
 	void fill_spinboxes();
+	void slot_article_updated();
+	void fill_pending_journalists();
+	void remove_pending_journalist(qulonglong pid);
 
 private slots:
     void on_pushButton_loadFromFile_clicked();
@@ -304,6 +307,22 @@ private slots:
     void on_comboBox_news_journalist_currentIndexChanged(int index);
 
     void on_pushButton_edit_article_clicked();
+
+    void on_listWidget_journalist_articles_currentRowChanged(int currentRow);
+
+    void on_pushButton_confirm_journalist_clicked();
+
+    void on_pushButton_remove_journalist_clicked();
+
+    void on_pushButton_request_journalism_clicked();
+
+    void on_pushButton_export_my_news_clicked();
+
+    void on_toolButton_import_news_clicked();
+
+    void on_spinBox_listSizeFirst_autodownload_valueChanged(int arg1);
+
+    void on_spinBox_listSizeDefault_autodownload_valueChanged(int arg1);
 
 signals:
 	/**

@@ -465,6 +465,9 @@ public:
 
 	void send_message_with_credentials(shared_ptr_message msg, bool send_credentials);
 
+	void add_stun_server(pk_t pid);
+	void add_stun_server(pk_t pid, IpWrapper& wrapper);
+
 	IpMap ip_map_; //map of all IPs, ports and RSA public keys
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles; //articles waiting to be found in the network
 	message_mmap waiting_symmetric_exchange; //messages waiting to be sent while symmetric key is exchanged

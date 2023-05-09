@@ -18,7 +18,7 @@ NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name, D
 NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy) : 
 	news_id_(serialized_ne.entry().news_id()),
 	news_name_(serialized_ne.entry().news_name()),
-	last_updated_(serialized_ne.last_updated()),
+	last_updated_(serialized_ne.entry().last_updated()),
 	disconnected_readers_lazy_remove(disconnected_users_lazy)
 {
 	for(const np2ps::SerializedArticle& gpb_articles : serialized_ne.articles()) {
@@ -52,7 +52,7 @@ void NewspaperEntry::deserialize_config(const np2ps::NewspaperConfig& serialized
 NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy) :
 	news_id_(serialized_ne.entry().news_id()),
 	news_name_(serialized_ne.entry().news_name()),
-	last_updated_(0),
+	last_updated_(serialized_ne.entry().last_updated()),
 	disconnected_readers_lazy_remove(disconnected_users_lazy)
 {
 	set_newspaper_public_key(
@@ -82,6 +82,17 @@ void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
 }
 
 bool NewspaperEntry::remove_article(hash_t article_hash) {
+	Article& article = get_article(article_hash);
+	auto it_time_created = time_created_sorted_articles.find(article.creation_time());
+	while (it_time_created != time_created_sorted_articles.end()) {
+		time_created_sorted_articles.erase(it_time_created);
+		it_time_created = time_created_sorted_articles.find(article.creation_time());
+	}
+	auto it_time_modified = time_modified_sorted_articles.find(article.modification_time());
+	while (it_time_modified != time_modified_sorted_articles.end()) {
+		time_modified_sorted_articles.erase(it_time_modified);
+		it_time_modified = time_modified_sorted_articles.find(article.modification_time());
+	}
 	return _articles.erase(article_hash) > 0;
 }
 
@@ -303,6 +314,7 @@ void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEn
 		auto* gpb_wrapper = nserialized_ne->add_journalists();
 		j_wrapper.serialize_wrapper(gpb_wrapper, false);
 	}
+	nserialized_ne->mutable_entry()->set_last_updated(last_updated_);
 }
 
 void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne) const {
@@ -328,7 +340,7 @@ void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry*
 			)
 		);
 	}
-	lserialized_ne->set_last_updated(last_updated_);
+	lserialized_ne->mutable_entry()->set_last_updated(last_updated_);
 	serialize_entry_config(lserialized_ne->mutable_config());
 }
 
@@ -481,6 +493,10 @@ pk_t NewspaperEntry::get_next_coworker() {
 void NewspaperEntry::update_metadata(NewspaperEntry& second_entry) {
 	for (auto&& journalist : second_entry.get_journalists()) {
 		emplace_journalist(journalist);
+	}
+
+	for (auto&& reader : second_entry.get_readers()) {
+		add_reader(reader);
 	}
 }
 

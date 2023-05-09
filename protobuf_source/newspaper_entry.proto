@@ -12,6 +12,7 @@ message NewspaperConfig {
 message NewspaperEntry {
     uint64 news_id = 1;
     string news_name = 2;
+    int64 last_updated = 6;
 }
 
 message NetworkSerializedNewspaperEntry {
@@ -24,6 +25,7 @@ message NetworkSerializedNewspaperEntry {
 message JournalistNewspaperEntry {
     NetworkSerializedNewspaperEntry entry = 1;
     string private_key = 2;
+    string peer_name = 3;
 }
 
 message LocalSerializedNewspaperEntry {
@@ -33,7 +35,6 @@ message LocalSerializedNewspaperEntry {
     repeated SerializedArticle articles = 2;
     repeated uint64 readers = 3;
     repeated uint64 journalists = 7;
-    int64 last_updated = 6;
     NewspaperConfig config = 8;
 }
 

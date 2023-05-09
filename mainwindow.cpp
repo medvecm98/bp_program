@@ -64,7 +64,7 @@ void MainWindow::all_newspaper_updated() {
 			current_index -= 1;
 		}
 		ui->comboBox_news_select->setCurrentIndex(current_index);
-		newspaper_updated(ui->comboBox_news_select->currentData().toUInt()); //generate the article list for given newspaper
+		newspaper_updated(ui->comboBox_news_select->currentData().toULongLong()); //generate the article list for given newspaper
 	}
 }
 
@@ -144,7 +144,7 @@ void MainWindow::article_list_create_category(pk_t nid, std::string category) {
 }
 
 void MainWindow::article_list_regenerate(pk_t nid) {
-	if (ui->comboBox_news_select->currentData().toUInt() == nid) {
+	if (ui->comboBox_news_select->currentData().toULongLong() == nid) {
 		if (ui->comboBox_categories->currentText() == "All categories") {
 			article_list_create(nid);
 		}
@@ -453,11 +453,11 @@ void MainWindow::on_comboBox_categories_activated(int index)
             ui->comboBox_news_select->currentIndex()
         );
 		if (ui->comboBox_categories->currentText() == "All categories") {
-        	article_list_create(data.toUInt());
+        	article_list_create(data.toULongLong());
 		}
 		else {
 			article_list_create_category(
-				data.toUInt(),
+				data.toULongLong(),
 				ui->comboBox_categories->currentText().toStdString()
 			);
 		}
@@ -468,12 +468,12 @@ void MainWindow::on_comboBox_categories_activated(int index)
 void MainWindow::on_comboBox_news_select_activated(int index)
 {
     QVariant data = ui->comboBox_news_select->currentData();
-	NewspaperEntry& news = ctx->p.get_news(data.toUInt());
+	NewspaperEntry& news = ctx->p.get_news(data.toULongLong());
     if (index != -1) {
-        newspaper_updated(data.toUInt());
+        newspaper_updated(data.toULongLong());
     }
-	if (data.toUInt() != ctx->p.get_public_key()
-		// && (news.last_updated() + 300000) > GlobalMethods::get_time_now()
+	if (data.toULongLong() != ctx->p.get_public_key()
+		&& (news.last_updated() + 300000) > GlobalMethods::get_time_now()
 	) {
 		ctx->p.generate_article_list_message(news.get_id());
 	}
@@ -482,8 +482,8 @@ void MainWindow::on_comboBox_news_select_activated(int index)
 void MainWindow::checked_display_article(pk_t news_id, hash_t article)
 {
 	if (ui->listWidget_articles->currentItem()
-		&& ui->listWidget_articles->currentItem()->data(Qt::UserRole).toUInt() == article
-		&& ui->comboBox_news_select->currentData().toUInt() == news_id
+		&& ui->listWidget_articles->currentItem()->data(Qt::UserRole).toULongLong() == article
+		&& ui->comboBox_news_select->currentData().toULongLong() == news_id
 	) {
 		display_article(news_id, article);
 	}
@@ -497,10 +497,7 @@ void MainWindow::display_article(pk_t news_id, hash_t article)
 
 	if (!article_header.article_present()) { //check if article contains its contents
 		ctx->p.generate_article_all_message(
-			ctx->p.check_destination_valid(
-				article_header.author_id(),
-				news.get_id()
-			),
+			news.get_id(),
 			article_header.main_hash()
 		); //no, and so it needs to be requested
 	}
@@ -532,8 +529,8 @@ void MainWindow::display_article(pk_t news_id, hash_t article)
 void MainWindow::on_listWidget_articles_itemClicked(QListWidgetItem *item)
 {
 	display_article(
-		ui->comboBox_news_select->currentData().toUInt(),
-		item->data(Qt::UserRole).toUInt()
+		ui->comboBox_news_select->currentData().toULongLong(),
+		item->data(Qt::UserRole).toULongLong()
 	);
 }
 
@@ -566,9 +563,17 @@ void MainWindow::on_pushButton_gossip_clicked()
 
 void MainWindow::on_toolButton_articleList_clicked()
 {
-	pk_t news_id = ui->comboBox_news_select->currentData().toUInt();
-	ctx->p.generate_article_list_message(news_id);
-	ctx->p.generate_news_refresh();
+	QVariant data = ui->comboBox_news_select->currentData();
+	pk_t news_id = data.toULongLong();
+	if (news_id != ctx->p.get_public_key()) {
+		NewspaperEntry& news = ctx->p.get_news(news_id);
+		if (ui->comboBox_news_select->currentIndex() != -1) {
+			newspaper_updated(data.toULongLong());
+		}
+		if (data.toULongLong() != ctx->p.get_public_key()) {
+			ctx->p.generate_article_list_message(news.get_id());
+		}
+	}
 }
 
 void MainWindow::set_config_from_app() {
@@ -586,8 +591,10 @@ void MainWindow::fill_spinboxes() {
 	ui->spinBox_gossipRandoms->setValue(ctx->p.slot_get_config_peer_gossips());
 	ui->spinBox_listSizeDefault->setValue(ctx->p.slot_get_config_peer_article_list_default());
 	ui->spinBox_listSizeFirst->setValue(ctx->p.slot_get_config_peer_article_list_first());
+	ui->spinBox_listSizeDefault_autodownload->setValue(ctx->p.slot_get_config_peer_article_list_default_percent());
+	ui->spinBox_listSizeFirst_autodownload->setValue(ctx->p.slot_get_config_peer_article_list_first_percent());
 
-	pk_t news_id = ui->comboBox_newsConfigSelect->currentData().toUInt();
+	pk_t news_id = ui->comboBox_newsConfigSelect->currentData().toULongLong();
 
 	ui->spinBox_readToKeep->setValue(ctx->p.slot_get_config_news_no_read_articles(news_id));
 	ui->spinBox_unreadToKeep->setValue(ctx->p.slot_get_config_news_no_unread_articles(news_id));
@@ -595,9 +602,18 @@ void MainWindow::fill_spinboxes() {
 
 void MainWindow::on_tabWidget_currentChanged(int index)
 {
+	if (index == 0) { // newspaper browser tab
+		QVariant data = ui->comboBox_news_select->currentData();
+        newspaper_updated(data.toULongLong());
+	}
+	if (index == 1) { // chief editor tab
+		fill_pending_journalists();
+	}
 	if (index == 2) { //journalist tab
 		fill_journalist_news();
 		print_journalist_articles();
+        ui->pushButton_edit_article->setEnabled(false);
+		// ui->pushButton_request_journalism->setEnabled(false);
 	}
 	if (index == 3) { //settings tab
 		fill_config_news();
@@ -615,7 +631,9 @@ void MainWindow::on_pushButton_config_save_clicked()
 	ctx->p.slot_set_config_peer_article_list_default(ui->spinBox_listSizeDefault->value());
 	ctx->p.slot_set_config_peer_article_list_first(ui->spinBox_listSizeFirst->value());
 	ctx->p.slot_set_config_peer_gossips(ui->spinBox_gossipRandoms->value());
-	pk_t news_id = ui->comboBox_newsConfigSelect->currentData().toUInt();
+	ctx->p.slot_set_config_peer_article_list_default_percent(ui->spinBox_listSizeDefault_autodownload->value());
+	ctx->p.slot_set_config_peer_article_list_first_percent(ui->spinBox_listSizeFirst_autodownload->value());
+	pk_t news_id = ui->comboBox_newsConfigSelect->currentData().toULongLong();
 	ctx->p.slot_set_config_news_no_read_articles(news_id, ui->spinBox_readToKeep->value());
 	ctx->p.slot_set_config_news_no_unread_articles(news_id, ui->spinBox_unreadToKeep->value());
 	disable_save_cancel_enable_news_select();
@@ -668,14 +686,14 @@ void MainWindow::on_pushButton_config_cancel_clicked()
 }
 
 void MainWindow::fill_journalist_news() {
-	for (auto&& news_id : ctx->p.get_journalist_of()) {
-		NewspaperEntry& news = ctx->p.get_news(news_id);
+	ui->comboBox_news_journalist->clear();
+	for (auto&& [news_id, news] : ctx->p.get_news()) {
 		ui->comboBox_news_journalist->addItem(news.get_name().c_str(), QVariant((qulonglong) news_id));
 	}
 }
 
 void MainWindow::print_journalist_articles() {
-	NewspaperEntry& news = ctx->p.get_news(ui->comboBox_news_journalist->currentData().toUInt());
+	NewspaperEntry& news = ctx->p.get_news(ui->comboBox_news_journalist->currentData().toULongLong());
 	ui->listWidget_journalist_articles->clear();
 	auto [articles, articles_end] = news.get_newest_articles(0);
 	for (; articles != articles_end; articles++) {
@@ -690,12 +708,98 @@ void MainWindow::print_journalist_articles() {
 
 void MainWindow::on_comboBox_news_journalist_currentIndexChanged(int index)
 {
-	print_journalist_articles();
+	if (index != -1) {
+		print_journalist_articles();
+		bool i_am_journalist = ctx->p.get_journalist_of().count(ui->comboBox_news_journalist->currentData().toULongLong()) > 0;
+		ui->pushButton_request_journalism->setEnabled(!i_am_journalist);
+		ui->pushButton_add_article->setEnabled(i_am_journalist);
+		ui->pushButton_delete_article->setEnabled(i_am_journalist);
+	}
 }
 
 void MainWindow::on_pushButton_edit_article_clicked()
 {
-	pk_t news_id = ui->comboBox_news_journalist->currentData().toUInt();
-	hash_t article_hash = ui->listWidget_journalist_articles->currentItem()->data(Qt::UserRole).toUInt();
+    pk_t news_id = ui->comboBox_news_journalist->currentData().toULongLong();
+	hash_t article_hash = ui->listWidget_journalist_articles->currentItem()->data(Qt::UserRole).toULongLong();
 	emit signal_edit_article(news_id, article_hash);
+}
+
+void MainWindow::on_listWidget_journalist_articles_currentRowChanged(int currentRow)
+{
+    ui->pushButton_edit_article->setEnabled(true);
+}
+
+void MainWindow::slot_article_updated() {
+	print_journalist_articles();
+}
+
+void MainWindow::fill_pending_journalists() {
+	auto& pending_journalists = ctx->p.get_pending_journalists();
+	auto rbegin_it_pending_journalists = pending_journalists.rbegin();
+	auto rend_it_pending_journalists = pending_journalists.rend();
+
+	ui->listWidget_pending_journalists->clear();
+	for (; rbegin_it_pending_journalists != rend_it_pending_journalists; rbegin_it_pending_journalists++) {
+		QString item_text = QString::fromStdString(rbegin_it_pending_journalists->first).append(" (").append(QString::number(rbegin_it_pending_journalists->second)).append(")");
+		QListWidgetItem* list_item = new QListWidgetItem(item_text);
+		list_item->setData(Qt::UserRole, QVariant((qulonglong)rbegin_it_pending_journalists->second));
+		ui->listWidget_pending_journalists->addItem(list_item);
+	}
+}
+
+void MainWindow::remove_pending_journalist(qulonglong pid) {
+	auto& pending_journalists = ctx->p.get_pending_journalists();
+	auto rbegin_it_pending_journalists = pending_journalists.rbegin();
+	auto rend_it_pending_journalists = pending_journalists.rend();
+
+	for (; rbegin_it_pending_journalists != rend_it_pending_journalists; rbegin_it_pending_journalists++) {
+		if (rbegin_it_pending_journalists->second == pid) {
+			break;
+		}
+	}
+	ctx->p.get_pending_journalists().erase(rbegin_it_pending_journalists->first);
+}
+
+void MainWindow::on_pushButton_confirm_journalist_clicked()
+{
+	qulonglong journalist_id = ui->listWidget_pending_journalists->currentItem()->data(Qt::UserRole).toULongLong();
+	ctx->p.generate_new_journalist(journalist_id);
+	remove_pending_journalist(journalist_id);
+	fill_pending_journalists();
+}
+
+void MainWindow::on_pushButton_remove_journalist_clicked()
+{
+	qulonglong journalist_id = ui->listWidget_pending_journalists->currentItem()->data(Qt::UserRole).toULongLong();
+	remove_pending_journalist(journalist_id);
+	fill_pending_journalists();
+}
+
+void MainWindow::on_pushButton_request_journalism_clicked()
+{
+    ctx->p.generate_journalist_request(ui->comboBox_news_journalist->currentData().toULongLong());
+}
+
+void MainWindow::on_pushButton_export_my_news_clicked()
+{
+	QHostAddress address(ui->lineEdit_ip_export->text());
+	QString file_name = QFileDialog::getSaveFileName(this, tr("Save File"), QDir::homePath(), tr("NP2PS news entry (*.ne.npps)"));
+	ctx->p.save_news_to_file(file_name.toStdString(), ctx->p.get_public_key(), address);
+}
+
+void MainWindow::on_toolButton_import_news_clicked()
+{
+	QString file_name = QFileDialog::getOpenFileName(this, tr("Load File"), QDir::homePath(), tr("NP2PS news entry (*.ne.npps)"));
+	ctx->p.load_news_from_file(file_name.toStdString());
+}
+
+void MainWindow::on_spinBox_listSizeFirst_autodownload_valueChanged(int arg1)
+{
+    enable_save_cancel_disable_news_select();
+}
+
+
+void MainWindow::on_spinBox_listSizeDefault_autodownload_valueChanged(int arg1)
+{
+    enable_save_cancel_disable_news_select();
 }

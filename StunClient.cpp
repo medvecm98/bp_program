@@ -33,7 +33,9 @@ void printQByteArray(QByteArray& a) {
     }
 }
 
-
+void StunClient::send_stun_message(stun_header_ptr stun_message) {
+    send_stun_message(stun_message, get_stun_server_front());
+}
 
 void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id) {
     QTcpSocket* socket;
@@ -59,8 +61,8 @@ void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id)
     else {
         socket = new QTcpSocket(this);
 
-        connect(socket, &QIODevice::readyRead, this, &StunClient::receive_msg);
-        connect(socket, &QAbstractSocket::errorOccurred, this, &StunClient::error);
+        QObject::connect(socket, &QIODevice::readyRead, this, &StunClient::receive_msg);
+        QObject::connect(socket, &QAbstractSocket::errorOccurred, this, &StunClient::error);
         QObject::connect(socket, &QAbstractSocket::disconnected, socket, &QObject::deleteLater);
         QObject::connect(socket, &QAbstractSocket::disconnected, networking_, &Networking::peer_process_disconnected_users);
         QObject::connect(socket, &QAbstractSocket::connected, this, &StunClient::host_connected);
@@ -96,6 +98,9 @@ void StunClient::send_stun_message_transport_address(stun_header_ptr stun_messag
 
 void StunClient::host_connected() {
     auto socket = (QTcpSocket*) QObject::sender();
+
+    failed_connections = 0;
+    clean_failed_connection_for_server(get_stun_server_front());
 
     auto mtemp = header_waiting_to_connect;
     auto atemp = address_waiting_to_connect;
@@ -200,10 +205,32 @@ void StunClient::create_binding_request(stun_header_ptr stun_msg) {
     // MessageProcessor<CRequestTag, MBindingTag>::create(mpc);
 }
 
-void StunClient::error(QAbstractSocket::SocketError socketError) {
+void StunClient::add_failed_connection_for_server(pk_t pid) {
+    if (failed_connections_per_server.count(pid) > 0) {
+        failed_connections_per_server[pid]++;
+    }
+    else {
+        failed_connections_per_server.emplace(pid, 1);
+    }
+}
+
+void StunClient::clean_failed_connection_for_server(pk_t pid) {
+    failed_connections_per_server.erase(pid);
+}
+
+void StunClient::error(QAbstractSocket::SocketError socket_error) {
     QTcpSocket* socket = (QTcpSocket*)QObject::sender();
     std::cout << "Connection to STUN server failed:" << socket->isValid() << std::endl;
-    std::cout << "Error number: " << socketError << std::endl;
+    std::cout << "Error number: " << socket_error << std::endl;
+    add_failed_connection_for_server(get_stun_server_front());
+    get_stun_server_next();
+    if (++failed_connections < stun_servers.size()) {
+        std::cout << "Reconnecting to other STUN server" << std::endl;
+        send_stun_message(header_waiting_to_connect);
+    }
+    else {
+        std::cout << "Connection to all STUN servers failed." << std::endl;
+    }
 }
 
 void StunClient::init_client(QHostAddress address, std::uint16_t port) {
@@ -441,7 +468,18 @@ void StunClient::identify(QHostAddress& address) {
 }
 
 pk_t StunClient::get_stun_server_any() {
-    return stun_servers[0];
+    return stun_servers.front();
+}
+
+pk_t StunClient::get_stun_server_front() {
+    return stun_servers.front();
+}
+
+pk_t StunClient::get_stun_server_next() {
+    pk_t first_stun_server = stun_servers.front();
+    stun_servers.pop();
+    stun_servers.push(first_stun_server);
+    return first_stun_server;
 }
 
 void StunClient::stun_server_connection_error() {
@@ -452,7 +490,7 @@ void StunClient::add_stun_server(QTcpSocket* tcp_socket_, pk_t pid) {
     networking_->ip_map_.update_stun_ip(pid, tcp_socket_->peerAddress(), tcp_socket_->peerPort());
     tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
     networking_->ip_map_.set_tcp_socket(pid, tcp_socket_);
-    stun_servers.push_back(pid);
+    stun_servers.push(pid);
 }
 
 void StunClient::process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message) {
@@ -492,4 +530,23 @@ void StunClient::process_response_error_allocate(stun_header_ptr stun_message) {
     }
 
     std::cout << "Identifier was already allocated for " << ria->get_public_identifier() << std::endl;
+}
+
+void StunClient::add_stun_server(pk_t pid) {
+    stun_servers.push(pid);
+}
+
+void StunClient::clean_bad_stun_servers() {
+    for (int i = 0; i < stun_servers.size(); i++) {
+        pk_t audited_server = stun_servers.front();
+        stun_servers.pop();
+        if (failed_connections_per_server.count(audited_server) > 0) {
+            if (failed_connections_per_server[audited_server] <= 5) {
+                stun_servers.push(audited_server);
+            }
+            else {
+                failed_connections_per_server.erase(audited_server);
+            }
+        }
+    }
 }

@@ -60,13 +60,13 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 
 	if (!article_actual.empty()) //we want to set the path, if there is article downloaded locally
 	{
+		normalize_article_and_calculate_crypto_hash();
 		set_path(article_actual);
-		calculate_crypto_hash();
 	}
 	else {
 		article_present_ = false;
-		crypto_hash_ = protobuf_article.crypto_hash();
 	}
+	crypto_hash_ = protobuf_article.crypto_hash();
 
 	creation_time_timepoint_ = my_timepoint(std::chrono::seconds(creation_time_));
 
@@ -99,11 +99,11 @@ Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_arti
  * 
  * @param article_actual Article contents.
  */
-void Article::set_path(const std::string& article_actual) {
+void Article::set_path(const std::string& article_actual, std::size_t version) {
 	article_present_ = true;
 
 	/* name of the file, without path, with spaces replaced with underscores and with article hash appended */
-	QString file_name = QString::fromStdString(_heading).replace(' ', '_').append('-').append(QString::number(_main_hash));
+	QString file_name = QString::fromStdString(_heading).replace(' ', '_').append('-').append(QString::number(_main_hash)).append('_').append(QString::number(version));
 
 	switch (_format) //set correct file suffix
 	{
@@ -135,9 +135,9 @@ void Article::set_path(const std::string& article_actual) {
 		rdir.mkpath(dir.path());
 	}
 	dir_path += "/";
-	std::cout << "Setting path: " << dir_path.toStdString() << std::endl;
 
 	file_name.prepend(dir_path); //form full path together with file name
+	std::cout << "Setting path: " << file_name.toStdString() << std::endl;
 
 	file.setFileName(file_name);
 	file.open(QIODevice::ReadWrite);
@@ -228,7 +228,7 @@ void Article::select_level(my_string& rv, level_t level) {
 	rv = std::move(rv_stream.str());
 }
 
-void Article::calculate_crypto_hash() {
+QString Article::normalize_article_and_calculate_crypto_hash() {
 	QString path(_path_to_article_file.c_str());
 	QFile file;
 	file.setFileName(path);
@@ -263,6 +263,8 @@ void Article::calculate_crypto_hash() {
 			)
 		);
 	}
+
+	return contents;
 }
 
 bool Article::verify(const std::string& article_to_check) {

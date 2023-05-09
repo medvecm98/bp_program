@@ -351,6 +351,12 @@ void IpMap::add_to_ip_map(pk_t pid, const IpWrapper& wrapper) {
 	map_.emplace(pid, wrapper);
 }
 
+void IpMap::add_or_update_to_ip_map(pk_t pid, const IpWrapper& wrapper) {
+	map_.erase(pid);
+	map_.emplace(pid, wrapper);
+}
+
+
 void IpMap::add_to_ip_map(pk_t pid, IpWrapper&& wrapper) {
 	map_.emplace(pid, wrapper);
 }

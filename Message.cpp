@@ -437,8 +437,8 @@ shared_ptr_message MFW::JournalistFactory(pk_t from, pk_t to) {
 	return msg;
 }
 
-shared_ptr_message MFW::ReqJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, NewspaperEntry& news, IpMap& map) {
-	msg->set_msg_ctx(np2ps::REQUEST);
+shared_ptr_message MFW::RespJournalistFactory(shared_ptr_message&& msg, rsa_private_optional newspaper_private_key, NewspaperEntry& news, IpMap& map) {
+	msg->set_msg_ctx(np2ps::RESPONSE);
 
 	if (newspaper_private_key.has_value()) {
 		auto hex_private = CryptoUtils::instance().private_to_hex(newspaper_private_key.value());
@@ -462,8 +462,9 @@ shared_ptr_message MFW::ReqJournalistFactory(shared_ptr_message&& msg, rsa_priva
 	return msg;
 }
 
-shared_ptr_message MFW::RespJournalistFactory(shared_ptr_message&& msg) {
-	msg->set_msg_ctx(np2ps::RESPONSE);
+shared_ptr_message MFW::ReqJournalistFactory(shared_ptr_message&& msg, std::string& name) {
+	msg->set_msg_ctx(np2ps::REQUEST);
+	msg->mutable_journalist()->set_peer_name(name);
 	return msg;
 }
 
