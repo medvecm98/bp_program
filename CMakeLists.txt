@@ -3,7 +3,11 @@ project(news_p2p_sharing)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-add_compile_options(-pedantic -O0 -g)
+
+if (UNIX)
+	add_compile_options(-pedantic -O0 -g)
+endif (UNIX)
+
 # set(CMAKE_CXX_CLANG_TIDY
 # 	clang-tidy;
 # 	-header-filter=${CMAKE_CURRENT_SOURCE_DIR};
@@ -13,14 +17,20 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-
-include(FindProtobuf)
+if (UNIX)
+	include(FindProtobuf)
+endif (UNIX)
 find_package(Protobuf REQUIRED)
+if (WIN32)
+	include_directories(${Protobuf_INCLUDE_DIRS})
+	find_package(cryptopp CONFIG REQUIRED)
+endif (WIN32)
 find_package(Qt5 COMPONENTS Core Network Widgets REQUIRED)
 #find_package(Doxygen REQUIRED dot)
-include_directories( ${Boost_INCLUDE_DIRS} )
 
-find_library(CryptoPP cryptopp)
+if (UNIX)
+	find_library(CryptoPP cryptopp)
+endif (UNIX)
 
 add_subdirectory(protobuf_source)
 add_dependencies(proto_msg proto_art)
@@ -40,8 +50,13 @@ add_executable(news_p2p_sharing main.cpp newarticleform.h newarticleform.cpp new
 	DataAttribute.hpp DataAttribute.cpp PublicKeyAttribute.hpp PublicKeyAttribute.cpp LazyWrappers.hpp
         RelayedPublicIdentifierAttribute.hpp RelayedPublicIdentifierAttribute.cpp addmargin.h addmargin.cpp addmargin.ui
         editarticle.h editarticle.cpp editarticle.ui)
-target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art proto_nee proto_per proto_ipm ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
-	Qt5::Widgets Qt5::Network Qt5::Core)
+if (UNIX)
+	target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art proto_nee proto_per proto_ipm ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
+		Qt5::Widgets Qt5::Network Qt5::Core)
+endif (UNIX)
+if (WIN32)
+	target_link_libraries(news_p2p_sharing ${Protobuf_LIBRARIES} proto_msg proto_art proto_nee proto_per proto_ipm Qt5::Widgets Qt5::Network Qt5::Core cryptopp::cryptopp)
+endif (WIN32)
 
 #if (DOXYGEN_FOUND)
 #	doxygen_add_docs(news_p2p_sharing_docs
