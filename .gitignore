@@ -8,3 +8,4 @@ b_docker/
 core
 CMakeLists.txt.user
 u/
+/.vs
