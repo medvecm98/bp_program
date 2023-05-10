@@ -2,6 +2,7 @@
 #define PROGRAM_GLOBALUSING_H
 
 #include <string>
+#include <sstream>
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
@@ -13,6 +14,8 @@
 #include <functional>
 #include <chrono>
 #include <memory>
+#include <array>
+#include <bitset>
 
 #include "MyExceptions.hpp"
 
@@ -45,55 +48,55 @@
 #define PORT 14128
 
 /* LOGGER */
-
-struct ELog {};
-
-class Log {
-public:
-    static Log& instance() {
-        static Log l;
-        return l;
-    }
-    Log(const Log&) = delete;
-    Log& operator= (const Log&) = delete;
-	
-    Log& log(int i) {
-        buffer << i << delim;
-        return *this;
-    }
-    Log& log(ELog dummy) {
-        end_log();
-        return *this;
-    }
-
-    template <typename T>
-    Log& operator<< (T t) {
-        return log(t);
-    }
-
-    std::string str() {
-        return buffer.str();
-    }
-    void end_log() {
-        std::cout << str() << end_delim << std::endl;
-        buffer.str("");
-    }
-    void set_delim(const std::string& delimiter) {
-        delim = delimiter;
-    }
-    void set_end_delim(const std::string& end_delimiter) {
-        end_delim = end_delimiter;
-    }
-private:
-    Log() {}
-    ~Log() {}
-    std::stringstream buffer;
-    std::string delim = " ";
-    std::string end_delim = "";
-};
-
-static ELog ELOG;
-#define LOG Log::instance()
+//
+//struct ELog {};
+//
+//class Log {
+//public:
+//    static Log& instance() {
+//        static Log l;
+//        return l;
+//    }
+//    Log(const Log&) = delete;
+//    Log& operator= (const Log&) = delete;
+//	
+//    Log& log(int i) {
+//        buffer << i << delim;
+//        return *this;
+//    }
+//    Log& log(ELog dummy) {
+//        end_log();
+//        return *this;
+//    }
+//
+//    template <typename T>
+//    Log& operator<< (T t) {
+//        return log(t);
+//    }
+//
+//    std::string str() {
+//        return buffer.str();
+//    }
+//    void end_log() {
+//        std::cout << str() << end_delim << std::endl;
+//        buffer.str("");
+//    }
+//    void set_delim(const std::string& delimiter) {
+//        delim = delimiter;
+//    }
+//    void set_end_delim(const std::string& end_delimiter) {
+//        end_delim = end_delimiter;
+//    }
+//private:
+//    Log() {}
+//    ~Log() {}
+//    std::stringstream buffer;
+//    std::string delim = " ";
+//    std::string end_delim = "";
+//};
+//
+//static ELog ELOG;
+//#define LOG Log::instance()
 
 /* OTHER */
 
