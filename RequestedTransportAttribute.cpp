@@ -32,9 +32,9 @@ void RequestedTransportAttribute::write_stun_attribute(QDataStream& output) {
  * @brief 
  * 
  * @param p Protocol in normal, unshifted, form.
- * @param h 
+ * @param stun_header 
  */
-void RequestedTransportAttribute::initialize(std::uint32_t p, StunMessageHeader* h) {
-    StunMessageAttribute::initialize(4, h);
+void RequestedTransportAttribute::initialize(std::uint32_t p, StunMessageHeader* stun_header) {
+    StunMessageAttribute::initialize(4, stun_header);
     set_protocol(p);
 }

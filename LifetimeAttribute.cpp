@@ -18,8 +18,8 @@ void LifetimeAttribute::write_stun_attribute(QDataStream& output) {
     output << time; //writes time
 }
 
-void LifetimeAttribute::initialize(std::uint32_t t, StunMessageHeader* h) {
-    StunMessageAttribute::initialize(4, h);
+void LifetimeAttribute::initialize(std::uint32_t t, StunMessageHeader* stun_header) {
+    StunMessageAttribute::initialize(4, stun_header);
 
     time = t; //sets time
 }

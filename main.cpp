@@ -27,8 +27,8 @@
 void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramContext> ctx) {
 	std::ifstream file(path.c_str());
 	std::string line;
-	ctx->p.peer_init("Test Peer", "Newspaper Test Peer");
-	int counter = ctx->p.get_public_key() * 10;
+	ctx->peer.peer_init("Test Peer", "Newspaper Test Peer");
+	int counter = ctx->peer.get_public_key() * 10;
 	while (std::getline(file, line)) { // loads articles from file, line after line
 		std::stringstream input_sstream(line);
 		std::string token;
@@ -53,9 +53,9 @@ void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramCon
     	std::uniform_int_distribution<std::mt19937::result_type> dist(1,1000);
 
 		Article a;
-		a.initialize_article(v, article_file_path, ctx->p, ctx->p.get_news_db().at(ctx->p.get_my_news_id()), 1, (counter++ + dist(rng)));
+		a.initialize_article(v, article_file_path, ctx->peer, ctx->peer.get_news_db().at(ctx->peer.get_my_news_id()), 1, (counter++ + dist(rng)));
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-		ctx->p.enroll_new_article(std::move(a), false);
+		ctx->peer.enroll_new_article(std::move(a), false);
 	}
 	file.close();
 }
@@ -107,16 +107,16 @@ int main(int argc, char *argv[]) {
 	w.setProgramContext(ctx.get()); //sets the program context for given window, for communication with peer
 	
 	/* Connect slots and signals in-between various widgets of the windows and windows and peer */
-	QObject::connect(&ctx->p, &Peer::got_newspaper_confirmation, &w, &MainWindow::newspaper_added_to_db);
-	QObject::connect(&ctx->p, &Peer::newspaper_list_received, &w, &MainWindow::newspaper_added_to_db_noarg);
-	QObject::connect(&ctx->p, &Peer::new_article_list, &w, &MainWindow::article_list_regenerate);
-	QObject::connect(&ctx->p, &Peer::checked_display_article, &w, &MainWindow::checked_display_article);
-	QObject::connect(ctx->p.get_networking(), &Networking::got_network_interfaces, &w, &MainWindow::got_network_interfaces);
-	QObject::connect(&w, &MainWindow::start_server, ctx->p.get_networking()->get_peer_receiver(), &PeerReceiver::start_server);
-	QObject::connect(&w, &MainWindow::start_server, ctx->p.get_networking()->get_stun_server(), &StunServer::start_server);
-	QObject::connect(&ctx->p, &Peer::check_selected_item, &w, &MainWindow::check_selected_item);
-	QObject::connect(&w, &MainWindow::signal_add_new_newspaper_from_file, &ctx->p, &Peer::slot_add_new_newspaper_from_file);
-	QObject::connect(&w, &MainWindow::signal_add_new_newspaper_pk, &ctx->p, &Peer::slot_add_new_newspaper_pk);
+	QObject::connect(&ctx->peer, &Peer::got_newspaper_confirmation, &w, &MainWindow::newspaper_added_to_db);
+	QObject::connect(&ctx->peer, &Peer::newspaper_list_received, &w, &MainWindow::newspaper_added_to_db_noarg);
+	QObject::connect(&ctx->peer, &Peer::new_article_list, &w, &MainWindow::article_list_regenerate);
+	QObject::connect(&ctx->peer, &Peer::checked_display_article, &w, &MainWindow::checked_display_article);
+	QObject::connect(ctx->peer.get_networking(), &Networking::got_network_interfaces, &w, &MainWindow::got_network_interfaces);
+	QObject::connect(&w, &MainWindow::start_server, ctx->peer.get_networking()->get_peer_receiver(), &PeerReceiver::start_server);
+	QObject::connect(&w, &MainWindow::start_server, ctx->peer.get_networking()->get_stun_server(), &StunServer::start_server);
+	QObject::connect(&ctx->peer, &Peer::check_selected_item, &w, &MainWindow::check_selected_item);
+	QObject::connect(&w, &MainWindow::signal_add_new_newspaper_from_file, &ctx->peer, &Peer::slot_add_new_newspaper_from_file);
+	QObject::connect(&w, &MainWindow::signal_add_new_newspaper_pk, &ctx->peer, &Peer::slot_add_new_newspaper_pk);
 
 	QObject::connect(f, &Form::enable_print_peer, &w, &MainWindow::enable_print_peer);
 	QObject::connect(f, &Form::enable_add_article, &w, &MainWindow::enable_add_article);
@@ -129,8 +129,8 @@ int main(int argc, char *argv[]) {
 	QObject::connect(&w, &MainWindow::add_new_article, cf, &CategoriesForm::add_new_article);
 
 	QObject::connect(&w, &MainWindow::signal_edit_article, ea, &EditArticle::showa);
-	QObject::connect(ea, &EditArticle::signal_article_updated, &ctx->p, &Peer::update_article);
-	QObject::connect(&ctx->p, &Peer::signal_article_updated, &w, &MainWindow::slot_article_updated);
+	QObject::connect(ea, &EditArticle::signal_article_updated, &ctx->peer, &Peer::update_article);
+	QObject::connect(&ctx->peer, &Peer::signal_article_updated, &w, &MainWindow::slot_article_updated);
 
 	f->setProgramContext(ctx.get());
 	w.addForm("new_peer", f);
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
 	am->set_program_context(ctx.get());
 	ea->set_program_context(ctx.get());
 
-	ctx->p.get_networking()->get_network_interfaces(); //gets networking interfaces for displaying them in the comboBox_networking
+	ctx->peer.get_networking()->get_network_interfaces(); //gets networking interfaces for displaying them in the comboBox_networking
 
 	if (loaded) {
 		w.all_newspaper_updated();

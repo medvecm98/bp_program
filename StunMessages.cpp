@@ -239,9 +239,9 @@ void StunMessageHeader::generate_tid(CryptoPP::AutoSeededRandomPool& rng) {
         }
 }
 
-void StunMessageAttribute::initialize(std::uint16_t len, StunMessageHeader* h) {
+void StunMessageAttribute::initialize(std::uint16_t len, StunMessageHeader* stun_header) {
     stun_attr_length = len;
-    header = h;
+    header = stun_header;
 }
 
 

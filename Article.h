@@ -180,15 +180,12 @@ public:
 		).count();
 		modification_time_ = creation_time_;
 		
-
-		article_present_ = true; //we provided the article file in function arguments, so the article's contents is 
-								 //... naturally present
-		
-
 		sign_article_hash_newspaper(me.get_my_newspaper().get_newspaper_private_key());
 
 		readers_.emplace(me.get_public_key());
 
+		set_flag(ArticleFlags::Present);
+		set_flag(ArticleFlags::Read);
 	}
 
 	/**
@@ -248,7 +245,7 @@ public:
 	 * @return true If there is article's contents present.
 	 * @return false If there is not article's contents present.
 	 */
-	bool article_present() const { return article_present_; }
+	bool article_present() const { return get_flag(ArticleFlags::Present); }
 
 	/**
 	 * @brief Gets the length of article.
@@ -331,7 +328,7 @@ public:
 	void local_serialize_article(np2ps::SerializedArticle* art) const;
 
 	bool is_header_only() {
-		return !article_present_;
+		return !get_flag(ArticleFlags::Present);
 	}
 
 	const user_container& const_readers() const {
@@ -365,16 +362,23 @@ public:
 	}
 
 	void sign_article_hash_newspaper(rsa_private_optional key);
+	
 	bool verify_news_signature(rsa_public_optional key);
+
 	std::string& get_signature();
+
 	void set_signature(std::string signature);
+
 	void lazy_remove_readers(user_container& disconnected_users);
+
 	void update_metadata(Article& other_article);
+
 	void set_read() {
-		read_ = true;
+		set_flag(ArticleFlags::Read);
 	}
+
 	bool get_read() {
-		return read_;
+		return get_flag(ArticleFlags::Read);
 	}
 
 	std::size_t get_version() {
@@ -393,6 +397,15 @@ public:
 		ancestor_ = ancestor;
 	}
 
+	void set_flag(ArticleFlags flag);
+
+	bool get_flag(ArticleFlags flag) const;
+
+	void reset_flag(ArticleFlags flag);
+
+	void set_flag_value(ArticleFlags flag, bool value);
+
+
 private:
 	my_string _author_name; //network, local
 	pk_t _author_id; //network, local
@@ -407,15 +420,14 @@ private:
 	margin_container _margins; //unordered map of public identifiers and margins //network, local
 	my_string _notes; //local
 	std::string crypto_hash_; //network, local
-	bool article_present_; //local
 	std::uint64_t creation_time_; //network, local
 	std::uint64_t modification_time_; //network, local
 	my_timepoint creation_time_timepoint_; //network, local
 	user_container readers_; //local, TODO: implement
 	std::string newspaper_signature_;
-	bool read_ = false;
 	std::size_t version_;
 	hash_t ancestor_;
+	std::size_t flags_ = 0;
 };
 
 using article_ptr = Article*;

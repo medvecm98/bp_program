@@ -5,10 +5,10 @@ DataAttribute::DataAttribute() : StunMessageAttribute::StunMessageAttribute()  {
     attribute_type = StunAttributeEnum::data; //enum form
 }
 
-void DataAttribute::initialize(QByteArray& d, StunMessageHeader* h) {
+void DataAttribute::initialize(QByteArray& d, StunMessageHeader* stun_header) {
     data = d;
 
-    StunMessageAttribute::initialize(data.size(), h);
+    StunMessageAttribute::initialize(data.size(), stun_header);
 }
 
 std::uint16_t DataAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {

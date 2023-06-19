@@ -25,9 +25,9 @@ public:
      * Function copies the time from argument into public field.
      * 
      * @param t Time to copy.
-     * @param h Pointer to header of StunMessageHeader.
+     * @param stun_header Pointer to header of StunMessageHeader.
      */
-    virtual void initialize(std::uint32_t t, StunMessageHeader* h);
+    virtual void initialize(std::uint32_t t, StunMessageHeader* stun_header);
 
     /**
      * @brief Reads the STUN Lifetime attribute from provided stream.

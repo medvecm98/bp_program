@@ -26,9 +26,9 @@ public:
      * Function copies the time from argument into public field.
      * 
      * @param public_identifier Public identifier to copy.
-     * @param h Pointer to header of StunMessageHeader.
+     * @param stun_header Pointer to header of StunMessageHeader.
      */
-    virtual void initialize(pk_t public_identifier, StunMessageHeader* h);
+    virtual void initialize(pk_t public_identifier, StunMessageHeader* stun_header);
 
     /**
      * @brief Reads the STUN PublicIdentifier attribute from provided stream.

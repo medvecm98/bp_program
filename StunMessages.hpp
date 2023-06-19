@@ -93,10 +93,10 @@ public:
 
     StunMessageAttribute() = default;
 
-    StunMessageAttribute(std::uint16_t type, StunMessageHeader* h) {
+    StunMessageAttribute(std::uint16_t type, StunMessageHeader* stun_header) {
         stun_attr_length = 0;
         stun_attr_type = type;
-        header = h;
+        header = stun_header;
     }
 
     /**
@@ -105,7 +105,7 @@ public:
      * Used when creating new attributes.
      * 
      */
-    virtual void initialize(std::uint16_t len, StunMessageHeader* h);
+    virtual void initialize(std::uint16_t len, StunMessageHeader* stun_header);
 
     /**
      * @brief Reads the STUN attribute from the network (through stream) using provided strean.

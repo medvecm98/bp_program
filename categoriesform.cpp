@@ -47,9 +47,9 @@ void CategoriesForm::on_pushButton_accept_clicked()
 {
 	Article a;
 	pk_t news_id = ui->comboBox_newspapers->currentText().split(':').last().trimmed().toULongLong(); //ID of news that this article will be inserted into
-	a.initialize_article(categories, path.toStdString(), ctx->p, ctx->p.get_news_db().at(news_id)); //intializes the article (partly) using data from listWidget_categories
-	ctx->p.upload_external_article(a); //upload article to newspaper readers and other (chief) editors
-	ctx->p.enroll_new_article(std::move(a), false); //insert new article into the map of my newspaper, including the article's contents
+	a.initialize_article(categories, path.toStdString(), ctx->peer, ctx->peer.get_news_db().at(news_id)); //intializes the article (partly) using data from listWidget_categories
+	ctx->peer.upload_external_article(a); //upload article to newspaper readers and other (chief) editors
+	ctx->peer.enroll_new_article(std::move(a), false); //insert new article into the map of my newspaper, including the article's contents
 	this->close();
 }
 
@@ -70,7 +70,7 @@ void CategoriesForm::showEvent(QShowEvent *event) {
 	ui->comboBox_newspapers->clear();
 
 	QString entry;
-	for (auto&& news : ctx->p.get_news_db()) {
+	for (auto&& news : ctx->peer.get_news_db()) {
 		//loop fills the comboBox_newspapers with all newspaper that peer either created,
 		//... or ever subscribed to
 

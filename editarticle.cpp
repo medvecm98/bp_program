@@ -20,7 +20,7 @@ void EditArticle::set_program_context(ProgramContext* context) {
 void EditArticle::showa(qulonglong news_pid_, qulonglong article_hash_) {
     news_pid = news_pid_;
     article_hash = article_hash_;
-    Article& article = ctx->p.get_news(news_pid).get_article(article_hash);
+    Article& article = ctx->peer.get_news(news_pid).get_article(article_hash);
     QString text = QString::fromStdString(article.read_contents());
     ui->plainTextEdit_article_edit->setPlainText(text);
     ui->textBrowser_article_browser->setMarkdown(text);
@@ -64,4 +64,3 @@ void EditArticle::on_pushButton_cancel_article_clicked()
     ui->textBrowser_article_browser->clear();
     this->close();
 }
-

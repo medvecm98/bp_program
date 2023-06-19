@@ -23,9 +23,9 @@ public:
      * Function copies the time from argument into public field.
      * 
      * @param public_key Public key to save.
-     * @param h Pointer to header of StunMessageHeader.
+     * @param stun_header Pointer to header of StunMessageHeader.
      */
-    virtual void initialize(const CryptoPP::RSA::PublicKey& public_key, StunMessageHeader* h);
+    virtual void initialize(const CryptoPP::RSA::PublicKey& public_key, StunMessageHeader* stun_header);
 
     /**
      * @brief Reads the STUN PublicKey attribute from provided stream.

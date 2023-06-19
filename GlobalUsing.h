@@ -100,6 +100,13 @@
 
 /* OTHER */
 
+enum class ArticleFlags {
+	Present = 1,
+	Downloading = 2,
+	Failed = 4,
+	Read = 8
+};
+
 using address_vec = std::vector<std::pair<QString, QHostAddress>>;
 using address_vec_ptr = std::shared_ptr<address_vec>;
 

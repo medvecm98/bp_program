@@ -5,8 +5,8 @@ PublicIdentifierAttribute::PublicIdentifierAttribute()  : StunMessageAttribute::
     attribute_type = StunAttributeEnum::public_identifier;
 }
 
-void PublicIdentifierAttribute::initialize(pk_t public_identifier, StunMessageHeader* h) {
-    StunMessageAttribute::initialize(8, h);
+void PublicIdentifierAttribute::initialize(pk_t public_identifier, StunMessageHeader* stun_header) {
+    StunMessageAttribute::initialize(8, stun_header);
     this->public_identifier = (quint64)public_identifier;
 }
 

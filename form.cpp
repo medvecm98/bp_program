@@ -28,10 +28,10 @@ void Form::on_checkBox_create_newspaper_stateChanged(int arg1)
 void Form::on_buttonBox_accepted()
 {
 	if (!ui->lineEdit_name->text().isEmpty()) { //if the lineEdit for name was not empty
-		ctx->p.set_name(ui->lineEdit_name->text().toStdString()); //set the name of the peer
+		ctx->peer.set_name(ui->lineEdit_name->text().toStdString()); //set the name of the peer
 
 		if (ui->checkBox_create_newspaper->isChecked() && !ui->lineEdit_newspaper_name->text().isEmpty()) { //when checkBox was checked and the lineEdit was not empty
-			ctx->p.init_newspaper(ui->lineEdit_newspaper_name->text().toStdString()); //initializes new newspaper
+			ctx->peer.init_newspaper(ui->lineEdit_newspaper_name->text().toStdString()); //initializes new newspaper
 
 			/* enables, resp. disables all the buttons */
 

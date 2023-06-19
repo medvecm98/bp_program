@@ -5,9 +5,9 @@ PublicKeyAttribute::PublicKeyAttribute() : StunMessageAttribute() {
     attribute_type = StunAttributeEnum::public_key;
 }
 
-void PublicKeyAttribute::initialize(const CryptoPP::RSA::PublicKey& public_key, StunMessageHeader* h) {
+void PublicKeyAttribute::initialize(const CryptoPP::RSA::PublicKey& public_key, StunMessageHeader* stun_header) {
     value = CryptoUtils::instance().rsa_to_hex(public_key);
-    StunMessageAttribute::initialize(value.size(), h);
+    StunMessageAttribute::initialize(value.size(), stun_header);
 }
 
 std::uint16_t PublicKeyAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {

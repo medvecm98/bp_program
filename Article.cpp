@@ -17,9 +17,9 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 	_heading(protobuf_article.heading()),
 	creation_time_(protobuf_article.creation_time()),
 	modification_time_(protobuf_article.modification_time()),
-	article_present_(false),
 	version_(protobuf_article.version()),
-	ancestor_(protobuf_article.ancestor())
+	ancestor_(protobuf_article.ancestor()),
+	flags_(0)
 {
 	//load categories
 	if (!protobuf_article.categories().empty()) {
@@ -59,7 +59,7 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 		set_path(article_actual);
 	}
 	else {
-		article_present_ = false;
+		reset_flag(ArticleFlags::Present);
 	}
 	crypto_hash_ = protobuf_article.crypto_hash();
 
@@ -75,9 +75,9 @@ Article::Article(const np2ps::Article& protobuf_article, const std::string& arti
 Article::Article(const np2ps::SerializedArticle& protobuf_article) : Article(protobuf_article.article())
 {
 	_path_to_article_file = protobuf_article.path_to_article_file();
-	article_present_ = protobuf_article.article_present();
+	set_flag_value(ArticleFlags::Present, protobuf_article.article_present());
 	_notes = protobuf_article.notes();
-	read_ = protobuf_article.article_was_read();
+	set_flag_value(ArticleFlags::Read, protobuf_article.article_was_read());
 }
 
 /**
@@ -95,7 +95,7 @@ Article::Article(const np2ps::Article& protobuf_article) : Article(protobuf_arti
  * @param article_actual Article contents.
  */
 void Article::set_path(const std::string& article_actual, std::size_t version) {
-	article_present_ = true;
+	set_flag(ArticleFlags::Present);
 
 	/* name of the file, without path, with spaces replaced with underscores and with article hash appended */
 	QString file_name = QString::fromStdString(_heading).replace(' ', '_').append('-').append(QString::number(_main_hash)).append('_').append(QString::number(version));
@@ -286,9 +286,9 @@ void Article::network_serialize_article(np2ps::Article* art) const {
 void Article::local_serialize_article(np2ps::SerializedArticle* art) const {
 	network_serialize_article(art->mutable_article());
 	art->set_path_to_article_file(_path_to_article_file);
-	art->set_article_present(article_present_);
+	art->set_article_present(get_flag(ArticleFlags::Present));
 	art->set_notes(_notes);
-	art->set_article_was_read(read_);
+	art->set_article_was_read(get_flag(ArticleFlags::Read));
 }
 
 std::string& Article::get_signature() {
@@ -355,4 +355,23 @@ std::string Article::read_contents() {
 		contents.append('\n');
 	}
 	return contents.toStdString();
+}
+
+void Article::set_flag(ArticleFlags flag) {
+	flags_ |= static_cast<std::size_t>(flag);
+}
+
+bool Article::get_flag(ArticleFlags flag) const {
+	return (flags_ & static_cast<std::size_t>(flag)) != 0;
+}
+
+void Article::reset_flag(ArticleFlags flag) {
+	flags_ &= ~static_cast<std::size_t>(flag);
+}
+
+void Article::set_flag_value(ArticleFlags flag, bool value) {
+	if (value)
+		set_flag(flag);
+	else
+		reset_flag(flag);
 }

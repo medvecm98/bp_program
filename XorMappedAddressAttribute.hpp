@@ -34,10 +34,10 @@ public:
      * Function copies the time from argument into public field.
      * 
      * @param family IP address family.
-     * @param h Pointer to header of StunMessageHeader.
+     * @param stun_header Pointer to header of StunMessageHeader.
      * @param socket Socket to initialize address and port with.
      */
-    std::uint16_t initialize(StunMessageHeader* header, std::uint16_t family, QTcpSocket* socket);
+    std::uint16_t initialize(StunMessageHeader* stun_header, std::uint16_t family, QTcpSocket* socket);
 
     /**
      * @brief Initializes the attribute.
@@ -45,11 +45,11 @@ public:
      * Function copies the time from argument into public field.
      * 
      * @param t Time to copy.
-     * @param h Pointer to header of StunMessageHeader.
+     * @param stun_header Pointer to header of StunMessageHeader.
      * @param address Address to set.
      * @param port Port to set.
      */
-    std::uint16_t initialize(StunMessageHeader* header, std::uint16_t family, QHostAddress& address, std::uint16_t port);
+    std::uint16_t initialize(StunMessageHeader* stun_header, std::uint16_t family, QHostAddress& address, std::uint16_t port);
 
     void set_address(std::uint32_t ipv4);
 
