@@ -118,7 +118,6 @@ public:
 		peer_init(peer_name);
 	}
 
-	void load_ip_authorities(pk_t newspaper_key);				// to load the IPs of authorities
 	void enroll_new_article(Article article, bool header_only); // add new article to list of category -> article
 	void add_new_newspaper(pk_t newspaper_key, const my_string &newspaper_name, const std::string &newspaper_ip, bool allocate_now = true);
 	void add_new_newspaper(pk_t newspaper_key, const my_string &newspaper_name, pk_t sender);
@@ -127,15 +126,9 @@ public:
 	NewspaperEntry& add_new_newspaper(NewspaperEntry&& newspaper_entry, QHostAddress&& address, bool allocate_now = false);
 	void add_new_newspaper_from_file(const std::string &path);
 	void add_new_newspaper_pk(pk_t pid);
-	size_t list_all_articles_from_news(article_container &articles, const std::set<category_t> &categories);
-	size_t list_all_articles_from_news(article_container &articles);
-	size_t list_all_articles_from_news(article_container &articles, pk_t newspaper_id, int count);
-	size_t list_all_articles_from_news(article_container &articles, pk_t newspaper_id, int count, QDate date);
 	size_t list_all_articles_by_me(article_container &articles, const std::set<category_t> &categories, pk_t news_id = 0);
 	size_t list_all_articles_by_me(article_container &articles, pk_t news_id = 0);
 	article_optional find_article(hash_t article_hash);
-	optional_author_peers find_article_in_article_categories_db(hash_t article_hash);
-	optional_author_peers find_article_in_article_categories_db(hash_t article_hash, category_container categories);
 
 	news_database &get_news();
 	NewspaperEntry &get_news(pk_t news_id);
@@ -292,7 +285,7 @@ public:
 	}
 
 	user_container& get_journalist_of() {
-		return journalist_of;
+		return journalist_of_;
 	}
 
 	std::map<std::string, pk_t>& get_pending_journalists();
@@ -421,19 +414,15 @@ private:
 	user_container friends_;				 // friends, sharing their newspaper entries with you
 
 	std::unordered_multimap<hash_t, Margin> margins_added_;					   // multimap of Article -> Margins, that this peer added, or requested to add
-	std::unordered_map<pk_t, Article> article_headers_only;					   // only for article headers, so it won't interfere with regular ones
-	std::unordered_map<pk_t, NewspaperEntry> newspapers_awaiting_confirmation; // newspaper that we want to add, but that haven't yet confirmed their existence
+	std::unordered_map<pk_t, NewspaperEntry> newspapers_awaiting_confirmation_; // newspaper that we want to add, but that haven't yet confirmed their existence
 
 	// journalist part
 	//  reader_database readers_; //list of article readers
-	user_container journalist_of;
+	user_container journalist_of_;
 
 	// chief editor
-	user_multimap_container newspaper_all_readers;	  // TODO: delete //list of all readers of all articles
-	category_multimap_container articles_categories_; // articles mapped by categories, maps to `newspaper_all_readers`
 	my_string newspaper_name_;						  // my newspaper name
 	pk_t newspaper_id_;								  // public identifier of my newspaper
-	user_container authorities_;					  // list of authorities
 	user_container journalists_;					  // list of journalists
 	std::unordered_set<hash_t> downloading_articles;
 	std::unordered_set<pk_t> getting_article_list;

@@ -86,7 +86,42 @@
                </layout>
               </item>
               <item>
-               <widget class="QListWidget" name="listWidget_articles"/>
+               <widget class="QListWidget" name="listWidget_articles">
+                <item>
+                 <property name="text">
+                  <string>Bruh</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Bruh 2: Electric boogaloo</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Bruh 3: The last crusade</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Bruh 4: The new hope</string>
+                 </property>
+                 <property name="background">
+                  <brush brushstyle="SolidPattern">
+                   <color alpha="128">
+                    <red>224</red>
+                    <green>27</green>
+                    <blue>36</blue>
+                   </color>
+                  </brush>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>Bruh 5: Empire strikes back</string>
+                 </property>
+                </item>
+               </widget>
               </item>
               <item>
                <widget class="QComboBox" name="comboBox_categories">

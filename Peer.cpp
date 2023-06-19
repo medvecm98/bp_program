@@ -37,7 +37,7 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 	auto news = NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove);
 	news.await_confirmation = true;
 
-	newspapers_awaiting_confirmation.emplace(newspaper_key, std::move(news));
+	newspapers_awaiting_confirmation_.emplace(newspaper_key, std::move(news));
 	
 	if (allocate_now) {
 		networking_->get_stun_client()->allocate_request(newspaper_key);
@@ -53,7 +53,7 @@ NewspaperEntry& Peer::add_new_newspaper(pk_t newspaper_key, const my_string& new
 	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
 	if (allocate_now) {
 		networking_->get_stun_client()->allocate_request(newspaper_key);
-		return newspapers_awaiting_confirmation.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove)).first->second;
+		return newspapers_awaiting_confirmation_.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove)).first->second;
 	}
 	else {
 		return news_.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove)).first->second;
@@ -69,7 +69,7 @@ void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name
 	networking_->get_stun_client()->identify(newspaper_key, sender);
 	NewspaperEntry ne(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove);
 	ne.add_reader(sender);
-	newspapers_awaiting_confirmation.emplace(newspaper_key, std::move(ne));
+	newspapers_awaiting_confirmation_.emplace(newspaper_key, std::move(ne));
 }
 
 NewspaperEntry& Peer::add_new_newspaper(NewspaperEntry&& newspaper_entry, QHostAddress&& address, bool allocate_now) {
@@ -77,7 +77,7 @@ NewspaperEntry& Peer::add_new_newspaper(NewspaperEntry&& newspaper_entry, QHostA
 	networking_->ip_map().add_to_map(news_pid, IpWrapper(address));
 	if (allocate_now) {
 		networking_->get_stun_client()->allocate_request(news_pid);
-		return newspapers_awaiting_confirmation.emplace(
+		return newspapers_awaiting_confirmation_.emplace(
 			news_pid,
 			std::move(newspaper_entry)
 		).first->second;
@@ -92,8 +92,8 @@ void Peer::newspaper_confirm(pk_t pid) {
 }
 
 void Peer::newspaper_confirm_public_key(pk_t pid, rsa_public_optional public_key) {
-	auto ne = newspapers_awaiting_confirmation.find(pid);
-	if (ne == newspapers_awaiting_confirmation.end()) { //no newspaper were awaiting confirmation with this pid
+	auto ne = newspapers_awaiting_confirmation_.find(pid);
+	if (ne == newspapers_awaiting_confirmation_.end()) { //no newspaper were awaiting confirmation with this pid
 		return;
 	}
 
@@ -112,19 +112,8 @@ void Peer::newspaper_confirm_public_key(pk_t pid, rsa_public_optional public_key
 		news.set_confirmation(true);
 	}
 	
-	newspapers_awaiting_confirmation.erase(ne);
+	newspapers_awaiting_confirmation_.erase(ne);
 	emit got_newspaper_confirmation(pid);
-}
-
-/**
- * @brief Loads the IPs of all the authorities of given newspaper key.
- * 
- * Message is sent to newspaper chief editor.
- * 
- * @param newspaper_key Newspaper public ID for which we need the authorities.
- */
-void Peer::load_ip_authorities(pk_t newspaper_key) {
-	throw deprecated_feature("Loading IP authorities is deprecated.");
 }
 
 /**
@@ -142,7 +131,7 @@ void Peer::init_newspaper(my_string name) {
 	news_db->second.set_newspaper_private_key(private_key);
 	news_db->second.set_newspaper_public_key(public_key);
 	news_db->second.emplace_journalist(get_public_key());
-	journalist_of.emplace(newspaper_id_);
+	journalist_of_.emplace(newspaper_id_);
 }
 
 /**
@@ -160,107 +149,6 @@ article_optional Peer::find_article_in_database(hash_t article_hash) {
 		}
 	}
 	return {};
-}
-
-/**
- * List of all articles that given news have, selecting only provided categories.
- * Chief editors only.
- * @param articles Where to put the articles.
- * @param categories What categories to use.
- * @return How many articles were found.
- */
-size_t Peer::list_all_articles_from_news(article_container &articles, const std::set<category_t> &categories) {
-	size_t article_counter = 0;
-	for (auto&& cat : articles_categories_) {
-		if (categories.empty() || (categories.find(cat.first) != categories.end())) {
-			articles.insert(&cat.second->article);
-			article_counter++;
-		}
-	}
-	return article_counter;
-}
-
-/**
- * List of all articles that given news have.
- * Chief editors only.
- * @param articles Where to put the articles.
- * @return How many articles were found.
- */
-size_t Peer::list_all_articles_from_news(article_container &articles) {
-	size_t article_counter = 0;
-	
-	auto& news = news_[get_my_news_id()];
-	auto bit = news.get_iterator_database();
-	auto eit = news.get_iterator_database_end();
-
-	for (; bit != eit; bit++) {
-		articles.insert(&bit->second);
-		article_counter++;
-	}
-
-	return article_counter;
-}
-
-/**
- * List of all articles that given news have.
- * Chief editors only.
- * @param articles Where to put the articles.
- * @return How many articles were found.
- */
-size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newspaper_id, int count) {
-	size_t article_counter = 0;
-	
-	auto& news = get_news(newspaper_id);
-	if (count > 0) {
-		auto [bit, eit] = news.get_newest_articles(count); 
-		while (bit != eit) {
-			Article& article = news.get_article(bit->second);
-			articles.emplace(&article);
-		}
-		return 1;
-	}
-	else {
-		auto bit = news.get_iterator_database();
-		auto eit = news.get_iterator_database_end();
-
-		for (; bit != eit; bit++) {
-			articles.insert(&bit->second);
-			article_counter++;
-		}
-
-		return article_counter;
-	}
-}
-
-/**
- * List of all articles that given news have.
- * Chief editors only.
- * @param articles Where to put the articles.
- * @return How many articles were found.
- */
-size_t Peer::list_all_articles_from_news(article_container &articles, pk_t newspaper_id, int count, QDate date) {
-	size_t article_counter = 0;
-	
-	auto& news = get_news(newspaper_id);
-	if (count > 0) {
-		auto [bit, eit] = news.get_newest_articles(date, count); 
-		while (bit != eit) {
-			Article& article = news.get_article(bit->second);
-			articles.emplace(&article);
-		}
-		return 1;
-	}
-	else {
-		auto bit = news.get_iterator_database();
-		auto eit = news.get_iterator_database_end();
-
-		for (; bit != eit; bit++) {
-			articles.insert(&bit->second);
-			article_counter++;
-		}
-
-		return article_counter;
-	}
 }
 
 //TODO: try to implement this as extensible as possible, e. g. using POLICIES
@@ -350,46 +238,6 @@ article_optional Peer::find_article(hash_t article_hash) {
 	}
 
 	return article_optional();
-}
-
-/**
- * @brief Returns pointer to ArticleReaders, if it was found in main category, article, readers database.
- * 
- * @param article_hash Hash of article.
- * @return std::optional. AuthorPeer pointer, if it was found, no value, if it didn't.
- */
-optional_author_peers Peer::find_article_in_article_categories_db(hash_t article_hash, category_container categories) {
-	for (auto&& cat : categories) {
-		if (articles_categories_.find(cat) != articles_categories_.end()) {
-			auto bucket_begin = articles_categories_.begin(articles_categories_.bucket(cat));
-			auto bucket_end = articles_categories_.end(articles_categories_.bucket(cat));
-			for (; bucket_begin != bucket_end; bucket_begin++) {
-				if (bucket_begin->second->article.main_hash() == article_hash) {
-					return optional_author_peers(bucket_begin->second);
-				}
-			}
-		}
-	}
-	return {};
-}
-
-/**
- * @brief Returns pointer to ArticleReaders, if it was found in main category, article, readers database.
- * 
- * @param article_hash Hash of article.
- * @return std::optional. AuthorPeer pointer, if it was found, no value, if it didn't.
- */
-optional_author_peers Peer::find_article_in_article_categories_db(hash_t article_hash) {
-	for (auto&& cat : articles_categories_) {
-		auto bucket_begin = articles_categories_.begin(articles_categories_.bucket(cat.first));
-		auto bucket_end = articles_categories_.end(articles_categories_.bucket(cat.first));
-		for (; bucket_begin != bucket_end; bucket_begin++) {
-			if (bucket_begin->second->article.main_hash() == article_hash) {
-				return optional_author_peers(bucket_begin->second);
-			}
-		}
-	}
-	return {};
 }
 
 void Peer::create_margin_request(pk_t to, hash_t article_hash) {
@@ -830,7 +678,6 @@ void Peer::handle_article_list_request(shared_ptr_message message) {
 		auto& news_ref = get_news(req_news_id);
 
 		article_container articles;
-		// list_all_articles_from_news(articles);
 		for (std::size_t i = 0; i < message->article_list().count(); i += config.list_size_default) {
 			news_ref.get_newest_articles(
 				articles,
@@ -885,25 +732,6 @@ void Peer::handle_article_data_update_request(shared_ptr_message message) {
 	// 				break;
 	// 			}
 	// 		}
-	// 	}
-	// }
-	// //authority part
-	// auto article_author_peers = find_article_in_article_categories_db(message->article_data_update().article_pk());
-	// if (article_author_peers.has_value()) {
-	// 	//AuthorPeer entry for given article exists
-
-	// 	auto user = user_map.find(message->from());
-	// 	if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
-	// 		if (user == user_map.end()) {
-	// 			auto ins = user_map.insert({message->from(), PeerInfo(message->from(), 127)});
-	// 			article_author_peers.value()->readers.insert({ins.first->first, &(ins.first->second)});
-	// 		}
-	// 		else {
-	// 			article_author_peers.value()->readers.insert({user->first, &(user->second)});
-	// 		}
-	// 	}
-	// 	else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
-	// 		article_author_peers.value()->readers.erase(message->from());
 	// 	}
 	// }
 }
@@ -1249,9 +1077,9 @@ void Peer::handle_credentials_response(shared_ptr_message message) {
 
 void Peer::handle_public_key_response(shared_ptr_message message) {
 	networking_->ip_map_.update_rsa_public((pk_t)message->from(), message->public_key().key());
-	if (newspapers_awaiting_confirmation.find((pk_t)message->from()) != newspapers_awaiting_confirmation.end()) {
-		news_.insert({message->from(), newspapers_awaiting_confirmation[(pk_t)message->from()]});
-		newspapers_awaiting_confirmation.erase(message->from());
+	if (newspapers_awaiting_confirmation_.find((pk_t)message->from()) != newspapers_awaiting_confirmation_.end()) {
+		news_.insert({message->from(), newspapers_awaiting_confirmation_[(pk_t)message->from()]});
+		newspapers_awaiting_confirmation_.erase(message->from());
 		emit got_newspaper_confirmation(message->from());
 	}
 }
@@ -1366,25 +1194,6 @@ void Peer::handle_article_data_update_one_way(shared_ptr_message msg) {
 	// 				break;
 	// 			}
 	// 		}
-	// 	}
-	// }
-	// //authority part
-	// auto article_author_peers = find_article_in_article_categories_db(message->article_data_update().article_pk());
-	// if (article_author_peers.has_value()) {
-	// 	//AuthorPeer entry for given article exists
-
-	// 	auto user = user_map.find(message->from());
-	// 	if (message->article_data_update().article_action() == np2ps::DOWNLOAD) {
-	// 		if (user == user_map.end()) {
-	// 			auto ins = user_map.insert({message->from(), PeerInfo(message->from(), 127)});
-	// 			article_author_peers.value()->readers.insert({ins.first->first, &(ins.first->second)});
-	// 		}
-	// 		else {
-	// 			article_author_peers.value()->readers.insert({user->first, &(user->second)});
-	// 		}
-	// 	}
-	// 	else if (message->article_data_update().article_action() == np2ps::REMOVAL) {
-	// 		article_author_peers.value()->readers.erase(message->from());
 	// 	}
 	// }
 	auto article_opt = find_article(msg->article_data_update().article_pk());
@@ -2063,8 +1872,8 @@ bool Peer::add_friend(pk_t id, const std::string& ip) {
 }
 
 void Peer::allocate_next_newspaper() {
-	if (newspapers_awaiting_confirmation.size() > 0) {
-		get_networking()->get_stun_client()->allocate_request(newspapers_awaiting_confirmation.begin()->first);
+	if (newspapers_awaiting_confirmation_.size() > 0) {
+		get_networking()->get_stun_client()->allocate_request(newspapers_awaiting_confirmation_.begin()->first);
 	}
 }
 
@@ -2128,7 +1937,7 @@ void Peer::handle_journalist_response(shared_ptr_message message) {
 		get_networking()->ip_map().add_to_ip_map(journalist.publicid(), wrapper);
 	}
 	news.emplace_journalist(public_identifier_);
-	journalist_of.emplace(news.get_id());
+	journalist_of_.emplace(news.get_id());
 }
 
 void Peer::handle_journalist_request(shared_ptr_message message) {
@@ -2220,7 +2029,7 @@ void Peer::handle_user_info_message_one_way_response(shared_ptr_message message)
 }
 
 void Peer::inform_coworkers() {
-	for (auto&& news_id : journalist_of) {
+	for (auto&& news_id : journalist_of_) {
 		NewspaperEntry& entry = get_news(news_id);
 		pk_t to = entry.get_next_coworker();
 		if (to == public_identifier_) {

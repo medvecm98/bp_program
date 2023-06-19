@@ -143,34 +143,6 @@ void Article::set_path(const std::string& article_actual, std::size_t version) {
 }
 
 /**
- * Will fill in heading_ member.
- */
-void Article::calculate_hashes() {
-	std::fstream article_file(_path_to_article_file);
-	std::string line;
-	std::stringstream article_builder;
-
-	if (article_file.is_open())
-		std::cout << "Opened article file for " << _path_to_article_file << std::endl;
-
-	if (std::getline(article_file, line)) { //read first line for the heading
-		article_builder << line; 
-		QString qline = QString::fromStdString(line);
-		if (qline.contains('#')) { //sets the heading...
-			auto i = qline.indexOf('#');
-			_heading = qline.mid(i + 1).toStdString(); //...for markdown, where it needs to cut the trailing `#`
-		}
-		else {
-			_heading = line; //...for plaintext
-		}
-	}
-
-	while (std::getline(article_file, line)) {
-		article_builder << line;
-	}
-}
-
-/**
  * @brief Getter for `_path_to_article_file`. 
  * 
  * @return my_string Path to article file.
@@ -209,18 +181,6 @@ void Article::open_fstream(std::fstream& stream) {
  */
 category_container_const_iter Article::get_categories() {
 	return _categories.cbegin();
-}
-
-void Article::select_level(my_string& rv, level_t level) {
-	std::stringstream rv_stream;
-	ParagraphIterator pi(_path_to_article_file, level, _hashes.begin());
-	++pi;
-	while (pi.get().has_value()) {
-		rv_stream << (pi.get().value());
-		rv_stream << std::endl;
-		++pi;
-	}
-	rv = std::move(rv_stream.str());
 }
 
 QString Article::normalize_article_and_calculate_crypto_hash() {
@@ -291,7 +251,7 @@ bool Article::verify(const std::string& article_to_check) {
 	return result;
 }
 
-std::string Article::get_crypto_hash() {
+std::string Article::crypto_hash() {
 	return crypto_hash_;
 }
 
@@ -310,16 +270,6 @@ void Article::network_serialize_article(np2ps::Article* art) const {
 	art->set_news_signature(newspaper_signature_);
 	art->set_version(version_);
 	art->set_ancestor(ancestor_);
-	
-	auto [hi, hie] = hashes();
-	for (; hi != hie; hi++) {
-		np2ps::HashWrapper hw;
-		hw.set_hash(hi->second.hash);
-		hw.set_level(hi->second.paragraph_level);
-
-		google::protobuf::MapPair<google::protobuf::int32, np2ps::HashWrapper> vt(hi->first, hw);
-		art->mutable_paragraph_hashes()->insert(vt);
-	}
 
 	art->set_length(_length);
 		
@@ -385,4 +335,24 @@ void Article::sign_article_hash_newspaper(rsa_private_optional key) {
 bool Article::verify_news_signature(rsa_public_optional key) {
 	auto& cu = CryptoUtils::instance();
 	return cu.verify_signature_with_keys(key, crypto_hash_, newspaper_signature_);
+}
+
+std::string Article::read_contents() {
+	QString path(_path_to_article_file.c_str());
+	QFile file;
+	file.setFileName(path);
+	file.open(QIODevice::ReadOnly); //opens the file
+	QTextStream text_stream(&file);
+	QString line, contents;
+	if (!text_stream.atEnd()) {
+		line = text_stream.readLine();
+		contents.append(line);
+		contents.append('\n');
+	}
+	while (!text_stream.atEnd()) { 
+		line = text_stream.readLine();
+		contents.append(line); //loads the article line by line
+		contents.append('\n');
+	}
+	return contents.toStdString();
 }

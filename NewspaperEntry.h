@@ -44,10 +44,6 @@ public:
 	std::size_t get_article_count();
 	void deserialize(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
 
-	user_container_citer get_first_authority() const;
-
-	std::size_t get_authority_count() const;
-
 	pk_t get_id() const;
 
 	const my_string& get_name() const;
@@ -138,22 +134,21 @@ private:
 
 	pk_t news_id_;
 	my_string news_name_;
-	article_database_container _articles; //(downloaded) articles from these newspapers
-	user_container _authorities; //authorities of these newspapers
+	article_database_container articles_; //(downloaded) articles from these newspapers
 	level_t level_ = 127; //level for given newspaper
 	ArticleListWrapper article_list_wrapper_; //saving requested article list
-	timed_article_map time_created_sorted_articles;
-	timed_article_map time_modified_sorted_articles;
+	timed_article_map time_created_sorted_articles_;
+	timed_article_map time_modified_sorted_articles_;
 	user_container readers_; //friends, that can share the articles with you
 	user_container journalists_;
 	std::list<pk_t> coworkers_;
 	rsa_public_optional newspaper_public_key_; //newspaper public key to check article legitimacy
 	rsa_private_optional newspaper_private_key_;
-	DisconnectedUsersLazy* disconnected_readers_lazy_remove;
+	DisconnectedUsersLazy* disconnected_readers_lazy_remove_;
 	timestamp_t last_updated_ = 0;
-	NewspaperGlobalConfig config;
+	NewspaperGlobalConfig config_;
 	
-	bool confirmed = false;
+	bool confirmed_ = false;
 };
 
 using news_database = std::unordered_map<pk_t, NewspaperEntry>;

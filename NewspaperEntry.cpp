@@ -2,15 +2,14 @@
 
 NewspaperEntry::NewspaperEntry(pk_t id, DisconnectedUsersLazy* disconnected_users_lazy) :
 	news_id_(id),
-	disconnected_readers_lazy_remove(disconnected_users_lazy)
+	disconnected_readers_lazy_remove_(disconnected_users_lazy)
 {
 	
 }
 
 NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name, DisconnectedUsersLazy* disconnected_users_lazy) :
-	disconnected_readers_lazy_remove(disconnected_users_lazy)
+	disconnected_readers_lazy_remove_(disconnected_users_lazy)
 {
-	_authorities.insert(first_key);
 	news_id_ = id;
 	news_name_= name;
 }
@@ -19,7 +18,7 @@ NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& seria
 	news_id_(serialized_ne.entry().news_id()),
 	news_name_(serialized_ne.entry().news_name()),
 	last_updated_(serialized_ne.entry().last_updated()),
-	disconnected_readers_lazy_remove(disconnected_users_lazy)
+	disconnected_readers_lazy_remove_(disconnected_users_lazy)
 {
 	for(const np2ps::SerializedArticle& gpb_articles : serialized_ne.articles()) {
 		add_article(gpb_articles.article().main_hash(), Article(gpb_articles));
@@ -45,15 +44,15 @@ NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& seria
 }
 
 void NewspaperEntry::deserialize_config(const np2ps::NewspaperConfig& serialized_config) {
-	config.article_limit_read = serialized_config.limit_read();
-	config.article_limit_unread = serialized_config.limit_unread();
+	config_.article_limit_read = serialized_config.limit_read();
+	config_.article_limit_unread = serialized_config.limit_unread();
 }
 
 NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy) :
 	news_id_(serialized_ne.entry().news_id()),
 	news_name_(serialized_ne.entry().news_name()),
 	last_updated_(serialized_ne.entry().last_updated()),
-	disconnected_readers_lazy_remove(disconnected_users_lazy)
+	disconnected_readers_lazy_remove_(disconnected_users_lazy)
 {
 	set_newspaper_public_key(
 		CryptoUtils::instance().hex_to_rsa(
@@ -76,24 +75,24 @@ void NewspaperEntry::deserialize(const np2ps::NetworkSerializedNewspaperEntry& s
 }
 
 void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
-	_articles.emplace(article_hash, article);
-	time_created_sorted_articles.emplace(article.creation_time(), article_hash);
-	time_modified_sorted_articles.emplace(article.modification_time(), article_hash);
+	articles_.emplace(article_hash, article);
+	time_created_sorted_articles_.emplace(article.creation_time(), article_hash);
+	time_modified_sorted_articles_.emplace(article.modification_time(), article_hash);
 }
 
 bool NewspaperEntry::remove_article(hash_t article_hash) {
 	Article& article = get_article(article_hash);
-	auto it_time_created = time_created_sorted_articles.find(article.creation_time());
-	while (it_time_created != time_created_sorted_articles.end()) {
-		time_created_sorted_articles.erase(it_time_created);
-		it_time_created = time_created_sorted_articles.find(article.creation_time());
+	auto it_time_created = time_created_sorted_articles_.find(article.creation_time());
+	while (it_time_created != time_created_sorted_articles_.end()) {
+		time_created_sorted_articles_.erase(it_time_created);
+		it_time_created = time_created_sorted_articles_.find(article.creation_time());
 	}
-	auto it_time_modified = time_modified_sorted_articles.find(article.modification_time());
-	while (it_time_modified != time_modified_sorted_articles.end()) {
-		time_modified_sorted_articles.erase(it_time_modified);
-		it_time_modified = time_modified_sorted_articles.find(article.modification_time());
+	auto it_time_modified = time_modified_sorted_articles_.find(article.modification_time());
+	while (it_time_modified != time_modified_sorted_articles_.end()) {
+		time_modified_sorted_articles_.erase(it_time_modified);
+		it_time_modified = time_modified_sorted_articles_.find(article.modification_time());
 	}
-	return _articles.erase(article_hash) > 0;
+	return articles_.erase(article_hash) > 0;
 }
 
 std::optional<article_ptr> NewspaperEntry::find_article_header(hash_t article_hash) {
@@ -107,11 +106,11 @@ std::optional<article_ptr> NewspaperEntry::find_article_header(hash_t article_ha
 }
 
 database_iterator_t NewspaperEntry::get_iterator_database() {
-	return _articles.begin();
+	return articles_.begin();
 }
 
 database_iterator_t NewspaperEntry::get_iterator_database_end() {
-	return _articles.end();
+	return articles_.end();
 }
 
 article_data_vec NewspaperEntry::get_articles_for_time_span(my_clock::time_point time_span_begin, my_clock::time_point time_span_end) {
@@ -129,8 +128,8 @@ article_data_vec NewspaperEntry::get_articles_for_time_span(my_clock::time_point
 }
 
 timed_article_map_pair NewspaperEntry::get_newest_articles(int count) {
-	timed_article_map_iter bit = time_created_sorted_articles.rbegin();
-	timed_article_map_iter eit = time_created_sorted_articles.rend();
+	timed_article_map_iter bit = time_created_sorted_articles_.rbegin();
+	timed_article_map_iter eit = time_created_sorted_articles_.rend();
 
 	if (count <= 0) {
 		return { bit, eit };
@@ -148,8 +147,8 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(int count) {
 }
 
 timed_article_map_pair NewspaperEntry::get_newest_articles(int from, int to) {
-	timed_article_map_iter bit = time_created_sorted_articles.rbegin();
-	timed_article_map_iter eit = time_created_sorted_articles.rend();
+	timed_article_map_iter bit = time_created_sorted_articles_.rbegin();
+	timed_article_map_iter eit = time_created_sorted_articles_.rend();
 
 	if (to - from <= 0) {
 		return { bit, eit };
@@ -206,8 +205,8 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(QDate date, int count
 	QDateTime date_time = date.startOfDay(Qt::LocalTime);
 	std::int64_t epoch = date_time.toMSecsSinceEpoch();
 
-	timed_article_map_iter bit = time_created_sorted_articles.rbegin();
-	timed_article_map_iter eit = time_created_sorted_articles.rend();
+	timed_article_map_iter bit = time_created_sorted_articles_.rbegin();
+	timed_article_map_iter eit = time_created_sorted_articles_.rend();
 	timed_article_map_iter it = bit;
 
 	if (count <= 0) {
@@ -252,9 +251,9 @@ void NewspaperEntry::add_reader(pk_t id) {
 }
 
 Article& NewspaperEntry::get_article(hash_t id) {
-	auto it = _articles.find(id);
-	if (it != _articles.end()) {
-		auto& article = _articles[id];
+	auto it = articles_.find(id);
+	if (it != articles_.end()) {
+		auto& article = articles_[id];
 		remove_disconnected_readers(article);
 		return article;
 	}
@@ -263,13 +262,6 @@ Article& NewspaperEntry::get_article(hash_t id) {
 
 std::size_t NewspaperEntry::reader_count() const {
 	return readers_.size();
-}
-
-user_container_citer NewspaperEntry::get_first_authority() const {
-	return _authorities.cbegin();
-}
-std::size_t NewspaperEntry::get_authority_count() const {
-	return _authorities.size();
 }
 
 pk_t NewspaperEntry::get_id() const {
@@ -296,7 +288,7 @@ void NewspaperEntry::serialize_entry(np2ps::NewspaperEntry* entry) const {
 
 void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper, pk_t id) const {
 	serialize_entry(nserialized_ne->mutable_entry());
-	for (auto& [hash, art] : _articles) {
+	for (auto& [hash, art] : articles_) {
 		np2ps::Article* pa = nserialized_ne->add_articles();
 		art.network_serialize_article(pa);
 	}
@@ -320,7 +312,7 @@ void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEn
 void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne, bool serialize_articles) const {
 	serialize_entry(lserialized_ne->mutable_entry());
 	if (serialize_articles) {
-		for (auto& [hash, art] : _articles) {
+		for (auto& [hash, art] : articles_) {
 			np2ps::SerializedArticle* pa = lserialized_ne->add_articles();
 			art.local_serialize_article(pa);
 		}
@@ -347,14 +339,14 @@ void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry*
 }
 
 void NewspaperEntry::serialize_entry_config(np2ps::NewspaperConfig* serialized_config) const {
-	serialized_config->set_limit_read(config.article_limit_read);
-	serialized_config->set_limit_unread(config.article_limit_unread);
+	serialized_config->set_limit_read(config_.article_limit_read);
+	serialized_config->set_limit_unread(config_.article_limit_unread);
 }
 
 void NewspaperEntry::fill_time_sorted_articles() {
-	if (time_created_sorted_articles.empty()) {
-		for (auto&& article : _articles) {
-			time_created_sorted_articles.emplace(article.first, article.second.creation_time());
+	if (time_created_sorted_articles_.empty()) {
+		for (auto&& article : articles_) {
+			time_created_sorted_articles_.emplace(article.first, article.second.creation_time());
 		}
 	}
 }
@@ -401,7 +393,7 @@ void NewspaperEntry::sign_article(hash_t id) {
 	Article& article = get_article(id);
 	if (has_newspaper_private_key()) {
 		auto signature = CryptoUtils::instance().sign_with_keys(
-			get_newspaper_private_key(), article.get_crypto_hash()
+			get_newspaper_private_key(), article.crypto_hash()
 		);
 		article.set_signature(signature);
 	}
@@ -414,43 +406,43 @@ bool NewspaperEntry::verify_article_signature(hash_t id) {
 	auto& article = get_article(id);
 	return CryptoUtils::instance().verify_signature_with_keys(
 		get_newspaper_public_key(),
-		article.get_crypto_hash(),
+		article.crypto_hash(),
 		article.get_signature()
 	);
 }
 
 bool NewspaperEntry::confirmation() {
-	return confirmed;
+	return confirmed_;
 }
 
 void NewspaperEntry::set_confirmation(bool c) {
-	confirmed = c;
+	confirmed_ = c;
 }
 
 article_database_container& NewspaperEntry::get_all_articles() {
 	remove_disconnected_readers_all(false);
-	return _articles;
+	return articles_;
 }
 
 void NewspaperEntry::remove_disconnected_readers(hash_t article) {
-	Article& article_ref = _articles.at(article);
+	Article& article_ref = articles_.at(article);
 	remove_disconnected_readers(article_ref);
 }
 
 void NewspaperEntry::remove_disconnected_readers(Article& article) {
-	for (auto&& disconnected_reader : disconnected_readers_lazy_remove->users) {
+	for (auto&& disconnected_reader : disconnected_readers_lazy_remove_->users) {
 		article.readers().erase(disconnected_reader);
 	}
 }
 
 void NewspaperEntry::remove_disconnected_readers_all(bool ignore_treshold) {
-	if (disconnected_readers_lazy_remove->users.size() >= 20 || ignore_treshold) {
-		for (auto&& disconnected_reader : disconnected_readers_lazy_remove->users) {
-			for (auto&& article : _articles) {
+	if (disconnected_readers_lazy_remove_->users.size() >= 20 || ignore_treshold) {
+		for (auto&& disconnected_reader : disconnected_readers_lazy_remove_->users) {
+			for (auto&& article : articles_) {
 				remove_disconnected_readers(article.second);
 			}
 		}
-		disconnected_readers_lazy_remove->users.clear();
+		disconnected_readers_lazy_remove_->users.clear();
 	}
 }
 
@@ -473,7 +465,7 @@ void NewspaperEntry::update() {
 }
 
 std::size_t NewspaperEntry::get_article_count() {
-	return _articles.size();
+	return articles_.size();
 }
 
 void NewspaperEntry::init_coworkers() {
@@ -507,19 +499,19 @@ std::list<pk_t>& NewspaperEntry::get_coworkers() {
 }
 
 void NewspaperEntry::set_article_limit_read(std::size_t limit) {
-	config.article_limit_read = limit;
+	config_.article_limit_read = limit;
 }
 
 std::size_t NewspaperEntry::get_article_limit_read() {
-	return config.article_limit_read;
+	return config_.article_limit_read;
 }
 
 void NewspaperEntry::set_article_limit_unread(std::size_t limit) {
-	config.article_limit_unread = limit;
+	config_.article_limit_unread = limit;
 }
 
 std::size_t NewspaperEntry::get_article_limit_unread() {
-	return config.article_limit_unread;
+	return config_.article_limit_unread;
 }
 
 void NewspaperEntry::clear_abundant_articles() {
@@ -527,7 +519,7 @@ void NewspaperEntry::clear_abundant_articles() {
 	std::set<hash_t> articles_to_remove;
 	for (auto&& [article_hash, article] : get_all_articles()) {
 		if (article.get_read()) {
-			if (found_read > config.article_limit_read) {
+			if (found_read > config_.article_limit_read) {
 				articles_to_remove.emplace(article_hash);
 			}
 			else {
@@ -535,7 +527,7 @@ void NewspaperEntry::clear_abundant_articles() {
 			}
 		}
 		else {
-			if (found_unread > config.article_limit_unread) {
+			if (found_unread > config_.article_limit_unread) {
 				articles_to_remove.emplace(article_hash);
 			}
 			else {
@@ -549,17 +541,17 @@ void NewspaperEntry::clear_abundant_articles() {
 }
 
 void NewspaperEntry::set_config_read_articles_to_keep(int value) {
-	config.article_limit_read = value;
+	config_.article_limit_read = value;
 }
 
 void NewspaperEntry::set_config_unread_articles_to_keep(int value) {
-	config.article_limit_unread = value;
+	config_.article_limit_unread = value;
 }
 
 int NewspaperEntry::get_config_read_articles_to_keep() {
-	return config.article_limit_read;
+	return config_.article_limit_read;
 }
 
 int NewspaperEntry::get_config_unread_articles_to_keep() {
-	return config.article_limit_unread;
+	return config_.article_limit_unread;
 }

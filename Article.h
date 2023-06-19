@@ -44,89 +44,12 @@ enum article_format {
 	Html = 4
 };
 
-struct HashWrapper {
-	HashWrapper() = default;
-	HashWrapper(hash_t h, level_t l) {
-		hash = h;
-		paragraph_level = l;
-	}
-	hash_t hash;
-	level_t paragraph_level;
-};
-
-using hashes_container = std::map<std::int32_t, HashWrapper>;
-using hashes_vt = hashes_container::value_type;
 using string_hash = std::hash<std::string>;
 using category_container = std::set<my_string>;
 using category_container_const_ref = const category_container&;
 using category_container_const_iter = category_container::const_iterator;
 using margin_container = std::unordered_multimap<pk_t, Margin>;
 using margin_vector = std::vector<Margin>;
-
-class ParagraphIterator {
-public:
-//TODO: use stringstream
-	ParagraphIterator(std::string source_file_path, level_t l, hashes_container::iterator h) :
-		source_file_(source_file_path), level_(l), hash_iter_(std::move(h))
-	{
-		if (source_file_.is_open()) 
-			loaded_ = true;
-	}
-
-	void operator++() {
-		std::string line;
-		paragraph_.clear();
-		bool paragraph_found = false;
-		bool wrong_level_para_found = false;
-		while (std::getline(source_file_, line)) {
-			if (line.find_first_not_of( WHITESPACE ) != std::string::npos) {
-				if (hash_iter_->second.paragraph_level <= level_) {
-					//found paragraph and level checks out
-					paragraph_found = true;
-					#if defined(_WIN32) 
-						paragraph_.append(line).append("\r\n");
-					#else
-						paragraph_.append(line).append("\n");
-					#endif
-				}
-				else {
-					wrong_level_para_found = true;
-				}
-			}
-			else if ((line.find_first_not_of( WHITESPACE ) == std::string::npos) && paragraph_found) {
-				//found first empty after paragraph
-				break;
-			}
-			else if ((line.find_first_not_of( WHITESPACE ) == std::string::npos) && wrong_level_para_found) {
-				//found empty line, but paragarph wasn't processed
-				wrong_level_para_found = false;
-				hash_iter_++;
-			}
-		}
-	}
-
-	optional_my_string get() {
-		if (!paragraph_.empty())
-			return optional_my_string(paragraph_);
-		else
-			return optional_my_string();
-	}
-
-	level_t get_level() {
-		return level_;
-	}
-
-	void reset() {
-		if (source_file_.is_open())
-			source_file_.seekg(0);
-	}
-private:
-	std::fstream source_file_;
-	my_string paragraph_;
-	level_t level_;
-	hashes_container::iterator hash_iter_;
-	bool loaded_ = false;
-};
 
 /**
  * @brief Class for newspaper article representation.
@@ -162,8 +85,6 @@ public:
 	category_container_const_iter get_categories();
 	my_string get_path_to_file();
 	
-	void calculate_hashes();
-
 	/**
 	 * @brief For initialization of new articles from "scratch".
 	 * 
@@ -330,13 +251,6 @@ public:
 	bool article_present() const { return article_present_; }
 
 	/**
-	 * @brief Gets both begin and end iterators to `_hashes` container.
-	 * 
-	 * @return Pair of iterators.
-	 */
-	std::pair<hashes_container::const_iterator, hashes_container::const_iterator> hashes() const { return {_hashes.cbegin(), _hashes.cend()}; }
-
-	/**
 	 * @brief Gets the length of article.
 	 * 
 	 * @return std::size_t Length of article.
@@ -348,7 +262,9 @@ public:
 	 * 
 	 * @return Pair of iterators.
 	 */
-	std::pair<category_container::const_iterator, category_container::const_iterator> categories() const { return {_categories.cbegin(), _categories.cend()}; }
+	std::pair<category_container::const_iterator, category_container::const_iterator> categories() const {
+		return { _categories.cbegin(), _categories.cend() };
+	}
 
 	const std::set<my_string>& categories_ref() const {
 		return _categories;
@@ -359,9 +275,9 @@ public:
 	 * 
 	 * @return Pair of iterators.
 	 */
-	std::pair<margin_container::const_iterator, margin_container::const_iterator> margins() const { return {_margins.cbegin(), _margins.cend()}; }
-
-	void select_level(my_string& rv, level_t level);
+	std::pair<margin_container::const_iterator, margin_container::const_iterator> margins() const {
+		return { _margins.cbegin(), _margins.cend() };
+	}
 
 	/**
 	 * @brief Adds margin into `_margins` container.
@@ -398,7 +314,7 @@ public:
 
 	bool verify(const std::string& to_check);
 
-	std::string get_crypto_hash();
+	std::string crypto_hash();
 
 	std::uint64_t creation_time() {
 		return creation_time_;
@@ -408,27 +324,7 @@ public:
 		return modification_time_;
 	}
 
-	friend class ArticleDatabase;
-
-	std::string read_contents() {
-		QString path(_path_to_article_file.c_str());
-		QFile file;
-		file.setFileName(path);
-		file.open(QIODevice::ReadOnly); //opens the file
-		QTextStream text_stream(&file);
-		QString line, contents;
-		if (!text_stream.atEnd()) {
-			line = text_stream.readLine();
-			contents.append(line);
-			contents.append('\n');
-		}
-		while (!text_stream.atEnd()) { 
-			line = text_stream.readLine();
-			contents.append(line); //loads the article line by line
-			contents.append('\n');
-		}
-		return contents.toStdString();
-	}
+	std::string read_contents();
 
 	void network_serialize_article(np2ps::Article* art) const;
 
@@ -504,7 +400,6 @@ private:
 	pk_t _news_id; //network, local
 	hash_t _main_hash; //network, local
 	my_string _heading; //network, local
-	hashes_container _hashes; //map of hashes, UNUSED
 	std::uint64_t _length; //UNUSED
 	article_format _format; //network, local, UNUSED
 	std::set<my_string> _categories; //set of categories //network, local
