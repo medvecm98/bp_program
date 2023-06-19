@@ -64,7 +64,7 @@ public:
 
 	bool has_newspaper_public_key() const ;
 
-	void set_newspaper_public_key(CryptoPP::RSA::PublicKey pk) ;
+	void set_newspaper_public_key(CryptoPP::RSA::PublicKey public_id) ;
 
 	rsa_public_optional get_newspaper_public_key();
 
@@ -72,7 +72,7 @@ public:
 
 	bool has_newspaper_private_key() const;
 
-	void set_newspaper_private_key(CryptoPP::RSA::PrivateKey pk);
+	void set_newspaper_private_key(CryptoPP::RSA::PrivateKey public_id);
 
 	rsa_private_optional get_newspaper_private_key() ;
 

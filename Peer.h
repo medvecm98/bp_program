@@ -240,7 +240,7 @@ public:
 
 	void create_margin_request(pk_t, hash_t);
 
-	pk_t get_public_key();
+	pk_t get_public_id();
 	my_string get_name();
 
 	my_string& name();
@@ -409,7 +409,7 @@ private:
 	// reader part
 	pk_t public_identifier_;				 // public identifier of my peer
 	my_string name_;						 // name of my peer
-	std::shared_ptr<Networking> networking_; // networking, for handling sending and receiving
+	networking_ptr networking_; // networking, for handling sending and receiving
 	news_database news_;					 // list of all downloaded articles, mapped by their Newspapers
 	user_container friends_;				 // friends, sharing their newspaper entries with you
 

@@ -130,7 +130,7 @@ void Peer::init_newspaper(my_string name) {
 	auto [public_key, private_key] = CryptoUtils::instance().generate_rsa_pair();
 	news_db->second.set_newspaper_private_key(private_key);
 	news_db->second.set_newspaper_public_key(public_key);
-	news_db->second.emplace_journalist(get_public_key());
+	news_db->second.emplace_journalist(get_public_id());
 	journalist_of_.emplace(newspaper_id_);
 }
 
@@ -956,7 +956,7 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 
 void Peer::generate_successful_download_message_all_readers(const user_container& readers, pk_t from, pk_t recv_article_id) {
 	for (auto&& reader : readers) {
-		if (reader == from || reader == get_public_key() || friends_.count(reader) > 0) {
+		if (reader == from || reader == get_public_id() || friends_.count(reader) > 0) {
 			continue;
 		}
 
@@ -1423,7 +1423,7 @@ void Peer::handle_newspaper_list_request(shared_ptr_message message) {
 		networking_->enroll_message_to_be_sent(
 			MFW::RespNewspaperListFactory(
 				MFW::NewspaperListFactory(
-					get_public_key(),
+					get_public_id(),
 					message->from()
 				),
 				my_news,
@@ -1442,7 +1442,7 @@ void Peer::handle_newspaper_list_request(shared_ptr_message message) {
 		networking_->enroll_message_to_be_sent(
 			MFW::RespNewspaperListFactory(
 				MFW::NewspaperListFactory(
-					get_public_key(),
+					get_public_id(),
 					message->from()
 				),
 				news_to_send,
@@ -1465,15 +1465,15 @@ void Peer::add_new_newspaper_from_file(const std::string& path) {
 	NewspaperEntry news(news_id, &networking_->disconnected_readers_lazy_remove);
 	while (std::getline(file, line)) {
 		std::stringstream ss(line);
-		std::string ip, port, pk;
+		std::string ip, port, public_id;
 		if (!std::getline(ss, ip, ':') ||
 		    !std::getline(ss, port, ':') ||
-		    !std::getline(ss, pk)) 
+		    !std::getline(ss, public_id)) 
 		{
 			throw other_error("Invalid newspaper file format.");
 		}
 		else {
-			pk_t id = std::stoll(pk);
+			pk_t id = std::stoll(public_id);
 			news.add_reader(id);
 			networking_->enroll_new_peer(ip, id);
 		}
@@ -1530,7 +1530,7 @@ void Peer::generate_newspaper_list_request(pk_t destination) {
 	networking_->enroll_message_to_be_sent(
 		MFW::SetMessageContextRequest(
 			MFW::NewspaperListFactory(
-				get_public_key(),
+				get_public_id(),
 				destination
 			)
 		)
@@ -1750,7 +1750,7 @@ void Peer::remove_margin(hash_t article_hash, unsigned int id) {
  * 
  * @return pk_t Public identifier.
  */
-pk_t Peer::get_public_key() {
+pk_t Peer::get_public_id() {
 	return public_identifier_;
 }
 
@@ -2113,7 +2113,7 @@ void Peer::generate_news_refresh() {
 		get_networking()->enroll_message_to_be_sent(
 			MFW::ReqNewspaperListFactory(
 				MFW::NewspaperListFactory(
-					get_public_key(),
+					get_public_id(),
 					connected_peer.first
 				),
 				get_news()

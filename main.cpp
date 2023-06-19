@@ -28,7 +28,7 @@ void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramCon
 	std::ifstream file(path.c_str());
 	std::string line;
 	ctx->peer.peer_init("Test Peer", "Newspaper Test Peer");
-	int counter = ctx->peer.get_public_key() * 10;
+	int counter = ctx->peer.get_public_id() * 10;
 	while (std::getline(file, line)) { // loads articles from file, line after line
 		std::stringstream input_sstream(line);
 		std::string token;

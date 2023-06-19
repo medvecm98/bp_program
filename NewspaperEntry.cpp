@@ -355,8 +355,8 @@ bool NewspaperEntry::has_newspaper_public_key() const {
 	return newspaper_public_key_.has_value();
 }
 
-void NewspaperEntry::set_newspaper_public_key(CryptoPP::RSA::PublicKey pk) {
-	newspaper_public_key_ = {pk};
+void NewspaperEntry::set_newspaper_public_key(CryptoPP::RSA::PublicKey public_id) {
+	newspaper_public_key_ = {public_id};
 }
 
 rsa_public_optional NewspaperEntry::get_newspaper_public_key() {
@@ -374,8 +374,8 @@ bool NewspaperEntry::has_newspaper_private_key() const {
 	return newspaper_private_key_.has_value();
 }
 
-void NewspaperEntry::set_newspaper_private_key(CryptoPP::RSA::PrivateKey pk) {
-	newspaper_private_key_ = {pk};
+void NewspaperEntry::set_newspaper_private_key(CryptoPP::RSA::PrivateKey public_id) {
+	newspaper_private_key_ = {public_id};
 }
 
 rsa_private_optional NewspaperEntry::get_newspaper_private_key() {

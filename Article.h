@@ -137,7 +137,7 @@ public:
 		_news_name = news_entry.get_name();
 		_news_id = news_entry.get_id();
 		_author_name = me.get_name();
-		_author_id = me.get_public_key();
+		_author_id = me.get_public_id();
 		_heading = "";
 
 		set_version(version__);
@@ -182,7 +182,7 @@ public:
 		
 		sign_article_hash_newspaper(me.get_my_newspaper().get_newspaper_private_key());
 
-		readers_.emplace(me.get_public_key());
+		readers_.emplace(me.get_public_id());
 
 		set_flag(ArticleFlags::Present);
 		set_flag(ArticleFlags::Read);
@@ -279,11 +279,11 @@ public:
 	/**
 	 * @brief Adds margin into `_margins` container.
 	 * 
-	 * @param pk Author of the margin.
+	 * @param public_id Author of the margin.
 	 * @param margin Margin to insert.
 	 */
-	void add_margin(pk_t pk, Margin&& margin) {
-		_margins.emplace(pk, std::move(margin));
+	void add_margin(pk_t public_id, Margin&& margin) {
+		_margins.emplace(public_id, std::move(margin));
 	}
 
 	/**
@@ -298,11 +298,11 @@ public:
 	/**
 	 * @brief Gets the iterators for margins from given author.
 	 * 
-	 * @param pk Author of the margins to find.
+	 * @param public_id Author of the margins to find.
 	 * @return Pair of iterators.
 	 */
-	std::pair<margin_container::iterator, margin_container::iterator> get_range_iterators(pk_t pk) {
-		return _margins.equal_range(pk);
+	std::pair<margin_container::iterator, margin_container::iterator> get_range_iterators(pk_t public_id) {
+		return _margins.equal_range(public_id);
 	}
 
 	void set_path(const std::string& article_actual, std::size_t version = 1);

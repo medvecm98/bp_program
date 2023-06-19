@@ -81,12 +81,12 @@ public:
 	/**
  	 * @brief Update given IP.
  	 * 
- 	 * @param pk Which user IP to update.
+ 	 * @param public_id Which user IP to update.
  	 * @param ip4 IPv4 to use.
  	 * @param ip6 IPv6 to use.
  	 * @return True, if update took place.
  	 */
-	bool update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port = PORT);
+	bool update_ip(pk_t public_id, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port = PORT);
 
 	/**
 	 * @brief Updates the RSA public key for given peer.

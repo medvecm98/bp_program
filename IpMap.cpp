@@ -37,18 +37,18 @@ IpMap::IpMap(const np2ps::IpMap& ip_map_serialized) :
 
 		StringSource ss(decoded_key, true);
 		ss.TransferTo(bq);
-		RSA::PrivateKey pk;
-		pk.Load(bq);
-		private_rsa = {pk};
+		RSA::PrivateKey public_id;
+		public_id.Load(bq);
+		private_rsa = {public_id};
 	}
 }
 
-bool IpMap::add_to_map(pk_t pk, IpWrapper&& ip) {
-	return map_.emplace(pk, ip).second;
+bool IpMap::add_to_map(pk_t public_id, IpWrapper&& ip) {
+	return map_.emplace(public_id, ip).second;
 }
 
-bool IpMap::add_to_map(pk_t pk, const IpWrapper& ip) {
-	return map_.emplace(pk, ip).second;
+bool IpMap::add_to_map(pk_t public_id, const IpWrapper& ip) {
+	return map_.emplace(public_id, ip).second;
 }
 
 bool IpMap::add_to_map(pk_t id, QHostAddress& ip, std::uint16_t port) {
@@ -56,8 +56,8 @@ bool IpMap::add_to_map(pk_t id, QHostAddress& ip, std::uint16_t port) {
 	return map_.emplace(id, std::move(ipw)).second;
 }
 
-void IpMap::remove_from_map(pk_t pk) {
-	map_.erase(pk);
+void IpMap::remove_from_map(pk_t public_id) {
+	map_.erase(public_id);
 }
 
 void IpMap::enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket, bool* updated_socket) {
@@ -95,163 +95,163 @@ void IpMap::enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket, bool* updat
 	}
 }
 
-bool IpMap::update_ip(pk_t pk, const QHostAddress& ip, std::uint16_t port /*= PORT*/) {
-	if (map_.find(pk) == map_.end()) {
-		return map_.emplace(pk, IpWrapper(ip, port)).second;
+bool IpMap::update_ip(pk_t public_id, const QHostAddress& ip, std::uint16_t port /*= PORT*/) {
+	if (map_.find(public_id) == map_.end()) {
+		return map_.emplace(public_id, IpWrapper(ip, port)).second;
 	}
 	else {
-		map_.at(pk).ipv4 = ip;
-		map_.at(pk).port = port;
+		map_.at(public_id).ipv4 = ip;
+		map_.at(public_id).port = port;
 		return true;
 	}
 }
 
 
-bool IpMap::update_ip(pk_t pk, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port /*= PORT*/) {
-	if (map_.find(pk) == map_.end()) {
-		return map_.insert({pk, IpWrapper(ip4, ip6, port)}).second;
+bool IpMap::update_ip(pk_t public_id, const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port /*= PORT*/) {
+	if (map_.find(public_id) == map_.end()) {
+		return map_.insert({public_id, IpWrapper(ip4, ip6, port)}).second;
 	}
 	else {
-		map_.at(pk).ipv4 = ip4;
-		map_.at(pk).ipv6 = ip6;
-		map_.at(pk).port = port;
+		map_.at(public_id).ipv4 = ip4;
+		map_.at(public_id).ipv6 = ip6;
+		map_.at(public_id).port = port;
 		return true;
 	}
 }
 
-bool IpMap::update_rsa_public(pk_t pk, const std::string& rsa) {
-	if (map_.find(pk) == map_.end()) {
-		throw create_ip_wrapper_error(pk, "updating for RSA public");
+bool IpMap::update_rsa_public(pk_t public_id, const std::string& rsa) {
+	if (map_.find(public_id) == map_.end()) {
+		throw create_ip_wrapper_error(public_id, "updating for RSA public");
 	}
 	else {
-		map_.at(pk).add_rsa_key(rsa);
+		map_.at(public_id).add_rsa_key(rsa);
 		return true;
 	}
 }
 
-bool IpMap::update_rsa_public(pk_t pk, const CryptoPP::RSA::PublicKey& rsa) {
-	if (map_.find(pk) == map_.end()) {
-		return map_.emplace(pk, IpWrapper(rsa)).second;
+bool IpMap::update_rsa_public(pk_t public_id, const CryptoPP::RSA::PublicKey& rsa) {
+	if (map_.find(public_id) == map_.end()) {
+		return map_.emplace(public_id, IpWrapper(rsa)).second;
 	}
 	else {
-		map_.at(pk).add_rsa_key(rsa);
+		map_.at(public_id).add_rsa_key(rsa);
 		return true;
 	}
 }
 
-bool IpMap::update_eax(pk_t pk, const std::string& eax) {
-	if (map_.find(pk) == map_.end()) {
-		throw create_ip_wrapper_error(pk, "updating EAX string");
+bool IpMap::update_eax(pk_t public_id, const std::string& eax) {
+	if (map_.find(public_id) == map_.end()) {
+		throw create_ip_wrapper_error(public_id, "updating EAX string");
 	}
 	else {
-		map_.at(pk).set_eax_hex_string(eax);
+		map_.at(public_id).set_eax_hex_string(eax);
 		return true;
 	}
 }
 
-bool IpMap::update_eax(pk_t pk, CryptoPP::ByteQueue& eax) {
-	if (map_.find(pk) == map_.end()) {
-		throw create_ip_wrapper_error(pk, "updating EAX");
+bool IpMap::update_eax(pk_t public_id, CryptoPP::ByteQueue& eax) {
+	if (map_.find(public_id) == map_.end()) {
+		throw create_ip_wrapper_error(public_id, "updating EAX");
 	}
 	else {
-		map_.at(pk).add_eax_key(std::move(eax));
+		map_.at(public_id).add_eax_key(std::move(eax));
 		return true;
 	}
 }
 
-QHostAddress IpMap::get_ip4(pk_t pk) {
-	auto it = map_.find(pk);
+QHostAddress IpMap::get_ip4(pk_t public_id) {
+	auto it = map_.find(public_id);
 	if (it != map_.end()) {
 		//element was found in map
 		return it->second.ipv4;
 	}
 
-	throw create_ip_wrapper_error(pk, "getting ipv4");
+	throw create_ip_wrapper_error(public_id, "getting ipv4");
 }
 
-QHostAddress IpMap::get_ip6(pk_t pk) {
-	auto it = map_.find(pk);
+QHostAddress IpMap::get_ip6(pk_t public_id) {
+	auto it = map_.find(public_id);
 	if (it != map_.end()) {
 		//element was found in map
 		return it->second.ipv6;
 	}
 
-	throw create_ip_wrapper_error(pk, "getting ipv6");
+	throw create_ip_wrapper_error(public_id, "getting ipv6");
 }
 
-std::uint16_t IpMap::get_port(pk_t pk) {
-	auto it = map_.find(pk);
+std::uint16_t IpMap::get_port(pk_t public_id) {
+	auto it = map_.find(public_id);
 	if (it != map_.end()) {
 		//element was found in map
 		return it->second.port;
 	}
 
-	throw create_ip_wrapper_error(pk, "getting port");
+	throw create_ip_wrapper_error(public_id, "getting port");
 }
 
-rsa_public_optional IpMap::get_rsa_public(pk_t pk) {
-	auto it = map_.find(pk);
+rsa_public_optional IpMap::get_rsa_public(pk_t public_id) {
+	auto it = map_.find(public_id);
 	if (it != map_.end()) {
 		//element was found in map
 		return it->second.key_pair.first;
 	}
 
-	throw create_ip_wrapper_error(pk, "getting RSA public");
+	throw create_ip_wrapper_error(public_id, "getting RSA public");
 }
 
-eax_optional IpMap::get_eax(pk_t pk) {
-	auto it = map_.find(pk);
+eax_optional IpMap::get_eax(pk_t public_id) {
+	auto it = map_.find(public_id);
 	if (it != map_.end()) {
 		//element was found in map
 		return it->second.key_pair.second;
 	}
 
-	throw create_ip_wrapper_error(pk, "getting EAX");
+	throw create_ip_wrapper_error(public_id, "getting EAX");
 }
 
 
-bool IpMap::have_ip4(pk_t pk) {
-	auto it = map_.find(pk);
+bool IpMap::have_ip4(pk_t public_id) {
+	auto it = map_.find(public_id);
 
 	if (it != map_.end())
 		return !it->second.ipv4.isNull();
 
-	throw create_ip_wrapper_error(pk, "checking for ipv4");
+	throw create_ip_wrapper_error(public_id, "checking for ipv4");
 }
 
-bool IpMap::have_ip6(pk_t pk) {
-	auto it = map_.find(pk);
+bool IpMap::have_ip6(pk_t public_id) {
+	auto it = map_.find(public_id);
 
 	if (it != map_.end())
 		return !it->second.ipv6.isNull();
 
-	throw create_ip_wrapper_error(pk, "checking for ipv6");
+	throw create_ip_wrapper_error(public_id, "checking for ipv6");
 }
 
-bool IpMap::have_rsa_public(pk_t pk) {
-	auto it = map_.find(pk);
+bool IpMap::have_rsa_public(pk_t public_id) {
+	auto it = map_.find(public_id);
 
 	if (it != map_.end())
 		return it->second.key_pair.first.has_value();
 
-	throw create_ip_wrapper_error(pk, "checking for RSA public");
+	throw create_ip_wrapper_error(public_id, "checking for RSA public");
 }
 
-bool IpMap::have_eax(pk_t pk) {
-	auto it = map_.find(pk);
+bool IpMap::have_eax(pk_t public_id) {
+	auto it = map_.find(public_id);
 
 	if (it != map_.end())
 		return it->second.key_pair.second.has_value();
 	
-	throw create_ip_wrapper_error(pk, "checking for EAX");
+	throw create_ip_wrapper_error(public_id, "checking for EAX");
 }
 
-ip_map::iterator IpMap::get_wrapper_for_pk(pk_t pk) {
-	auto find_result = map_.find(pk);
+ip_map::iterator IpMap::get_wrapper_for_pk(pk_t public_id) {
+	auto find_result = map_.find(public_id);
 	if (find_result != map_.end()) {
 		return find_result;
 	}
-	throw create_ip_wrapper_error(pk, "getting entire wrapper");
+	throw create_ip_wrapper_error(public_id, "getting entire wrapper");
 }
 
 IpWrapper& IpMap::get_wrapper_ref(pk_t id) {
@@ -262,21 +262,21 @@ IpWrapper& IpMap::get_wrapper_ref(pk_t id) {
 	throw create_ip_wrapper_error(id, "getting wrapper ref");
 }
 
-void IpMap::set_tcp_socket(pk_t pk, QTcpSocket* tcp_socket_) {
-	if (map_.find(pk) == map_.end()) {
-		throw create_ip_wrapper_error(pk, "setting TCP socker");
+void IpMap::set_tcp_socket(pk_t public_id, QTcpSocket* tcp_socket_) {
+	if (map_.find(public_id) == map_.end()) {
+		throw create_ip_wrapper_error(public_id, "setting TCP socker");
 	}
 	else {
-		map_.at(pk).copy_tcp_socket(tcp_socket_);
+		map_.at(public_id).copy_tcp_socket(tcp_socket_);
 	}	
 }
 		
-QTcpSocket* IpMap::get_tcp_socket(pk_t pk) {
-	if (map_.find(pk) == map_.end()) {
+QTcpSocket* IpMap::get_tcp_socket(pk_t public_id) {
+	if (map_.find(public_id) == map_.end()) {
 		return NULL;
 	}
 	else {
-		return map_.at(pk).get_tcp_socket();
+		return map_.at(public_id).get_tcp_socket();
 	}	
 }
 
@@ -290,13 +290,13 @@ void IpMap::update_preferred_stun_server(pk_t who, pk_t server) {
 	}
 }
 
-bool IpMap::have_port(pk_t pk) {
-	auto it = map_.find(pk);
+bool IpMap::have_port(pk_t public_id) {
+	auto it = map_.find(public_id);
 
 	if (it != map_.end())
 		return it->second.port != 0;
 
-	throw create_ip_wrapper_error(pk, "checking for port");
+	throw create_ip_wrapper_error(public_id, "checking for port");
 }
 
 bool IpMap::update_stun_ip(pk_t pid, const QHostAddress& ip, std::uint16_t port) {

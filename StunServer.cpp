@@ -200,7 +200,7 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
     bool request_transport_found = false;
     std::uint32_t protocol;
     std::uint32_t lifetime = 600;
-    CryptoPP::RSA::PublicKey pk;
+    CryptoPP::RSA::PublicKey public_id;
     PublicKeyAttribute* pka;
 
     IpMap& ipm = networking_->ip_map_;
@@ -226,7 +226,7 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
         }
         if (attr->attribute_type == StunAttributeEnum::public_key) {
             pka = (PublicKeyAttribute*)attr.get();
-            pk = pka->get_value();
+            public_id = pka->get_value();
         }
     }
 
@@ -240,7 +240,7 @@ void StunServer::process_request_allocate(stun_header_ptr message_orig, stun_hea
         networking_->add_to_ip_map(public_identifier, socket->peerAddress());
     }
 
-    networking_->ip_map_.update_rsa_public(public_identifier, pk);
+    networking_->ip_map_.update_rsa_public(public_identifier, public_id);
 
     networking_->ip_map_.set_tcp_socket(public_identifier, socket);
 

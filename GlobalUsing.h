@@ -128,21 +128,21 @@ struct PeerInfo {
 	/**
 	 * @brief Construct a new Peer Info object.
 	 * 
-	 * @param pk Public identifier od the peer.
+	 * @param public_id Public identifier od the peer.
 	 */
-	explicit PeerInfo(pk_t pk) {
-		peer_key = pk;
+	explicit PeerInfo(pk_t public_id) {
+		peer_key = public_id;
 		peer_level = 0;
 	}
 
 	/**
 	 * @brief Construct a new Peer Info object providing the peer public ID.
 	 * 
-	 * @param pk Peer public identifier.
+	 * @param public_id Peer public identifier.
 	 * @param level Level of the peer.
 	 */
-	PeerInfo(pk_t pk, level_t level) {
-		peer_key = pk;
+	PeerInfo(pk_t public_id, level_t level) {
+		peer_key = public_id;
 		peer_level = level;
 	}
 	pk_t peer_key = 0;

@@ -51,11 +51,11 @@ struct IpWrapper {
 		preferred_stun_server = server;
 	}
 
-	explicit IpWrapper(const CryptoPP::RSA::PublicKey& pk) {
+	explicit IpWrapper(const CryptoPP::RSA::PublicKey& public_id) {
 		ipv4 = QHostAddress();
 		ipv6 = QHostAddress();
 		this->port = 0;
-		key_pair.first = {pk};
+		key_pair.first = {public_id};
 	}
 
 	explicit IpWrapper(const np2ps::IpWrapper& serialized_wrapper) : 

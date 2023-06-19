@@ -236,8 +236,8 @@ void MainWindow::on_pushButton_delete_article_clicked()
 
 void MainWindow::on_pushButton_addJournalist_clicked()
 {
-	std::size_t pk = ui->lineEdit_addJournalist->text().toULongLong();
-	ctx->peer.add_journalist(pk);
+	std::size_t public_id = ui->lineEdit_addJournalist->text().toULongLong();
+	ctx->peer.add_journalist(public_id);
 }
 
 void MainWindow::newspaper_created() {
@@ -319,7 +319,7 @@ void MainWindow::new_margin(std::string type, std::string contents) {
 	// std::cout << "Adding margin for article: " << article_selected_hash << std::endl;
 	// auto article = ctx->peer.find_article( article_selected_hash); //find article in newspaper database
 	// if (article.has_value()) { //if article was found
-	// 	article.value()->add_margin(ctx->peer.get_public_key(), Margin(type, contents, ctx->peer.get_public_key())); //add the margin with provided type and contents
+	// 	article.value()->add_margin(ctx->peer.get_public_id(), Margin(type, contents, ctx->peer.get_public_id())); //add the margin with provided type and contents
 	// }
 }
 
@@ -472,7 +472,7 @@ void MainWindow::on_comboBox_news_select_activated(int index)
     if (index != -1) {
         newspaper_updated(data.toULongLong());
     }
-	if (data.toULongLong() != ctx->peer.get_public_key()
+	if (data.toULongLong() != ctx->peer.get_public_id()
 		&& (news.last_updated() + 300000) > GlobalMethods::get_time_now()
 	) {
 		ctx->peer.generate_article_list_message(news.get_id());
@@ -565,12 +565,12 @@ void MainWindow::on_toolButton_articleList_clicked()
 {
 	QVariant data = ui->comboBox_news_select->currentData();
 	pk_t news_id = data.toULongLong();
-	if (news_id != ctx->peer.get_public_key()) {
+	if (news_id != ctx->peer.get_public_id()) {
 		NewspaperEntry& news = ctx->peer.get_news(news_id);
 		if (ui->comboBox_news_select->currentIndex() != -1) {
 			newspaper_updated(data.toULongLong());
 		}
-		if (data.toULongLong() != ctx->peer.get_public_key()) {
+		if (data.toULongLong() != ctx->peer.get_public_id()) {
 			ctx->peer.generate_article_list_message(news.get_id());
 		}
 	}
@@ -698,7 +698,7 @@ void MainWindow::print_journalist_articles() {
 	auto [articles, articles_end] = news.get_newest_articles(0);
 	for (; articles != articles_end; articles++) {
 		Article& article = news.get_article(articles->second);
-		if (article.author_id() == ctx->peer.get_public_key()) {
+		if (article.author_id() == ctx->peer.get_public_id()) {
 			QListWidgetItem* item = new QListWidgetItem(article.heading().c_str());
 			item->setData(Qt::UserRole, QVariant((qulonglong)article.main_hash()));
 			ui->listWidget_journalist_articles->addItem(item);
@@ -784,7 +784,7 @@ void MainWindow::on_pushButton_export_my_news_clicked()
 {
 	QHostAddress address(ui->lineEdit_ip_export->text());
 	QString file_name = QFileDialog::getSaveFileName(this, tr("Save File"), QDir::homePath(), tr("NP2PS news entry (*.ne.npps)"));
-	ctx->peer.save_news_to_file(file_name.toStdString(), ctx->peer.get_public_key(), address);
+	ctx->peer.save_news_to_file(file_name.toStdString(), ctx->peer.get_public_id(), address);
 }
 
 void MainWindow::on_toolButton_import_news_clicked()

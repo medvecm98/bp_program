@@ -163,7 +163,7 @@ signals:
      */
     void confirmed_newspaper(pk_t pid);
 
-    void confirmed_newspaper_pk(pk_t pid, rsa_public_optional pk);
+    void confirmed_newspaper_pk(pk_t pid, rsa_public_optional public_id);
 
 private slots:
     /**

@@ -298,7 +298,11 @@ shared_ptr_message MFW::RespCredentialsFactory(
 			msg->mutable_credentials()->set_req_ipv6(false);
 
 		if (public_key.has_value()) {
-			msg->mutable_credentials()->mutable_rsa_public_key()->set_key(CryptoUtils::instance().rsa_to_hex(public_key.value()));
+			msg->mutable_credentials()->mutable_rsa_public_key()->set_key(
+				CryptoUtils::instance().rsa_to_hex(
+					public_key.value()
+				)
+			);
 			msg->mutable_credentials()->set_req_rsa_public_key(true);
 		}
 		else
