@@ -71,13 +71,12 @@ public:
 	 * @param categories Container of categories.
 	 * @return shared_ptr_message 
 	 */
-	template <typename CategoryContainer>
-	static shared_ptr_message ReqArticleListFactory(shared_ptr_message&& msg, const CategoryContainer& categories) {
+	static shared_ptr_message ReqArticleListFactory(shared_ptr_message&& msg, const std::vector<std::string>& categories) {
 		msg->mutable_article_list()->set_all_articles(true);
 
 		msg->set_msg_ctx(np2ps::REQUEST);
 		
-		for (auto &&cat : categories) {
+		for (auto&& cat : categories) {
 			msg->mutable_article_list()->set_all_articles(false);
 			msg->mutable_article_list()->add_categories(cat);
 		}

@@ -48,6 +48,8 @@ public:
 
 		networking_->ip_map_.my_ip().add_rsa_key(key_pair.first);
 		networking_->ip_map_.private_rsa = {key_pair.second};
+
+		init_timers();
 		qobject_connect_peer();
 		peer_init();
 	}
@@ -67,6 +69,7 @@ public:
 		}
 		
 		deserialize_config(peer_serialized.config());
+		init_timers();
 		qobject_connect_peer();
 		peer_init();
 	}
@@ -90,6 +93,21 @@ public:
 
 		QObject::connect(networking_.get(), &Networking::newspaper_identified,
 						 this, &Peer::newspaper_identified);
+		QObject::connect(
+			auto_update_timer, &QTimer::timeout,
+			this, &Peer::generate_article_list_message_all_news
+		);
+		auto_update_timer->start(
+			std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::minutes(20)
+			)
+		);
+	}
+
+	void init_timers() {
+		if (!auto_update_timer) {
+			auto_update_timer = new QTimer(this);
+		}
 	}
 
 	/**
@@ -119,10 +137,10 @@ public:
 	}
 
 	void enroll_new_article(Article article, bool header_only); // add new article to list of category -> article
-	void add_new_newspaper(pk_t newspaper_key, const my_string &newspaper_name, const std::string &newspaper_ip, bool allocate_now = true);
-	void add_new_newspaper(pk_t newspaper_key, const my_string &newspaper_name, pk_t sender);
+	void add_new_newspaper(pk_t newspaper_pid, const my_string &newspaper_name, const std::string &newspaper_ip, bool allocate_now = true);
+	void add_new_newspaper(pk_t newspaper_pid, const my_string &newspaper_name, pk_t sender);
 	void add_new_newspaper(pk_t destination, pk_t news_id, my_string news_name);
-	NewspaperEntry& add_new_newspaper(pk_t newspaper_key, const my_string &newspaper_name, QHostAddress &&newspaper_ip_domain, bool allocate_now = false);
+	NewspaperEntry& add_new_newspaper(pk_t newspaper_pid, const my_string &newspaper_name, QHostAddress &&newspaper_ip_domain, bool allocate_now = false);
 	NewspaperEntry& add_new_newspaper(NewspaperEntry&& newspaper_entry, QHostAddress&& address, bool allocate_now = false);
 	void add_new_newspaper_from_file(const std::string &path);
 	void add_new_newspaper_pk(pk_t pid);
@@ -202,7 +220,8 @@ public:
 
 	void generate_article_all_message(pk_t destination, hash_t article_hash);
 	void generate_article_header_message(pk_t destination, hash_t article_hash);
-	void generate_article_list_message(pk_t newspaper_id);
+	void generate_article_list_message(pk_t newspaper_id, bool ignore_timestamp = false);
+	void generate_article_list_message_all_news();
 	void generate_newspaper_entry_request(pk_t destination, pk_t newspaper_id);
 	void generate_newspaper_list_request();
 	void generate_newspaper_list_request(pk_t destination);
@@ -230,8 +249,7 @@ public:
 
 	void init_newspaper(my_string name);
 
-	template <typename Container>
-	void generate_article_list_message(pk_t destination, const Container &categories);
+	void generate_article_list_message(pk_t destination, const std::vector<std::string> &categories);
 
 	void add_margin(hash_t article_hash, my_string type, my_string content);
 	void add_margin(hash_t article_hash, margin_vector &vm);
@@ -304,7 +322,7 @@ public slots:
 
 	void newspaper_confirm_public_key(pk_t pid, rsa_public_optional public_key);
 
-	void newspaper_identified(pk_t newspaper_key, my_string newspaper_name, std::string newspaper_ip_domain);
+	void newspaper_identified(pk_t newspaper_pid, my_string newspaper_name, std::string newspaper_ip_domain);
 
 	void slot_add_new_newspaper_from_file(QString path)
 	{
@@ -427,6 +445,8 @@ private:
 	std::unordered_set<hash_t> downloading_articles;
 	std::unordered_set<pk_t> getting_article_list;
 	std::map<std::string, pk_t> pending_journalist_requests;
+
+	QTimer* auto_update_timer = NULL;
 
 	article_optional find_article_in_database(hash_t article_hash);
 };

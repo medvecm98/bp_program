@@ -96,6 +96,8 @@ signals:
 	 */
 	void created_newspaper();
 
+	void creation_cancelled();
+
 private:
 	Ui::Form *ui;
 	ProgramContext *ctx; //program context

@@ -165,6 +165,9 @@ public slots:
 	void slot_article_updated();
 	void fill_pending_journalists();
 	void remove_pending_journalist(qulonglong pid);
+	void new_peer_creation_cancelled();
+	void save_peer();
+	void load_peer();
 
 private slots:
     void on_pushButton_loadFromFile_clicked();

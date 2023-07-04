@@ -361,6 +361,12 @@ void IpMap::add_to_ip_map(pk_t pid, IpWrapper&& wrapper) {
 	map_.emplace(pid, wrapper);
 }
 
+void IpMap::add_to_ip_map_relayed(pk_t pid) {
+	IpWrapper wrapper;
+	wrapper.set_relay_state(true);
+	map_.emplace(pid, IpWrapper());
+}
+
 std::list<std::pair<pk_t, IpWrapper>> IpMap::select_connected_randoms(int count) {
 	std::list<std::pair<pk_t, IpWrapper>> rv;
 	std::vector<std::pair<pk_t, IpWrapper>> connected;

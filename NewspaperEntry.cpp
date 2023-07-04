@@ -175,6 +175,15 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(int from, int to) {
 	return { bit, it };
 }
 
+/**
+ * @brief Get newest articles from given newspaper from given time.
+ * 
+ * To ignore timestamp and set `count` articles, set timestamp to 0.
+ * 
+ * @param articles Where to take articles from.
+ * @param count Number to newset articles to get.
+ * @param timestamp Get only newer articles than defined timestamp.
+ */
 void NewspaperEntry::get_newest_articles(article_container& articles, int count, timestamp_t timestamp) {
 	auto [bit, eit] = get_newest_articles(count);
 
@@ -187,6 +196,16 @@ void NewspaperEntry::get_newest_articles(article_container& articles, int count,
 	}
 }
 
+/**
+ * @brief Get newest articles from given newspaper from given time.
+ * 
+ * To ignore timestamp and set (to - from) articles, set timestamp to 0.
+ * 
+ * @param articles Where to take articles from.
+ * @param from Offset of articles to begin loading from.
+ * @param to Offset of articles to finish loading.
+ * @param timestamp Get only newer articles than defined timestamp.
+ */
 void NewspaperEntry::get_newest_articles(article_container& articles, int from, int to, timestamp_t timestamp) {
 	auto [bit, eit] = get_newest_articles(from, to);
 

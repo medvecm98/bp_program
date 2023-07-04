@@ -39,6 +39,7 @@ void MainWindow::newspaper_added_to_db_noarg() {
 
 void MainWindow::newspaper_added_to_db(pk_t news_id) {
 	all_newspaper_updated();
+	ctx->peer.generate_article_list_message(news_id);
 	ctx->peer.allocate_next_newspaper();
 }
 
@@ -407,9 +408,13 @@ void MainWindow::on_pushButton_save_clicked()
     np2ps::Peer serialized_peer;
     ctx->peer.serialize(&serialized_peer);
 
-    QString fileName = QFileDialog::getSaveFileName(this, tr("Save File"), QDir::homePath(), tr("NP2PS archive (*.nppsa)"));
+	QString file_name = QStandardPaths::writableLocation(
+		QStandardPaths::AppDataLocation
+	).append(
+		tr("/user_info.nppsa")
+	);
 
-    std::ofstream file(fileName.toStdString());
+    std::ofstream file(file_name.toStdString());
     serialized_peer.SerializeToOstream(&file);
 }
 
@@ -420,8 +425,13 @@ void MainWindow::on_pushButton_load_clicked()
 
 void MainWindow::on_pushButton_loadFromFile_clicked()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Newspaper File"), QDir::homePath(), tr("NP2PS newspaper (*.nppsn)"));
-    emit signal_add_new_newspaper_from_file(fileName);
+    emit signal_add_new_newspaper_from_file(
+		QStandardPaths::writableLocation(
+			QStandardPaths::AppDataLocation
+		).append(
+			tr("/user_info.nppsa")
+		)
+	);
 }
 
 void MainWindow::on_pushButtonFriends_clicked()
@@ -802,4 +812,35 @@ void MainWindow::on_spinBox_listSizeFirst_autodownload_valueChanged(int arg1)
 void MainWindow::on_spinBox_listSizeDefault_autodownload_valueChanged(int arg1)
 {
     enable_save_cancel_disable_news_select();
+}
+
+void MainWindow::new_peer_creation_cancelled() {
+	QApplication::quit();
+}
+
+void MainWindow::save_peer() {
+	np2ps::Peer serialized_peer;
+    ctx->peer.serialize(&serialized_peer);
+
+	QString file_name = QStandardPaths::writableLocation(
+		QStandardPaths::AppDataLocation
+	).append(
+		tr("/user_info.nppsa")
+	);
+
+    std::ofstream file(file_name.toStdString());
+    serialized_peer.SerializeToOstream(&file);
+}
+
+void MainWindow::load_peer() {
+	QString archive_path = QStandardPaths::writableLocation(
+			QStandardPaths::AppDataLocation
+		).append(
+			tr("/user_info.nppsa")
+		);
+
+	std::filesystem::path path(archive_path.toStdString());
+	if (std::filesystem::exists(path)) {
+		emit signal_add_new_newspaper_from_file(archive_path);
+	}
 }

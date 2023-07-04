@@ -9,6 +9,12 @@
 #include <QtNetwork/QTcpSocket>
 #include <cryptopp/filters.h>
 
+enum class RelayState {
+	Direct,
+	Relayed,
+	Unknown
+};
+
 /**
  * @brief Wrapper for IPs and RSA and EAX keys.
  * 
@@ -60,8 +66,7 @@ struct IpWrapper {
 
 	explicit IpWrapper(const np2ps::IpWrapper& serialized_wrapper) : 
 		ipv4(QHostAddress(serialized_wrapper.ipv4())),
-		port(serialized_wrapper.port()),
-		relay_flag(serialized_wrapper.relay_flag())
+		port(serialized_wrapper.port())
 	{
 		if (serialized_wrapper.has_rsa_public_key()) { //deserialize RSA public
 			using namespace CryptoPP;
@@ -73,6 +78,28 @@ struct IpWrapper {
 			using namespace CryptoPP;
 			std::string encoded_key = serialized_wrapper.eax_key();
 			set_eax_hex_string(encoded_key);
+		}
+
+		switch (serialized_wrapper.relay_state()) {
+			case np2ps::RelayState::Direct:
+				relay_state = RelayState::Direct;
+				break;
+			case np2ps::RelayState::Relayed:
+				relay_state = RelayState::Relayed;
+				break;
+			case np2ps::RelayState::Unknown:
+				relay_state = RelayState::Unknown;
+				break;
+			default:
+				throw other_error("Unknown relay state deserialized.");
+		}
+
+		for (auto&& serialized_relay_by : serialized_wrapper.relay_by()) {
+			relay_by.emplace(serialized_relay_by);
+		}
+
+		for (auto&& serialized_relay_to : serialized_wrapper.relay_to()) {
+			relay_to.emplace(serialized_relay_to);
 		}
 	}
 
@@ -118,17 +145,28 @@ struct IpWrapper {
 		return stun_port;
 	}
 
-	void set_relay_flag() {
-		std::cout << "SETTING RELAY FLAG" << std::endl;
-		relay_flag = true;
+	void set_relay_state(bool relay) {
+		std::cout << "SETTING RELAY FLAG " << std::flush;
+		if (relay) {
+			std::cout << "Relayed" << std::endl;
+			relay_state = RelayState::Relayed;
+		}
+		else {
+			std::cout << "Direct" << std::endl;
+			relay_state = RelayState::Direct;
+		}
 	}
 
-	bool get_relay_flag() {
-		return relay_flag;
+	RelayState get_relay_state() {
+		return relay_state;
 	}
 
-	void reset_relay_flag() {
-		relay_flag = false;
+	bool get_relay_state_bool() {
+		return relay_state == RelayState::Relayed;
+	}
+
+	void reset_relay_state() {
+		relay_state = RelayState::Unknown;
 	}
 
 	bool has_rsa() {
@@ -237,11 +275,38 @@ struct IpWrapper {
 		return false;
 	}
 
-	void serialize_wrapper(np2ps::IpWrapper* wrapper, bool serialize_eax = true) {
-		wrapper->set_ipv4(ipv4.toIPv4Address());
-		wrapper->set_port(port);
+	bool ip_address_is_private(const QHostAddress& address) {
+		
+		quint32 address_number = address.toIPv4Address();
 
-		if (key_pair.second.has_value() && serialize_eax) {
+		if (address_number >= QHostAddress("10.1.0.0").toIPv4Address() && 
+			address_number <= QHostAddress("10.1.255.255").toIPv4Address())
+		{
+			return true;
+		}
+
+		return false;
+
+		// if ((address_number >= QHostAddress("10.0.0.0").toIPv4Address() && 
+		// 	 address_number <= QHostAddress("10.255.255.255").toIPv4Address()) ||
+        // 	(address_number >= QHostAddress("172.16.0.0").toIPv4Address() &&
+		// 	 address_number <= QHostAddress("172.31.255.255").toIPv4Address()) ||
+        // 	(address_number >= QHostAddress("192.168.0.0").toIPv4Address() &&
+		// 	 address_number <= QHostAddress("192.168.255.255").toIPv4Address()))
+		// {
+        // 	return true;
+    	// }
+
+		// return false;
+	}
+
+	void serialize_wrapper(np2ps::IpWrapper* wrapper, bool local_serialize = true) {
+		if (local_serialize || !ip_address_is_private(ipv4)) {
+			wrapper->set_ipv4(ipv4.toIPv4Address());
+			wrapper->set_port(port);
+		}
+
+		if (key_pair.second.has_value() && local_serialize) {
 			std::string shared_key_b64 = get_eax_hex_string();
 			wrapper->set_eax_key(shared_key_b64);
 		}
@@ -251,7 +316,28 @@ struct IpWrapper {
 			wrapper->set_rsa_public_key(public_key_b64);
 		}
 
-		wrapper->set_relay_flag(relay_flag);
+		switch(relay_state) {
+			case RelayState::Direct:
+				wrapper->set_relay_state(np2ps::RelayState::Direct);
+				break;
+			case RelayState::Relayed:
+				wrapper->set_relay_state(np2ps::RelayState::Relayed);
+				break;
+			case RelayState::Unknown:
+				wrapper->set_relay_state(np2ps::RelayState::Unknown);
+				break;
+			default:
+				throw unsupported_feature("Serializing unknown relay state.");
+		}
+
+		if (local_serialize) {
+			for (auto&& relay_by_peer : relay_by) {
+				wrapper->add_relay_by(relay_by_peer);
+			}
+			for (auto&& relay_to_peer : relay_to) {
+				wrapper->add_relay_to(relay_to_peer);
+			}
+		}
 	}
 
 	//for normal traversal
@@ -271,7 +357,9 @@ struct IpWrapper {
 
 	rsa_eax_pair key_pair;	
 	
-	bool relay_flag = false;
+	RelayState relay_state = RelayState::Unknown;
+	user_container relay_to;
+	user_container relay_by;
 };
 
 using ip_map = std::unordered_map<pk_t, IpWrapper>;

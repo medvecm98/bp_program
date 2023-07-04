@@ -846,16 +846,11 @@
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QMenuBar" name="menuBar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1247</width>
-     <height>24</height>
-    </rect>
+  <action name="actionNew_peer">
+   <property name="text">
+    <string>New peer</string>
    </property>
-  </widget>
+  </action>
  </widget>
  <resources/>
  <connections/>

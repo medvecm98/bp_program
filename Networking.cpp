@@ -30,7 +30,7 @@ void send_message_using_turn(networking_ptr networking_, QByteArray& msg, pk_t t
 	stun_header_ptr new_stun_message = std::make_shared<StunMessageHeader>();
 	networking_->get_stun_client()->create_request_send(new_stun_message, msg, to);
 	networking_->get_stun_client()->send_stun_message(
-		new_stun_message, networking_->ip_map_.get_wrapper_for_pk(to)->second.preferred_stun_server
+		new_stun_message, networking_->ip_map_.get_wrapper_ref(to).preferred_stun_server
 	);
 }
 
@@ -329,8 +329,14 @@ QString read_meta_message(const QString& message) {
  * @param s_msg Message to get the init vector from, in QString form.
  * @return Initialization vector CryptoPP::SecByteBlock.
  */
-CryptoPP::SecByteBlock extract_init_vector(const QByteArray& s_msg) {
-	std::string iv_str = s_msg.mid(4).toStdString();
+CryptoPP::SecByteBlock extract_init_vector(const QByteArray& s_msg, bool message_was_direct) {
+	std::string iv_str;
+	if (message_was_direct) {
+		iv_str = s_msg.mid(4).toStdString();
+	}
+	else {
+		iv_str = s_msg.toStdString();
+	}
 	CryptoPP::SecByteBlock iv(reinterpret_cast<const CryptoPP::byte*>(&iv_str[0]), iv_str.size());
 	return std::move(iv);
 }
@@ -351,9 +357,15 @@ pk_t extract_public_identifier(const QByteArray& s_msg) {
  * @param s_msg 
  * @return std::string 
  */
-std::string extract_encrypted_message(const QByteArray& s_msg) {
+std::string extract_encrypted_message(const QByteArray& s_msg, bool message_was_direct) {
 	std::cout << "  byte array: " << s_msg.size() << std::endl;
-	std::string s_msg_string = s_msg.mid(4).toStdString();
+	std::string s_msg_string;
+	if (message_was_direct) {
+		s_msg_string = s_msg.mid(4).toStdString();
+	}
+	else {
+		s_msg_string = s_msg.toStdString();
+	}
 	std::cout << "  string: " << s_msg_string.size() << std::endl;
 	return s_msg_string;
 }
@@ -483,9 +495,11 @@ void write_plain_message(QDataStream& length_plus_msg, const std::string& serial
 }
 
 template<typename T>
-void socket_wait_for_read(QTcpSocket* np2ps_socket) {
-	while(np2ps_socket->bytesAvailable() < sizeof(T)) {
-		np2ps_socket->waitForReadyRead();
+inline void socket_wait_for_read(QTcpSocket* np2ps_socket) {
+	if (np2ps_socket) {
+		while(np2ps_socket->bytesAvailable() < sizeof(T)) {
+			np2ps_socket->waitForReadyRead();
+		}
 	}
 }
 
@@ -514,15 +528,20 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 
 			QByteArray iv_array;
 			qint64 read_size = 0;
-			while (read_size < iv_size) {
-				iv_array += np2ps_socket->read(iv_size + 4);
-				read_size = iv_array.size();
-				if (read_size < iv_size) {
-					np2ps_socket->waitForReadyRead();
+			if (np2ps_socket) {
+				while (read_size < iv_size) {
+					iv_array += np2ps_socket->read(iv_size + 4);
+					read_size = iv_array.size();
+					if (read_size < iv_size) {
+						np2ps_socket->waitForReadyRead();
+					}
 				}
 			}
+			else {
+				msg >> iv_array;
+			}
 
-			auto iv = extract_init_vector(iv_array); //init. vector
+			auto iv = extract_init_vector(iv_array, (bool)np2ps_socket); //init. vector
 
 			socket_wait_for_read<quint64>(np2ps_socket);
 			quint64 msg_size;
@@ -531,17 +550,22 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 			std::cout << "Received message payload size: " << msg_size << std::endl;
 			read_size = 0;
 			QByteArray msg_array;
-			while (read_size < msg_size) {
-				msg_array += np2ps_socket->read(msg_size - read_size + 4);
-				read_size = msg_array.size();
-				if (read_size < msg_size) {
-					np2ps_socket->waitForReadyRead();
+			if (np2ps_socket) {
+				while (read_size < msg_size) {
+					msg_array += np2ps_socket->read(msg_size - read_size + 4);
+					read_size = msg_array.size();
+					if (read_size < msg_size) {
+						np2ps_socket->waitForReadyRead();
+					}
 				}
+			}
+			else {
+				msg >> msg_array;
 			}
 			
 			// msg.commitTransaction();
 
-			auto e_msg = extract_encrypted_message(msg_array); //encrypted message
+			auto e_msg = extract_encrypted_message(msg_array, (bool)np2ps_socket); //encr. message
 			
 			//decrypt
 			auto& [ipw_pk, ipw] = *(networking_->ip_map_.get_wrapper_for_pk(pid));
@@ -601,17 +625,21 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 
 			qint64 read_size = 0;
 			QByteArray msg_array;
-			while (read_size < msg_size) {
-				msg_array += np2ps_socket->read(4 + msg_size);
-				read_size = msg_array.size();
-				if (read_size < msg_size) {
-					np2ps_socket->waitForReadyRead();
+			if (np2ps_socket) {
+				while (read_size < msg_size) {
+					msg_array += np2ps_socket->read(4 + msg_size);
+					read_size = msg_array.size();
+					if (read_size < msg_size) {
+						np2ps_socket->waitForReadyRead();
+					}
 				}
+				m->ParseFromString(msg_array.mid(4).toStdString());
+			}
+			else {
+				msg >> msg_array;
+				m->ParseFromString(msg_array.toStdString());
 			}
 
-			
-
-			m->ParseFromString(msg_array.mid(4).toStdString());
 			print_message(m, "receiving");
 
 			if (m->msg_type() == np2ps::SYMMETRIC_KEY) {
@@ -628,8 +656,13 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 				}
 			}
 			else if (m->msg_type() == np2ps::CREDENTIALS) {
-				networking_->add_to_ip_map(m->from(), np2ps_socket->peerAddress());
-				networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket); //enroll NP2PS socket for peers, that are not enrolled yet
+				if (np2ps_socket) {
+					networking_->add_to_ip_map(m->from(), np2ps_socket->peerAddress());
+					networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket); //enroll NP2PS socket for peers, that are not enrolled yet
+				}
+				else {
+					networking_->ip_map().add_to_ip_map_relayed(m->from());
+				}
 				networking_->add_to_received(std::move(m));
 			}
 			else {
@@ -637,6 +670,9 @@ void PeerReceiver::process_received_np2ps_message(QDataStream& msg, QTcpSocket* 
 			}
 		}
 		std::cout << "\nRecived message consumed." << std::endl;
+		if (!np2ps_socket) {
+			break;
+		}
 	} while (np2ps_socket->bytesAvailable() > 0);
 	msg.commitTransaction();
 	std::cout << "All subsequent messages consumed.\n" << std::endl;
@@ -650,9 +686,10 @@ PeerSender::PeerSender(networking_ptr net) {
 
 void PeerSender::try_connect(shared_ptr_message msg, IpWrapper& connectee) {
 	if (connectee.np2ps_tcp_socket_ && connectee.np2ps_tcp_socket_->isValid()) { //try, if connection isn't already established
+		connectee.set_relay_state(false); // direct communication
 		message_send(connectee.np2ps_tcp_socket_, msg, connectee, false);
 	}
-	else if (connectee.get_relay_flag()) { //if not, is relay flag set? If yes, relay the message
+	else if (connectee.get_relay_state() == RelayState::Relayed) { //if not, is relay flag set? If yes, relay the message
 		message_send(NULL, msg, connectee, true);
 	}
 	else {
@@ -669,7 +706,11 @@ void PeerSender::try_connect(shared_ptr_message msg, IpWrapper& connectee) {
 		message_waiting_for_connection = msg;
 		connectee_waiting_for_connection = connectee;
 
-		std::cout << "Connecting to host: " << connectee.ipv4.toString().toStdString() << " and port " << connectee.port << std::endl;  //try to connect to peer directly
+		std::cout << "Connecting to host: "
+			<< connectee.ipv4.toString().toStdString()
+			<< " and port "
+			<< connectee.port
+			<< std::endl;  //try to connect to peer directly
 		socket_->connectToHost(connectee.ipv4, connectee.port);
 	}
 }
@@ -702,7 +743,7 @@ void PeerSender::handle_connection_error() {
 		message_waiting_for_connection.reset();
 		connectee_waiting_for_connection = IpWrapper();
 
-		if (itemp.port != 14128) {
+		if (/*itemp.port != 14128*/ true) {
 			message_send(socket_, mtemp, itemp, true); //relay
 		}
 		else {

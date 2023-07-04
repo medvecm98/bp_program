@@ -22,54 +22,59 @@ void Peer::identify_newspaper(QHostAddress address, const std::string& newspaper
 	networking_->get_stun_client()->identify(address);
 }
 
-void Peer::newspaper_identified(pk_t newspaper_key, my_string newspaper_name, std::string newspaper_ip_domain) {
-	add_new_newspaper(newspaper_key, newspaper_name, newspaper_ip_domain);
+void Peer::newspaper_identified(pk_t newspaper_pid, my_string newspaper_name, std::string newspaper_ip_domain) {
+	add_new_newspaper(
+		newspaper_pid,
+		newspaper_name,
+		QHostAddress(QString::fromStdString(newspaper_ip_domain)),
+		true
+	);
 }
 
 /**
  * Adds new newspaper to the collection.
- * @param newspaper_key Public key of newspaper.
+ * @param newspaper_pid Public key of newspaper.
  * @param newspaper_ip_domain IP, or domain name, of the newspaper.
  */
-void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, const std::string &newspaper_ip_domain, bool allocate_now) {
-	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
+void Peer::add_new_newspaper(pk_t newspaper_pid, const my_string& newspaper_name, const std::string &newspaper_ip_domain, bool allocate_now) {
+	networking_->ip_map_.add_to_map(newspaper_pid, IpWrapper(newspaper_ip_domain));
 
-	auto news = NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove);
+	auto news = NewspaperEntry(newspaper_pid, newspaper_pid, newspaper_name, &networking_->disconnected_readers_lazy_remove);
 	news.await_confirmation = true;
 
-	newspapers_awaiting_confirmation_.emplace(newspaper_key, std::move(news));
+	newspapers_awaiting_confirmation_.emplace(newspaper_pid, std::move(news));
 	
 	if (allocate_now) {
-		networking_->get_stun_client()->allocate_request(newspaper_key);
+		networking_->get_stun_client()->allocate_request(newspaper_pid);
 	}
 }
 
 /**
  * Adds new newspaper to the collection.
- * @param newspaper_key Public key of newspaper.
+ * @param newspaper_pid Public key of newspaper.
  * @param newspaper_ip_domain IP of the newspaper.
  */
-NewspaperEntry& Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, QHostAddress&& newspaper_ip_domain, bool allocate_now) {
-	networking_->ip_map_.add_to_map(newspaper_key, IpWrapper(newspaper_ip_domain));
+NewspaperEntry& Peer::add_new_newspaper(pk_t newspaper_pid, const my_string& newspaper_name, QHostAddress&& newspaper_ip_domain, bool allocate_now) {
+	networking_->ip_map_.add_to_map(newspaper_pid, IpWrapper(newspaper_ip_domain));
 	if (allocate_now) {
-		networking_->get_stun_client()->allocate_request(newspaper_key);
-		return newspapers_awaiting_confirmation_.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove)).first->second;
+		networking_->get_stun_client()->allocate_request(newspaper_pid);
+		return newspapers_awaiting_confirmation_.emplace(newspaper_pid, NewspaperEntry(newspaper_pid, newspaper_pid, newspaper_name, &networking_->disconnected_readers_lazy_remove)).first->second;
 	}
 	else {
-		return news_.emplace(newspaper_key, NewspaperEntry(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove)).first->second;
+		return news_.emplace(newspaper_pid, NewspaperEntry(newspaper_pid, newspaper_pid, newspaper_name, &networking_->disconnected_readers_lazy_remove)).first->second;
 	}
 }
 
 /**
  * Adds new newspaper to the collection.
- * @param newspaper_key Public key of newspaper.
+ * @param newspaper_pid Public key of newspaper.
  * @param sender Sender of this NewspaperEntry.
  */
-void Peer::add_new_newspaper(pk_t newspaper_key, const my_string& newspaper_name, pk_t sender) {
-	networking_->get_stun_client()->identify(newspaper_key, sender);
-	NewspaperEntry ne(newspaper_key, newspaper_key, newspaper_name, &networking_->disconnected_readers_lazy_remove);
+void Peer::add_new_newspaper(pk_t newspaper_pid, const my_string& newspaper_name, pk_t sender) {
+	networking_->get_stun_client()->identify(newspaper_pid, sender);
+	NewspaperEntry ne(newspaper_pid, newspaper_pid, newspaper_name, &networking_->disconnected_readers_lazy_remove);
 	ne.add_reader(sender);
-	newspapers_awaiting_confirmation_.emplace(newspaper_key, std::move(ne));
+	newspapers_awaiting_confirmation_.emplace(newspaper_pid, std::move(ne));
 }
 
 NewspaperEntry& Peer::add_new_newspaper(NewspaperEntry&& newspaper_entry, QHostAddress&& address, bool allocate_now) {
@@ -413,14 +418,15 @@ void Peer::generate_article_all_message(pk_t news_id, hash_t article_hash) {
 	/* Ask article readers, if any */
 
 	if (article.readers_count() > 0) {
-		std::cout << "Readers: " << article.readers_count() << std::endl;
+		std::cout << "Asking " << article.readers_count() << " readers." << std::endl;
 		for (auto&& reader_id : article.readers()) {
 			if (get_networking()->ip_map().has_wrapper(reader_id)) {
 				auto& wrapper = get_networking()->ip_map().get_wrapper_ref(reader_id);
-				std::cout << "  reader: " << reader_id << std::endl;
+				std::cout << "  asking reader: " << reader_id << std::endl;
 				if (reader_id == author_id
 					|| reader_id == public_identifier_
-					|| !wrapper.np2ps_socket_connected()
+					|| !wrapper.np2ps_socket_connected() 
+					&& wrapper.relay_state == RelayState::Direct
 				) {
 					continue;
 				}
@@ -463,50 +469,61 @@ void Peer::generate_article_header_message(pk_t destination, hash_t article_hash
 	 * 
 	 * @param newspaper_id ID of newspaper which article list we want.
 	 */
-void Peer::generate_article_list_message(pk_t newspaper_id) {
-		getting_article_list.insert(newspaper_id);
-		emit check_selected_item();
+void Peer::generate_article_list_message(pk_t newspaper_id, bool ignore_timestamp) {
+	getting_article_list.insert(newspaper_id);
+	emit check_selected_item();
 
-		auto& news = get_news(newspaper_id);
-		const user_container& news_friends = news.get_readers();
+	auto& news = get_news(newspaper_id);
+	const user_container& news_friends = news.get_readers();
 
-		std::size_t list_size = config.list_size_default;
+	std::size_t list_size = config.list_size_default;
 
-		if (news.get_article_count() == 0) {
-			list_size = config.list_size_first;
+	if (news.get_article_count() == 0) {
+		list_size = config.list_size_first;
+	}
+
+	networking_->enroll_message_to_be_sent(
+		MFW::ReqArticleListFactory(
+			MFW::ArticleListFactory(
+				public_identifier_,
+				newspaper_id
+			),
+			newspaper_id,
+			list_size,
+			0,
+			std::vector<my_string>()
+		)
+	);
+
+	for (auto&& user : news_friends) { //send the same request to all the friends
+		if (user == newspaper_id) {
+			continue;
 		}
-
 		networking_->enroll_message_to_be_sent(
 			MFW::ReqArticleListFactory(
 				MFW::ArticleListFactory(
 					public_identifier_,
-					newspaper_id
+					user
 				),
 				newspaper_id,
 				list_size,
 				news.last_updated(),
 				std::vector<my_string>()
 			)
-		);
-
-		for (auto&& user : news_friends) { //send the same request to all the friends
-			if (user == newspaper_id) {
-				continue;
-			}
-			networking_->enroll_message_to_be_sent(
-				MFW::ReqArticleListFactory(
-					MFW::ArticleListFactory(
-						public_identifier_,
-						user
-					),
-					newspaper_id,
-					list_size,
-					news.last_updated(),
-					std::vector<my_string>()
-				)
-			);	
-		}
+		);	
 	}
+}
+
+void Peer::generate_article_list_message_all_news() {
+	std::cout << "Auto updating news" << std::endl;
+	for (auto&& [news_id, news] : news_) {
+		if (news_id == get_public_id()) {
+			continue;
+		}
+		std::cout << "  id: " << news_id << std::endl;
+		generate_article_list_message(news_id, true);
+	}
+}
 
 /**
  * @brief Handler for messages of context "one way".
@@ -824,7 +841,7 @@ void Peer::handle_credentials_request(shared_ptr_message message) {
 }
 
 bool verify_article_hash(Article& article, shared_ptr_message message) {
-	std::cout << "Article " << article.main_hash() << " verification " << std::flush;
+	std::cout << "Article " << article.main_hash() << " verification" << std::flush;
 	if (article.verify(message->article_all().article_actual())) {
 		std::cout << " succeeded." << std::endl;
 		return true;
@@ -835,7 +852,7 @@ bool verify_article_hash(Article& article, shared_ptr_message message) {
 }
 
 bool verify_article_news_signature(Article& article, NewspaperEntry& news) {
-	std::cout << "Article " << article.main_hash() << " verification for news " << news.get_id() << std::flush;
+	std::cout << "Article " << article.main_hash() << " verification for news" << news.get_id() << std::flush;
 	if (article.verify_news_signature(news.get_newspaper_public_key())) {
 		std::cout << " succeeded." << std::endl;
 		return true;
@@ -987,13 +1004,14 @@ void check_add_article_to_news(shared_ptr_message message, NewspaperEntry& news,
 	};
 
 	try { //try finding received article from article list in article database
-		auto& present_article = news.get_article(article.main_hash());
-		if (present_article.modification_time() >= article.modification_time()) { //if received article is newer, replace it
+		auto& local_article = news.get_article(article.main_hash());
+		local_article.update_metadata(article);
+		if (local_article.modification_time() < article.modification_time()) { //if received article is newer, replace it
 			news.remove_article(article.main_hash());
 			add_to_news();
 		}
 		else {
-			present_article.add_reader(message->from());
+			local_article.add_reader(message->from());
 		}
 	}
 	catch (article_not_found_database& e) { //if it wasn't found, add it
@@ -1014,7 +1032,9 @@ void Peer::handle_article_list_response(shared_ptr_message message) {
 		news.update();
 		auto [bit,eit] = news.get_newest_articles(slot_get_config_peer_article_list_default_total());
 		for (; bit != eit; bit++) {
-			generate_article_all_message(list_news_id, bit->second);
+			if (news.get_article(bit->second).is_header_only()) {
+				generate_article_all_message(list_news_id, bit->second);
+			}
 		}
 		emit new_article_list(list_news_id);
 	}
@@ -1518,6 +1538,24 @@ void Peer::print_contents() {
 			std::cout << "  I am NOT journalist." << std::endl;
 		}
 	}
+	auto connected = get_networking()->ip_map().select_connected(0);
+	for (auto&& [c_pk, c_wrapper] : connected) {
+		std::cout << "Peer " << c_pk << " is in relaying state: " << std::flush;
+		switch(c_wrapper.relay_state) {
+			case RelayState::Direct:
+				std::cout << " Direct." << std::endl;
+				break;
+			case RelayState::Relayed:
+				std::cout << " Relayed." << std::endl;
+				break;
+			case RelayState::Unknown:
+				std::cout << " Unknown." << std::endl;
+				break;
+			default:
+				std::cout << std::endl;
+				break;
+		}
+	}
 }
 
 void Peer::generate_newspaper_list_request() {
@@ -1605,10 +1643,9 @@ void Peer::set_my_ip(QString ip) {
  * @param destination ID of newspaper which article list we want.
  * @param categories Categories we want.
  */
-template<typename Container>
-void Peer::generate_article_list_message(pk_t destination, const Container& categories) {
+void Peer::generate_article_list_message(pk_t destination, const std::vector<std::string>& categories) {
 	networking_->enroll_message_to_be_sent(
-		MFW::ReqArticleListFactory<Container>(
+		MFW::ReqArticleListFactory(
 			MFW::ArticleListFactory(
 				public_identifier_,
 				destination

@@ -19,7 +19,10 @@ void add_newspaper::clear_all_lineEdit() {
 }
 
 void add_newspaper::on_buttonBox_accepted() {
-	ctx->peer.identify_newspaper(QHostAddress(ui->lineEdit_ip->text()), ui->lineEdit_name->text().toStdString());
+	ctx->peer.identify_newspaper(
+		QHostAddress(ui->lineEdit_ip->text()),
+		ui->lineEdit_name->text().toStdString()
+	);
 
 	clear_all_lineEdit();
 	this->hide();

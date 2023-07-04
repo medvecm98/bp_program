@@ -22,22 +22,6 @@
 #include "CryptoUtils.hpp"
 #include "Margins.h"
 
-#define COMMENT_ "[NScomment]:"
-#define BEGIN_HEADER_ "**BEGIN_HEADER**"
-#define END_HEADER_ "**END_HEADER**"
-#define BEGIN_HASH_ "**BEGIN_HASH**"
-#define END_HASH_ "**END_HASH**"
-#define HEADER_MAIN_HASH_ "*MAIN_HASH*"
-#define HEADER_FILE_PATH_ "*FILE_PATH*"
-#define HEADER_CATEGORIES_ "*CATEGORY*"
-#define HEADER_AUTHOR_NAME_ "*AUTHOR_NAME*"
-#define HEADER_AUTHOR_ID_ "*AUTHOR_ID*"
-#define COMMENT_DELIM_ '#'
-#define HASH_ "[NShash]:"
-#define CATEGORY_DELIMITER_ ';'
-
-#define WHITESPACE " \t\r\n\v\f"
-
 enum article_format {
 	PlainText = 0,
 	Markdown = 1,
@@ -163,6 +147,7 @@ public:
 
 
 		/* main hash, is calculated and found here: */
+		set_flag(ArticleFlags::Present);
 
 		std::string article_full = normalize_article_and_calculate_crypto_hash().toStdString();
 		CryptoPP::AutoSeededRandomPool prng;
@@ -184,7 +169,6 @@ public:
 
 		readers_.emplace(me.get_public_id());
 
-		set_flag(ArticleFlags::Present);
 		set_flag(ArticleFlags::Read);
 	}
 

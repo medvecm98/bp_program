@@ -51,4 +51,5 @@ void Form::on_buttonBox_rejected()
     ui->lineEdit_newspaper_name->clear();
     ui->checkBox_create_newspaper->setChecked(false);
     this->hide();
+	emit creation_cancelled();
 }

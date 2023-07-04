@@ -300,6 +300,7 @@ public:
 
 	void add_to_ip_map(pk_t pid, const IpWrapper& wrapper);
 	void add_to_ip_map(pk_t pid, IpWrapper&& wrapper);
+	void add_to_ip_map_relayed(pk_t pid);
 
 	void add_or_update_to_ip_map(pk_t pid, const IpWrapper& wrapper);
 

@@ -123,6 +123,7 @@ int main(int argc, char *argv[]) {
 	QObject::connect(f, &Form::enable_add_newspaper, &w, &MainWindow::enable_add_news);
 	QObject::connect(f, &Form::disable_new_peer, &w, &MainWindow::disable_new_peer);
 	QObject::connect(f, &Form::created_newspaper, &w, &MainWindow::newspaper_created);
+	QObject::connect(f, &Form::creation_cancelled, &w, &MainWindow::new_peer_creation_cancelled);
 
 	QObject::connect(&w, &MainWindow::add_margin, am, &AddMargin::show_this);
 	QObject::connect(am, &AddMargin::new_margin, &w, &MainWindow::new_margin);
@@ -131,6 +132,7 @@ int main(int argc, char *argv[]) {
 	QObject::connect(&w, &MainWindow::signal_edit_article, ea, &EditArticle::showa);
 	QObject::connect(ea, &EditArticle::signal_article_updated, &ctx->peer, &Peer::update_article);
 	QObject::connect(&ctx->peer, &Peer::signal_article_updated, &w, &MainWindow::slot_article_updated);
+	QObject::connect(&a, &QApplication::lastWindowClosed, &w, &MainWindow::save_peer);
 
 	f->setProgramContext(ctx.get());
 	w.addForm("new_peer", f);
@@ -156,6 +158,12 @@ int main(int argc, char *argv[]) {
 	}
 
 	w.show();
+
+	if (!loaded) {
+		f->setWindowFlags(Qt::WindowStaysOnTopHint);
+		f->setWindowModality(Qt::ApplicationModal);
+		f->show();
+	}
 
 	return a.exec();
 }

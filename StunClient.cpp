@@ -125,12 +125,48 @@ void StunClient::host_connected() {
         std::cout << "SC: Error occured while writing the block" << std::endl;
 }
 
+void print_stun_message(stun_header_ptr stun_message_header) {
+    std::cout << "STUN " << std::flush;
+    if (stun_message_header->stun_class == StunClassEnum::request) {
+        std::cout << "request " << std::flush;
+    }
+    else if (stun_message_header->stun_class == StunClassEnum::response_success) {
+        std::cout << "success response " << std::flush;
+    }
+    else if (stun_message_header->stun_class == StunClassEnum::response_error) {
+        std::cout << "error response " << std::flush;
+    }
+    else if (stun_message_header->stun_class == StunClassEnum::indication) {
+        std::cout << "indication " << std::flush;
+    }
+    else {
+        std::cout << "unknown class " << std::flush;
+    }
+    if (stun_message_header->stun_method == StunMethodEnum::binding) {
+        std::cout << "binding " << std::flush;
+    }
+    else if (stun_message_header->stun_method == StunMethodEnum::allocate) {
+        std::cout << "allocate " << std::flush;
+    }
+    else if (stun_message_header->stun_method == StunMethodEnum::identify) {
+        std::cout << "identify " << std::flush;
+    }
+    else if (stun_message_header->stun_method == StunMethodEnum::send) {
+        std::cout << "send " << std::flush;
+    }
+    else {
+        std::cout << "unknown method " << std::flush;
+    }
+    std::cout << std::endl;
+}
+
 /**
  * @brief Handles received STUN message.
  * 
  * @param stun_message_header Message received.
  */
 void StunClient::handle_received_message(stun_header_ptr stun_message_header, QTcpSocket* socket) {
+    print_stun_message(stun_message_header);
     if (stun_message_header->stun_class == StunClassEnum::response_success) {
         if (stun_message_header->stun_method == StunMethodEnum::binding) {
             // QString client_IP;
@@ -430,7 +466,7 @@ void StunClient::identify(pk_t who) {
         IpWrapper& ipw = networking_->ip_map().get_wrapper_ref(who);
         auto preferred_stun_server = ipw.preferred_stun_server;
         if (preferred_stun_server == 0) {
-            send_stun_message(msg, get_stun_server_any());
+            send_stun_message(msg, get_stun_server_front());
         }
         else {
             send_stun_message(msg, preferred_stun_server);
@@ -443,7 +479,7 @@ void StunClient::identify(pk_t who) {
                   << e.what()
                   << std::endl;
         std::cout << "Sending to another STUN server." << std::endl;
-        send_stun_message(msg, get_stun_server_any());
+        send_stun_message(msg, get_stun_server_next());
     }
 }
 
@@ -512,8 +548,13 @@ void StunClient::process_indication_send(stun_header_ptr stun_message, std::stri
 
     np2ps_message = data->get_np2ps_messsage();
 
-    networking_->ip_map_.update_preferred_stun_server(pia->get_public_identifier(), ria->get_public_identifier());
-    networking_->ip_map_.get_wrapper_for_pk(pia->get_public_identifier())->second.set_relay_flag();
+    networking_->ip_map_.update_preferred_stun_server(
+        pia->get_public_identifier(),
+        ria->get_public_identifier()
+    );
+    networking_->ip_map_.get_wrapper_for_pk(
+        pia->get_public_identifier()
+    )->second.set_relay_state(true); // relaying
 }
 
 void StunClient::delete_disconnected_users() {
