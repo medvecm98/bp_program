@@ -562,6 +562,10 @@ void Peer::handle_one_way(shared_ptr_message msg) {
 	else if (type == np2ps::ARTICLE_ALL) {
 		handle_article_all_one_way(msg);
 	}
+	else if (type == np2ps::PING) {
+		/* Pinging requires no further action. */
+		return;
+	}
 	else {
 		throw unsupported_message_type_in_context("Peer received a message type that is unsupported in given context");
 	}
@@ -1082,6 +1086,7 @@ void Peer::handle_credentials_response(shared_ptr_message message) {
 
 	auto& messages_waiting_for_credentials = get_networking()->messages_waiting_for_credentials;
 	if (messages_waiting_for_credentials.count(message->from()) > 0) {
+		/* process messages, that are waiting for sender's credentials */
 		auto [bit, eit] = messages_waiting_for_credentials.equal_range(message->from());
 		std::vector<decltype(bit)> to_erase;
 		for (; bit != eit; bit++) {
@@ -2287,4 +2292,22 @@ int Peer::slot_get_config_peer_article_list_first_total() {
 
 int Peer::slot_get_config_peer_article_list_default_total() {
 	return config.list_size_first * config.first_percent_autodownload / 100;
+}
+
+void Peer::generate_ping_one_way(pk_t to) {
+	get_networking()->enroll_message_to_be_sent(
+		MFW::SetMessageContextOneWay(
+			MFW::PingFactory(
+				get_public_id(),
+				to
+			)
+		)
+	);
+}
+
+void Peer::ping_direct_peers() {
+	auto direct_peers = get_networking()->ip_map().select_direct(-1);
+	for (auto &[peer_id, peer_wrapper] : direct_peers) {
+		generate_ping_one_way(peer_id);
+	}
 }

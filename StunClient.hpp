@@ -155,6 +155,16 @@ public:
      */
     void create_request_send(stun_header_ptr stun_message, QByteArray& msg, pk_t where);
 
+    /**
+     * @brief Process the Send indication.
+     * 
+     * Relays the message to PeerReceiver.
+     * 
+     * @param stun_message STUN message to process.
+     * @param np2ps_message Relayed NP2PS message.
+     */
+    pk_t process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message);
+
 signals:
     /**
      * @brief Newspapers were confirmed through response success allocate.
@@ -260,15 +270,11 @@ private:
      */
     void process_response_success_binding(stun_header_ptr stun_message, QTcpSocket* socket_);
 
-    /**
-     * @brief Process the Send indication.
-     * 
-     * Relays the message to PeerReceiver.
-     * 
-     * @param stun_message STUN message to process.
-     * @param np2ps_message Relayed NP2PS message.
-     */
-    void process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message);
+    
+
+    void process_response_success_send(stun_header_ptr stun_message);
+
+    void process_response_error_send(stun_header_ptr stun_message);
 
     /**
      * @brief Process the Allocate response error.

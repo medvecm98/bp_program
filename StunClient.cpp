@@ -196,10 +196,10 @@ void StunClient::handle_received_message(stun_header_ptr stun_message_header, QT
     else if (stun_message_header->stun_class == StunClassEnum::indication) {
         if (stun_message_header->stun_method == StunMethodEnum::send) {
             std::string np2ps_message;
-            process_indication_send(stun_message_header, np2ps_message);
+            pk_t relayer = process_indication_send(stun_message_header, np2ps_message);
             QByteArray msg(np2ps_message.c_str(), np2ps_message.length());
             QDataStream stream(msg);
-            networking_->pass_message_to_receiver(stream);
+            networking_->pass_message_to_receiver(stream, relayer);
         }
     }
     else {
@@ -326,6 +326,10 @@ void StunClient::process_response_success_identify(stun_header_ptr stun_message)
     networking_->ip_map_.update_ip(pia->get_public_identifier(), QHostAddress(xraa->get_address()), xraa->get_port());
     networking_->ip_map_.get_wrapper_for_pk(pia->get_public_identifier())->second.preferred_stun_server = ria->get_public_identifier();
     networking_->ip_map_.update_rsa_public(pia->get_public_identifier(), pka->get_value());
+    networking_->ip_map_.check_or_add_to_ip_map_relayed(
+        pia->get_public_identifier(),
+        ria->get_public_identifier()
+    );
 
     auto find_it_waiting_ip = networking_->waiting_ip.find(pia->get_public_identifier());
 
@@ -354,6 +358,7 @@ void StunClient::process_response_success_identify(stun_header_ptr stun_message)
         emit networking_->newspaper_identified(ria->get_public_identifier(), name, ip);
         return;
     }
+
 
     emit confirmed_newspaper(pia->get_public_identifier());
 }
@@ -461,26 +466,32 @@ void StunClient::process_response_success_binding(stun_header_ptr stun_message, 
 
 void StunClient::identify(pk_t who) {
     auto msg = std::make_shared<StunMessageHeader>();
+
     create_request_identify(msg, who);
-    try {
-        IpWrapper& ipw = networking_->ip_map().get_wrapper_ref(who);
-        auto preferred_stun_server = ipw.preferred_stun_server;
-        if (preferred_stun_server == 0) {
-            send_stun_message(msg, get_stun_server_front());
-        }
-        else {
-            send_stun_message(msg, preferred_stun_server);
-        }
+    for (int i = 0; i < stun_servers.size(); i++) {
+        stun_servers.push(stun_servers.front());
+        send_stun_message(msg, stun_servers.front());
+        stun_servers.pop();
     }
-    catch (user_not_found_in_database& e) {
-        std::cout << "Failed to connect to peer "
-                  << who
-                  << " when attempting to establish STUN connection. "
-                  << e.what()
-                  << std::endl;
-        std::cout << "Sending to another STUN server." << std::endl;
-        send_stun_message(msg, get_stun_server_next());
-    }
+    // try {
+    //     IpWrapper& ipw = networking_->ip_map().get_wrapper_ref(who);
+    //     auto preferred_stun_server = ipw.preferred_stun_server;
+    //     if (preferred_stun_server == 0) {
+    //         send_stun_message(msg, get_stun_server_front());
+    //     }
+    //     else {
+    //         send_stun_message(msg, preferred_stun_server);
+    //     }
+    // }
+    // catch (user_not_found_in_database& e) {
+    //     std::cout << "Failed to connect to peer "
+    //               << who
+    //               << " when attempting to establish STUN connection. "
+    //               << e.what()
+    //               << std::endl;
+    //     std::cout << "Sending to another STUN server." << std::endl;
+    //     send_stun_message(msg, get_stun_server_next());
+    // }
 }
 
 void StunClient::identify(pk_t who, pk_t where) {
@@ -529,7 +540,7 @@ void StunClient::add_stun_server(QTcpSocket* tcp_socket_, pk_t pid) {
     stun_servers.push(pid);
 }
 
-void StunClient::process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message) {
+pk_t StunClient::process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message) {
     PublicIdentifierAttribute* pia;
     RelayedPublicIdentifierAttribute* ria;
     DataAttribute* data;
@@ -555,6 +566,66 @@ void StunClient::process_indication_send(stun_header_ptr stun_message, std::stri
     networking_->ip_map_.get_wrapper_for_pk(
         pia->get_public_identifier()
     )->second.set_relay_state(true); // relaying
+
+    return ria->get_public_identifier();
+}
+
+void StunClient::process_response_success_send(stun_header_ptr stun_message) {
+    PublicIdentifierAttribute* pia;
+    RelayedPublicIdentifierAttribute* ria;
+
+    for (auto&& attr : stun_message->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::public_identifier) {
+            pia = (PublicIdentifierAttribute*) attr.get();
+        }
+        if (attr->attribute_type == StunAttributeEnum::relayed_publid_identifier) { //server
+            ria = (RelayedPublicIdentifierAttribute*) attr.get();
+        }
+    }
+
+    networking_->ip_map().check_or_add_to_ip_map_relayed(
+        pia->get_public_identifier(),
+        ria->get_public_identifier()
+    );
+
+    networking_->stun_message_success(pia->get_public_identifier());
+}
+
+void StunClient::process_response_error_send(stun_header_ptr stun_message) {
+    PublicIdentifierAttribute* pia;
+    RelayedPublicIdentifierAttribute* ria;
+    ErrorCodeAttribute* err;
+
+    for (auto&& attr : stun_message->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::public_identifier) {
+            pia = (PublicIdentifierAttribute*) attr.get();
+        }
+        if (attr->attribute_type == StunAttributeEnum::relayed_publid_identifier) { //server
+            ria = (RelayedPublicIdentifierAttribute*) attr.get();
+        }
+        if (attr->attribute_type == StunAttributeEnum::error_code) {
+            err = (ErrorCodeAttribute*) attr.get();
+        }
+    }
+
+    networking_->ip_map().check_or_add_to_ip_map_relayed(
+        pia->get_public_identifier(),
+        ria->get_public_identifier()
+    );
+
+    switch (err->get_code()) {
+        case STUN_ERR_USE_OTHER_SERVER:
+            networking_->ip_map().check_and_remove_relayed(
+                pia->get_public_identifier(),
+                ria->get_public_identifier()
+            );
+            networking_->resend_stun_message(pia->get_public_identifier());
+            break;
+        case STUN_ERR_PEER_OFFLINE:
+            break;
+        default:
+            break;
+    }
 }
 
 void StunClient::delete_disconnected_users() {

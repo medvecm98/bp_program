@@ -3,6 +3,15 @@
 
 #include "StunMessages.hpp"
 
+#define STUN_ERR_USE_OTHER_SERVER 300
+#define STUN_ERR_MALFORMED 400
+#define STUN_ERR_INCORRECT_CREDS 401
+#define STUN_ERR_UNKNOWN_COMPREHENSION_REQ_ATTR 420
+#define STUN_ERR_INVALID_NONCE 438
+#define STUN_ERR_PEER_OFFLINE 499
+#define STUN_ERR_TEMP_ERROR 500
+
+
 /**
  * @brief Class for STUN ErrorCode attribute.
  * 
@@ -57,6 +66,10 @@ public:
      * @param output Stream to write the STUN attribute into.
      */
     virtual void write_stun_attribute(QDataStream&) override;
+
+    std::uint32_t get_code() {
+        return error_code;
+    }
 
 private:
     std::uint32_t error_code; //error code of the error

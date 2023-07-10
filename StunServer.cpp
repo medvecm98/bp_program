@@ -47,51 +47,72 @@ void StunServer::reply() {
     in_stream.setDevice(socket);
     in_stream.startTransaction();
 
-    try {
-        stun_message->read_message_header(in_stream);
-        stun_message->read_attributes(in_stream, stun_attribute_factories);
-        in_stream.commitTransaction();
+    do {
+        try {
+            stun_message->read_message_header(in_stream);
+            stun_message->read_attributes(in_stream, stun_attribute_factories);
+            in_stream.commitTransaction();
 
-        if (stun_message->stun_class == StunClassEnum::request) {
-            if (stun_message->stun_method == StunMethodEnum::binding) {
-                // auto mp = MPProcess<CRequestTag, MBindingTag>(stun_message, stun_new, socket, unknown_cr_attributes);
-                // MessageProcessor<CRequestTag, MBindingTag>::process(mp);
-            }
-            else if (stun_message->stun_method == StunMethodEnum::allocate) {
-                process_request_allocate(stun_message, stun_new, socket);
-            }
-            else if (stun_message->stun_method == StunMethodEnum::identify) {
-                process_request_identify(stun_message, stun_new);
-            }
-            else if (stun_message->stun_method == StunMethodEnum::send) {
-                pk_t to;
-                process_request_send(stun_message, stun_new, to);
-                socket = networking_->ip_map_.get_wrapper_for_pk(to)->second.tcp_socket_;
-            }
-        }
-        else if (stun_message->stun_class == StunClassEnum::indication) {
-            if (stun_message->stun_method == StunMethodEnum::binding) {
-                //no work here
-            }
-        }
-        else {
-            throw invalid_stun_message_format_error("Invalid message received.");
-        }
+            if (stun_message->stun_class == StunClassEnum::request) {
+                if (stun_message->stun_method == StunMethodEnum::binding) {
+                    // auto mp = MPProcess<CRequestTag, MBindingTag>(stun_message, stun_new, socket, unknown_cr_attributes);
+                    // MessageProcessor<CRequestTag, MBindingTag>::process(mp);
+                }
+                else if (stun_message->stun_method == StunMethodEnum::allocate) {
+                    process_request_allocate(stun_message, stun_new, socket);
+                }
+                else if (stun_message->stun_method == StunMethodEnum::identify) {
+                    process_request_identify(stun_message, stun_new);
+                }
+                else if (stun_message->stun_method == StunMethodEnum::send) {
+                    pk_t to;
+                    process_request_send(stun_message, stun_new, to);
+                    try {
+                        auto socket_sender = socket;
+                        auto& wrapper = networking_->ip_map_.get_wrapper_ref(to);
+                        socket = wrapper.tcp_socket_;
+                        if (wrapper.relay_state == RelayState::Relayed && wrapper.has_relay_stun_servers()) {
+                            // networking_->add_waiting_stun_message(to, stun_new);
 
-        send_stun_message(socket, stun_new);
-    }
-    catch (invalid_stun_message_format_error de) {
-        in_stream.abortTransaction();
-    }
-    catch (unknown_comprehension_required_attribute_error u) {
-        send_error(420, socket, socket->peerAddress(), socket->peerPort());
-    }
+                        }
+                        else if (!socket || !socket->isValid() && wrapper.relay_state == RelayState::Direct) {
+                            create_response_error_send(stun_message, stun_new, STUN_ERR_PEER_OFFLINE, to);
+                        }
+                        else {
+                            stun_header_ptr stun_new_success_send = std::make_shared<StunMessageHeader>();
+                            create_response_success_send(stun_message, stun_new_success_send, to);
+                            send_stun_message(socket_sender, stun_new_success_send);
+                        }
+                    }
+                    catch (user_not_found_in_database unfid) {
+                        create_response_error_send(stun_message, stun_new, STUN_ERR_USE_OTHER_SERVER, to);
+                    }
+                }
+            }
+            else if (stun_message->stun_class == StunClassEnum::indication) {
+                if (stun_message->stun_method == StunMethodEnum::binding) {
+                    //no work here
+                }
+            }
+            else {
+                throw invalid_stun_message_format_error("Invalid message received.");
+            }
+
+            send_stun_message(socket, stun_new);
+        }
+        catch (invalid_stun_message_format_error de) {
+            in_stream.abortTransaction();
+        }
+        catch (unknown_comprehension_required_attribute_error u) {
+            send_error(STUN_ERR_UNKNOWN_COMPREHENSION_REQ_ATTR, socket, socket->peerAddress(), socket->peerPort());
+        }
+    } while (socket->bytesAvailable() > 0);
 }
 
 void StunServer::send_error(std::size_t error_no, QTcpSocket* socket, QHostAddress address, quint16 port) {
     stun_header_ptr stun_new = std::make_shared<StunMessageHeader>();
 
-    if (error_no == 420) {
+    if (error_no == STUN_ERR_UNKNOWN_COMPREHENSION_REQ_ATTR) {
         std::shared_ptr<ErrorCodeAttribute> error_code_attr = std::make_shared<ErrorCodeAttribute>();
         error_code_attr->set_error_code(error_no);
         error_code_attr->set_reason();
@@ -309,6 +330,42 @@ void StunServer::create_indication_send(stun_header_ptr message_orig, stun_heade
     auto qa = QByteArray::fromStdString(np2ps_message);
     data->initialize(qa, message_new.get());
     message_new->append_attribute(data);
+
+    message_new->copy_tid(message_orig);
+}
+
+void StunServer::create_response_error_send(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint16_t code, pk_t target_pid) {
+    message_new->stun_class = StunClassEnum::response_error;
+    message_new->stun_method = StunMethodEnum::send;
+
+    auto pia = std::make_shared<PublicIdentifierAttribute>();
+    pia->initialize(target_pid, message_new.get());
+    message_new->append_attribute(pia);
+
+    auto ria = std::make_shared<RelayedPublicIdentifierAttribute>();
+    ria->initialize(networking_->get_peer_public_id(), message_new.get());
+    message_new->append_attribute(ria);
+
+    auto err = std::make_shared<ErrorCodeAttribute>();
+    err->initialize(0, message_new.get());
+    err->set_error_code(code);
+    err->set_reason();
+    message_new->append_attribute(err);
+
+    message_new->copy_tid(message_orig);
+}
+
+void StunServer::create_response_success_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t target_pid) {
+    message_new->stun_class = StunClassEnum::response_success;
+    message_new->stun_method = StunMethodEnum::send;
+
+    auto pia = std::make_shared<PublicIdentifierAttribute>();
+    pia->initialize(target_pid, message_new.get());
+    message_new->append_attribute(pia);
+
+    auto ria = std::make_shared<RelayedPublicIdentifierAttribute>();
+    ria->initialize(networking_->get_peer_public_id(), message_new.get());
+    message_new->append_attribute(ria);
 
     message_new->copy_tid(message_orig);
 }

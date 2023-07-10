@@ -55,8 +55,10 @@ std::uint16_t XorRelayedAddressAttribute::initialize(StunMessageHeader* header, 
 std::uint16_t XorRelayedAddressAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {
     std::uint16_t read_length = StunMessageAttribute::read_stun_attribute(input, length, type);
 
-    input >> address_family >> tcp_port;
-
+    StunMessageAttribute::socket_wait_for_read<std::uint16_t>((QTcpSocket*)input.device());
+    input >> address_family;
+    StunMessageAttribute::socket_wait_for_read<std::uint16_t>((QTcpSocket*)input.device());
+    input >> tcp_port;
 
     read_length += 4;
 

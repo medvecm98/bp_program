@@ -143,6 +143,27 @@ public:
      */
     virtual void unpad(QDataStream& input, std::uint16_t length);
 
+    template<typename T>
+    inline void socket_wait_for_read(QTcpSocket* device) {
+        if (device) {
+            while(device->bytesAvailable() < sizeof(T)) {
+                device->waitForReadyRead();
+            }
+        }
+    }
+
+    void socket_read_to_msg_array(std::size_t length, QTcpSocket* socket, QByteArray& msg_array) {
+        qint64 read_size = 0;
+        msg_array.clear();
+        while (read_size < length) {
+            msg_array += socket->read(length - read_size + 4);
+            read_size = msg_array.size();
+            if (read_size < length) {
+                socket->waitForReadyRead();
+            }
+        }
+    }
+
     std::uint16_t stun_attr_type, stun_attr_length;
     StunAttributeEnum attribute_type;
 
@@ -247,7 +268,7 @@ public:
      * 
      * @param input Stream to read from.
      */
-    void read_message_header(QDataStream& input);
+    void read_message_header(QDataStream& in_stream);
 
     /**
      * @brief Reads attributes from the network.
@@ -281,6 +302,17 @@ public:
 
     template <typename ClassTag>
     void process_method(stun_header_ptr message_orig, stun_header_ptr message_new, QTcpSocket* socket, stun_attr_type_vec& unknown_cr_attr);
+
+    template<typename T>
+    inline void socket_wait_for_read(QTcpSocket* socket) {
+        if (socket) {
+            while(socket->bytesAvailable() < sizeof(T)) {
+                socket->waitForReadyRead();
+            }
+        }
+    }
+
+    
 };
 
 

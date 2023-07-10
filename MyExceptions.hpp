@@ -256,3 +256,20 @@ public:
 private:
     std::string message;
 };
+
+class unknown_relay_state : public std::exception {
+public:
+    unknown_relay_state(const char* what_arg) throw() : std::exception() {
+        message = std::string(what_arg);
+    }
+
+    unknown_relay_state(std::string& what_arg) throw() : std::exception() {
+        message = what_arg;
+    }
+
+    virtual const char* what() const throw() {
+        return message.data();
+    }
+private:
+    std::string message;
+};

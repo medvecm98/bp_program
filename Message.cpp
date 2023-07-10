@@ -586,3 +586,12 @@ shared_ptr_message MFW::OneWayArticleAllFactory(shared_ptr_message&& msg, Articl
 
 	return std::move(msg);
 }
+
+shared_ptr_message MFW::PingFactory(pk_t from, pk_t to) {
+	auto msg = upm_factory();
+	set_from_to(msg, from, to);
+
+	msg->set_msg_type(np2ps::PING);
+
+	return msg;
+}

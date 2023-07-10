@@ -361,10 +361,39 @@ void IpMap::add_to_ip_map(pk_t pid, IpWrapper&& wrapper) {
 	map_.emplace(pid, wrapper);
 }
 
-void IpMap::add_to_ip_map_relayed(pk_t pid) {
+void IpMap::add_to_ip_map_relayed(pk_t pid, pk_t relay_by_) {
 	IpWrapper wrapper;
 	wrapper.set_relay_state(true);
-	map_.emplace(pid, IpWrapper());
+	wrapper.relay_by.push(relay_by_);
+	map_.emplace(pid, wrapper);
+}
+
+void IpMap::check_or_add_to_ip_map_relayed(pk_t pid, pk_t relay_by_) {
+	try {
+		IpWrapper& wrapper = get_wrapper_ref(pid);
+		wrapper.relay_by.push(relay_by_);
+	}
+	catch(user_not_found_in_database e) {
+		add_to_ip_map_relayed(pid, relay_by_);
+	}
+}
+
+void IpMap::check_and_remove_relayed(pk_t pid, pk_t relay_by_) {
+	try {
+		IpWrapper& wrapper = get_wrapper_ref(pid);
+		pk_t temp = 0;
+		for (int i = 0; i < wrapper.relay_by.size(); i++) {
+			temp = wrapper.relay_by.front();
+			wrapper.relay_by.pop();
+			if (temp != relay_by_) {
+				wrapper.relay_by.push(temp);
+			}
+			else {
+				break;
+			}
+		}
+	}
+	catch(user_not_found_in_database e) {}
 }
 
 std::list<std::pair<pk_t, IpWrapper>> IpMap::select_connected_randoms(int count) {
@@ -395,4 +424,14 @@ std::list<std::pair<pk_t, IpWrapper>> IpMap::select_connected(int count) {
 		}
 	}
 	return connected;
+}
+
+std::list<std::pair<pk_t, IpWrapper>> IpMap::select_direct(int count) {
+	std::list<std::pair<pk_t, IpWrapper>> direct;
+	for (auto&& wrapper : map_) {
+		if (wrapper.second.get_relay_state() == RelayState::Direct) {
+			direct.push_back({wrapper.first, wrapper.second});
+		}
+	}
+	return direct;
 }

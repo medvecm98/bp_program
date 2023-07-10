@@ -5,6 +5,7 @@
 
 #include "CryptoUtils.hpp"
 #include <unordered_map>
+#include <queue>
 #include <QtNetwork/QHostAddress>
 #include <QtNetwork/QTcpSocket>
 #include <cryptopp/filters.h>
@@ -95,7 +96,7 @@ struct IpWrapper {
 		}
 
 		for (auto&& serialized_relay_by : serialized_wrapper.relay_by()) {
-			relay_by.emplace(serialized_relay_by);
+			relay_by.push(serialized_relay_by);
 		}
 
 		for (auto&& serialized_relay_to : serialized_wrapper.relay_to()) {
@@ -155,6 +156,10 @@ struct IpWrapper {
 			std::cout << "Direct" << std::endl;
 			relay_state = RelayState::Direct;
 		}
+	}
+
+	void set_relay_state(RelayState relay_state_) {
+		relay_state = relay_state_;
 	}
 
 	RelayState get_relay_state() {
@@ -331,13 +336,31 @@ struct IpWrapper {
 		}
 
 		if (local_serialize) {
-			for (auto&& relay_by_peer : relay_by) {
-				wrapper->add_relay_by(relay_by_peer);
+			pk_t temp = 0;
+			for (int i = 0; i < relay_by.size(); i++) {
+				temp = relay_by.front();
+				relay_by.pop();
+				wrapper->add_relay_by(temp);
+				relay_by.push(temp);
 			}
 			for (auto&& relay_to_peer : relay_to) {
 				wrapper->add_relay_to(relay_to_peer);
 			}
 		}
+	}
+
+	pk_t get_relay_stun_server() {
+		return relay_by.front();
+	}
+
+	pk_t next_relay_stun_server() {
+		relay_by.push(relay_by.front());
+		relay_by.pop();
+		return relay_by.front();
+	}
+
+	bool has_relay_stun_servers() {
+		return relay_by.size() != 0;
 	}
 
 	//for normal traversal
@@ -359,7 +382,7 @@ struct IpWrapper {
 	
 	RelayState relay_state = RelayState::Unknown;
 	user_container relay_to;
-	user_container relay_by;
+	std::queue<pk_t> relay_by;
 };
 
 using ip_map = std::unordered_map<pk_t, IpWrapper>;

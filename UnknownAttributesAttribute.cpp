@@ -13,6 +13,7 @@ std::uint16_t UnknownAttributesAttribute::read_stun_attribute(QDataStream& input
     QByteArray in_reason(length - 4, 0);
 
     while (length > 0) {
+        StunMessageAttribute::socket_wait_for_read<std::uint16_t>((QTcpSocket*)input.device());
         input >> unknown_attr;
         unknown_attrs.push_back(unknown_attr);
 

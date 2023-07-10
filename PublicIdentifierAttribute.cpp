@@ -12,6 +12,7 @@ void PublicIdentifierAttribute::initialize(pk_t public_identifier, StunMessageHe
 
 std::uint16_t PublicIdentifierAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {
     StunMessageAttribute::read_stun_attribute(input, length, type);
+    StunMessageAttribute::socket_wait_for_read<quint64>((QTcpSocket*)input.device());
     input >> public_identifier;
     return 8;
 }

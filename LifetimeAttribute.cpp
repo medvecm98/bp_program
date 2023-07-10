@@ -8,6 +8,7 @@ LifetimeAttribute::LifetimeAttribute() : StunMessageAttribute::StunMessageAttrib
 std::uint16_t LifetimeAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {
     StunMessageAttribute::read_stun_attribute(input, length, type);
 
+    StunMessageAttribute::socket_wait_for_read<std::uint32_t>((QTcpSocket*)input.device());
     input >> time; //reads time
 
     return 4;

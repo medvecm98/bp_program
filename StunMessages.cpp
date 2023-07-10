@@ -172,11 +172,17 @@ std::uint16_t StunMessageHeader::encode_type() {
  * @return stun_header_ptr Decoded STUN message header.
  */
 void StunMessageHeader::read_message_header(QDataStream& in_stream) {
+    QTcpSocket* socket = (QTcpSocket*)in_stream.device();
     quint16 stun_header_type = 0;
     quint16 stun_header_length = 0;
     quint32 stun_header_magic_cookie = 0;
 
-    in_stream >> stun_header_type >> stun_header_length >> stun_header_magic_cookie;
+    socket_wait_for_read<quint16>(socket);
+    in_stream >> stun_header_type;
+    socket_wait_for_read<quint16>(socket);
+    in_stream >> stun_header_length;
+    socket_wait_for_read<quint32>(socket);
+    in_stream >> stun_header_magic_cookie;
 
     this->stun_length = stun_header_length;
 
@@ -185,11 +191,17 @@ void StunMessageHeader::read_message_header(QDataStream& in_stream) {
 
     quint32 stun_header_tid_0 = 0, stun_header_tid_1 = 0, stun_header_tid_2 = 0;
 
+    socket_wait_for_read<quint32>(socket);
+    socket_wait_for_read<quint32>(socket);
+    socket_wait_for_read<quint32>(socket);
     in_stream >> stun_header_tid_2 >> stun_header_tid_1 >> stun_header_tid_0; 
 
     decode_type((std::uint16_t)stun_header_type);
-    insert_tid((std::uint32_t)stun_header_tid_0, 
-        (std::uint32_t)stun_header_tid_1, (std::uint32_t)stun_header_tid_2);
+    insert_tid(
+        (std::uint32_t)stun_header_tid_0,
+        (std::uint32_t)stun_header_tid_1,
+        (std::uint32_t)stun_header_tid_2
+    );
 }
 
 /**
@@ -203,10 +215,12 @@ void StunMessageHeader::read_attributes(QDataStream& in_stream, factory_map& stu
     quint16 attr_type, attr_length;
     std::shared_ptr<StunMessageAttribute> stun_attribute;
     const std::uint16_t type_and_length_length = 4;
+    QTcpSocket* socket = (QTcpSocket*)in_stream.device();
 
     while (stun_message_remaining_length > 0) { //load all attributes
+        socket_wait_for_read<quint16>(socket);
+        socket_wait_for_read<quint16>(socket);
         in_stream >> attr_type >> attr_length;
-
 
         stun_message_remaining_length -= type_and_length_length;
 
@@ -269,6 +283,7 @@ void StunMessageAttribute::pad(QDataStream& output, std::uint16_t length) {
 void StunMessageAttribute::unpad(QDataStream& input, std::uint16_t length) {
     quint8 zero_byte = 0;
     while ((length % 4) != 0) {
+        StunMessageAttribute::socket_wait_for_read<quint8>((QTcpSocket*)input.device());
         input >> zero_byte;
         length++;
     }

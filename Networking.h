@@ -33,6 +33,7 @@ using msg_queue_ptr = std::shared_ptr< msg_queue>;
 using msg_map = std::unordered_map< std::size_t, shared_ptr_message>;
 using message_map = std::map<pk_t, shared_ptr_message>;
 using message_mmap = std::multimap<pk_t, shared_ptr_message>;
+using stun_message_mmap = std::multimap<pk_t, std::pair<stun_header_ptr, pk_t>>; // <who is final receiver, <stun message, first used stun server>>
 
 class StunClient;
 class StunServer;
@@ -121,7 +122,7 @@ public slots:
 	 * @param msg Message received, stored in stream.
 	 * @param socket Socket that received this message, or NULL, when received from STUN.
 	 */
-	void process_received_np2ps_message(QDataStream& msg, QTcpSocket* socket);
+	void process_received_np2ps_message(QDataStream& msg, QTcpSocket* socket, pk_t relayer);
 
 	/**
 	 * @brief Sets up QDataStream for incoming data and creates QTcp Socket.
@@ -298,8 +299,8 @@ public:
 			}
 		}
 
-		stun_server = std::make_shared<StunServer>(this);
 		stun_client = std::make_shared<StunClient>(this);
+		stun_server = std::make_shared<StunServer>(this);
 
 		QObject::connect(this, &Networking::new_message_enrolled, this, &Networking::send_message);
 	}
@@ -389,8 +390,8 @@ public:
 	 * 
 	 * @param msg Relayed message just received by STUN.
 	 */
-	void pass_message_to_receiver(QDataStream& msg) {
-		receiver_->process_received_np2ps_message(msg, NULL);
+	void pass_message_to_receiver(QDataStream& msg, pk_t relayer) {
+		receiver_->process_received_np2ps_message(msg, NULL, relayer);
 	}
 
 	/**
@@ -467,6 +468,12 @@ public:
 
 	void add_stun_server(pk_t pid);
 	void add_stun_server(pk_t pid, IpWrapper& wrapper);
+	void store_message_waiting_for_connection(shared_ptr_message message);
+	void add_waiting_stun_message(pk_t final_receiver, stun_header_ptr stun_message);
+	void remove_waiting_stun_message(pk_t final_receiver);
+	void resend_stun_message(pk_t final_receiver);
+	void stun_message_success(pk_t final_receiver);
+	void resend_messages_waiting_for_connection();
 
 	IpMap ip_map_; //map of all IPs, ports and RSA public keys
 	std::map<hash_t, std::vector<pk_t>> soliciting_articles; //articles waiting to be found in the network
@@ -474,6 +481,7 @@ public:
 	message_map waiting_symmetric_key_messages;
 	message_mmap messages_waiting_for_credentials;
 	message_mmap messages_waiting_for_connection;
+	stun_message_mmap stun_messages_waiting_for_success;
 	std::map<quint32, std::string> newspapers_awaiting_identification;
 	DisconnectedUsersLazy disconnected_readers_lazy_remove;
 

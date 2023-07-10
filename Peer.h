@@ -234,8 +234,10 @@ public:
 	void generate_gossip_one_way(pk_t to);
 	void generate_gossip_one_way();
 	void generate_news_refresh();
+	void generate_ping_one_way(pk_t to);
 
 	void inform_coworkers();
+	void ping_direct_peers();
 
 	void send_stun_binding_request();
 	void removed_external_article(hash_t article, pk_t to);

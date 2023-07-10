@@ -96,6 +96,7 @@ int main(int argc, char *argv[]) {
 				std::ifstream ifile(path_string);
 				serialized_peer.ParseFromIstream(&ifile);
 				ctx = std::make_shared<ProgramContext>(serialized_peer);
+				ctx->peer.ping_direct_peers();
 			}
 			loaded = true;
 		}

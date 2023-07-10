@@ -24,6 +24,7 @@ enum MessageType {
 	USER_INFO = 160;
 	GOSSIP = 170;
 	NEW_JOURNALIST = 180;
+	PING = 190;
 }
 
 enum MessageContext {
@@ -70,6 +71,7 @@ message Message {
 		UserInfo user_info = 260;
 		Gossip gossip = 270;
 		NewJournalist new_journalist = 280;
+		Ping ping = 290;
 	}
 }
 
@@ -178,4 +180,8 @@ message Gossip {
 
 message NewJournalist {
 	IpWrapper journalist_ip_wrapper = 1;
+}
+
+message Ping {
+	
 }

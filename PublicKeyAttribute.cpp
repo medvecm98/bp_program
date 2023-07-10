@@ -15,12 +15,14 @@ std::uint16_t PublicKeyAttribute::read_stun_attribute(QDataStream& input, std::u
     
     QByteArray val;
     val.resize(length);
-    input >> val;
-    value = val.toStdString();
-
+    
     unpad(input, length);
+    StunMessageAttribute::socket_read_to_msg_array(length, (QTcpSocket*)input.device(), val);
+    // input >> val;
+    value = val.mid(4).toStdString();
 
-    std::cout << "Read PublicKeyAttribute length: " << value.length() << std::endl;
+
+    std::cout << "Read PublicKeyAttribute length: " << value.length() << " value: " << value << std::endl;
 
     return length;
 }
@@ -30,7 +32,9 @@ void PublicKeyAttribute::write_stun_attribute(QDataStream& output) {
 
     QByteArray val(value.data(), value.size());
     output << val;
-    pad(output, val.size());
+
+    std::cout << "Write PublicKeyAttribute length: " << value.size() << " value: " << value << std::endl;
+    // pad(output, val.size());
 }
 
 void PublicKeyAttribute::set_value(const CryptoPP::RSA::PublicKey& public_key) {

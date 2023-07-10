@@ -14,7 +14,9 @@ void DataAttribute::initialize(QByteArray& d, StunMessageHeader* stun_header) {
 std::uint16_t DataAttribute::read_stun_attribute(QDataStream& input, std::uint16_t length, std::uint16_t type) {
     StunMessageAttribute::read_stun_attribute(input, length, type);
     data.resize(length);
-    input >> data;
+    QTcpSocket* socket = (QTcpSocket*) input.device();
+    StunMessageAttribute::socket_read_to_msg_array(length, socket, data);
+    data.remove(0, 4);
     unpad(input, length);
     return length;
 }

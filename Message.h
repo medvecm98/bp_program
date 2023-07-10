@@ -170,6 +170,7 @@ public:
 	static shared_ptr_message NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id, const std::string& name);
 	static shared_ptr_message NewspaperListFactory(pk_t from, pk_t to);
 	static shared_ptr_message JournalistFactory(pk_t from, pk_t to);
+	static shared_ptr_message PingFactory(pk_t from, pk_t to);
 
 	static shared_ptr_message UserInfoFactory(pk_t from, pk_t to);
 	static shared_ptr_message AdvertUserInfoFactory(shared_ptr_message&& msg, std::set<pk_t> users);

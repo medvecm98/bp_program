@@ -300,12 +300,15 @@ public:
 
 	void add_to_ip_map(pk_t pid, const IpWrapper& wrapper);
 	void add_to_ip_map(pk_t pid, IpWrapper&& wrapper);
-	void add_to_ip_map_relayed(pk_t pid);
+	void add_to_ip_map_relayed(pk_t pid, pk_t relay_by_);
+	void check_or_add_to_ip_map_relayed(pk_t pid, pk_t relay_by_);
+	void check_and_remove_relayed(pk_t pid, pk_t relay_by_);
 
 	void add_or_update_to_ip_map(pk_t pid, const IpWrapper& wrapper);
 
 	std::list<std::pair<pk_t, IpWrapper>> select_connected_randoms(int count);
 	std::list<std::pair<pk_t, IpWrapper>> select_connected(int count);
+	std::list<std::pair<pk_t, IpWrapper>> select_direct(int count);
 
 	// IpWrapper my_ip; //IpWrapper containing information related to my networking
 	pk_t my_public_id; //my public identifier, set by Peer

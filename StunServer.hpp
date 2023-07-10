@@ -170,6 +170,10 @@ private:
      * @param np2ps_message Message to relay.
      */
     void create_indication_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t source_pk, std::string&& np2ps_message);    
+
+    void create_response_error_send(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint16_t code, pk_t target_pid);
+
+    void create_response_success_send(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t target_pid);
     
     /**
      * @brief Sends the STUN message.
