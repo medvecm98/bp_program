@@ -31,15 +31,17 @@ void send_message_using_turn(networking_ptr networking_, QByteArray &msg, pk_t t
 {
 	stun_header_ptr new_stun_message = std::make_shared<StunMessageHeader>();
 	networking_->get_stun_client()->create_request_send(new_stun_message, msg, to);
-	networking_->add_waiting_stun_message(to, new_stun_message);
 	IpWrapper& to_wrapper = networking_->ip_map_.get_wrapper_ref(to);
 	if (to_wrapper.has_relay_stun_servers()) {
+		to_wrapper.begin_relay_stun_server_tracking();
+		networking_->add_waiting_stun_message(to, new_stun_message);
 		networking_->get_stun_client()->send_stun_message(
 			new_stun_message,
 			networking_->ip_map_.get_wrapper_ref(to).get_relay_stun_server()
 		);
 	}
 	else {
+		networking_->add_waiting_stun_message(to, new_stun_message);
 		networking_->get_stun_client()->send_stun_message(
 			new_stun_message,
 			networking_->ip_map_.get_wrapper_ref(to).preferred_stun_server
@@ -1098,12 +1100,14 @@ void Networking::add_stun_server(pk_t pid, IpWrapper &wrapper)
 
 void Networking::store_message_waiting_for_connection(shared_ptr_message message)
 {
-	messages_waiting_for_connection.emplace(message->to(), message);
+	messages_waiting_for_connection.push_back(message);
 }
 
 void Networking::add_waiting_stun_message(pk_t final_receiver, stun_header_ptr stun_message)
 {
-	stun_messages_waiting_for_success.emplace(final_receiver, stun_message);
+	stun_messages_waiting_for_success.emplace(
+		final_receiver, stun_message
+	);
 }
 
 void Networking::remove_waiting_stun_message(pk_t final_receiver)
@@ -1113,21 +1117,37 @@ void Networking::remove_waiting_stun_message(pk_t final_receiver)
 
 void Networking::resend_stun_message(pk_t final_receiver) {
 	auto [messages, messages_end] = stun_messages_waiting_for_success.equal_range(final_receiver);
+	IpWrapper& wrapper = ip_map().get_wrapper_ref(final_receiver);
+	try {
+		wrapper.next_relay_stun_server();
+	}
+	catch (no_more_relay_stun_servers nmrss) {
+		wrapper.end_relay_stun_server_tracking();
+		remove_waiting_stun_message(messages->first);
+	}
 	for (; messages != messages_end; messages++) {
-		IpWrapper& wrapper = ip_map().get_wrapper_ref(final_receiver);
-		if (wrapper.next_relay_stun_server() == messages->second.second) {
-			remove_waiting_stun_message(messages->first);
-		}
-		else {
-			get_stun_client()->send_stun_message(messages->second.first, wrapper.get_relay_stun_server());
-		}
+		get_stun_client()->send_stun_message(
+			messages->second,
+			wrapper.get_relay_stun_server()
+		);
 	}
 }
 
 void Networking::stun_message_success(pk_t final_receiver) {
 	stun_messages_waiting_for_success.erase(final_receiver);
+	IpWrapper& receiver_wrapper = ip_map().get_wrapper_ref(final_receiver);
+	receiver_wrapper.end_relay_stun_server_tracking();
 }
 
 void Networking::resend_messages_waiting_for_connection() {
-	for 
+	std::vector<shared_ptr_message> backup_messages_waiting_for_connection;
+	backup_messages_waiting_for_connection.insert(
+		backup_messages_waiting_for_connection.end(),
+		std::make_move_iterator(messages_waiting_for_connection.begin()),
+		std::make_move_iterator(messages_waiting_for_connection.end())
+	);
+	messages_waiting_for_connection.clear();
+	for (auto&& message : backup_messages_waiting_for_connection) {
+		enroll_message_to_be_sent(message);
+	}
 }

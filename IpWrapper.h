@@ -356,11 +356,25 @@ struct IpWrapper {
 	pk_t next_relay_stun_server() {
 		relay_by.push(relay_by.front());
 		relay_by.pop();
+		if (first_relay_stun_server != 0 && first_relay_stun_server == relay_by.front()) {
+			first_relay_stun_server = 0;
+			throw no_more_relay_stun_servers(
+				"All known relay STUN servers for this peer were used."
+			);
+		}
 		return relay_by.front();
 	}
 
 	bool has_relay_stun_servers() {
 		return relay_by.size() != 0;
+	}
+
+	void begin_relay_stun_server_tracking() {
+		first_relay_stun_server = get_relay_stun_server();
+	}
+
+	void end_relay_stun_server_tracking() {
+		first_relay_stun_server = 0;
 	}
 
 	//for normal traversal
@@ -383,6 +397,7 @@ struct IpWrapper {
 	RelayState relay_state = RelayState::Unknown;
 	user_container relay_to;
 	std::queue<pk_t> relay_by;
+	pk_t first_relay_stun_server = 0;
 };
 
 using ip_map = std::unordered_map<pk_t, IpWrapper>;

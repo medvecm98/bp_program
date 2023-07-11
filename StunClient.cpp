@@ -258,6 +258,16 @@ void StunClient::error(QAbstractSocket::SocketError socket_error) {
     QTcpSocket* socket = (QTcpSocket*)QObject::sender();
     std::cout << "Connection to STUN server failed:" << socket->isValid() << std::endl;
     std::cout << "Error number: " << socket_error << std::endl;
+    IpWrapper& connectee_wrapper = networking_->ip_map().get_wrapper_ref(connecting_to);
+    if (connectee_wrapper.has_relay_stun_servers()) {
+        try {
+            connectee_wrapper.next_relay_stun_server();
+            send_stun_message(header_waiting_to_connect, connectee_wrapper.get_relay_stun_server());
+        }
+        catch (no_more_relay_stun_servers nmrss) {
+            connectee_wrapper.end_relay_stun_server_tracking();
+        }
+    }
     add_failed_connection_for_server(get_stun_server_front());
     get_stun_server_next();
     if (++failed_connections < stun_servers.size()) {
