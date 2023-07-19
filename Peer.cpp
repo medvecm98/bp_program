@@ -1689,10 +1689,11 @@ void Peer::print_contents() {
 		for (auto&& f : n.second.get_readers()) {
 			std::cout << "  friend: " << f << std::endl;
 		}
-		for (auto&& a : n.second.get_all_articles()) {
-			std::cout << "  Article: " << a.second.main_hash() << std::endl;
-			std::cout << "  - readers: " << a.second.readers().size() << std::endl;
-		}
+		std::cout << "  Articles : " << n.second.get_all_articles().size() << std::endl;
+		// for (auto&& a : n.second.get_all_articles()) {
+		// 	std::cout << "  Article: " << a.second.main_hash() << std::endl;
+		// 	std::cout << "  - readers: " << a.second.readers().size() << std::endl;
+		// }
 		if (n.second.has_newspaper_public_key()) {
 			std::cout << "  I have public key." << std::endl;
 		}
@@ -2317,7 +2318,17 @@ void Peer::handle_gossip_one_way(shared_ptr_message message) {
 			continue;
 		}
 		std::cout << "Heard gossip: " <<  gossip.publicid() << std::endl;
-		get_networking()->ip_map().add_to_ip_map(gossip.publicid(), IpWrapper(gossip));
+		try {
+			IpWrapper& wrapper = get_networking()->ip_map().get_wrapper_ref(gossip.publicid());
+			wrapper.port = gossip.port();
+			wrapper.stun_port = gossip.stun_port();
+			if (!GlobalMethods::ip_address_is_private(QHostAddress(gossip.ipv4()))) {
+				wrapper.ipv4 = QHostAddress(gossip.ipv4());
+			}
+		}
+		catch (user_not_found_in_database e) {
+			get_networking()->ip_map().add_to_ip_map(gossip.publicid(), IpWrapper(gossip));
+		}
 	}
 }
 

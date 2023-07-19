@@ -52,7 +52,7 @@ void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramCon
 
 		std::random_device dev;
 		std::mt19937 rng(dev());
-    	std::uniform_int_distribution<std::mt19937::result_type> dist(1,1000);
+    	std::uniform_int_distribution<std::mt19937::result_type> dist(1,1000000);
 
 		Article a;
 		a.initialize_article(v, article_file_path, ctx->peer, ctx->peer.get_news_db().at(ctx->peer.get_my_news_id()), 1, (counter++ + dist(rng)));

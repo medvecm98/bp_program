@@ -178,7 +178,7 @@ void MainWindow::on_pushButton_add_article_released()
 	auto fileName = QFileDialog::getOpenFileName(this, "Select files", env_p, "Markdown (*.md);;Text Files (*.txt)"); //open file selection dialog for plain text files and markdown
 	if (!fileName.isNull()) {
 		if (std::filesystem::is_regular_file(fileName.toStdString())) {
-			emit add_new_article(fileName); //we selected a regular file and new article now may be added
+            emit add_new_article(fileName, ui->comboBox_news_journalist->currentData().toULongLong()); //we selected a regular file and new article now may be added
 		}
 	}
 }

@@ -53,7 +53,7 @@ public slots:
 	 * 
 	 * @param path Path to article file to add.
 	 */
-	void add_new_article(QString path);
+	void add_new_article(QString path, pk_t news_id);
 
 private slots:
 	/**
@@ -112,6 +112,7 @@ private:
 	Ui::CategoriesForm *ui;
 	ProgramContext* ctx; //program context
 	QString path; //path to article file
+	pk_t news_id_;
 };
 
 #endif // CATEGORIESFORM_H

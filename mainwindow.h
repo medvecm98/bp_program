@@ -353,7 +353,7 @@ signals:
 	 * 
 	 * @param path Path of file seleted as article's contents.
 	 */
-	void add_new_article(QString path);
+	void add_new_article(QString path, pk_t news_id);
 
 	/**
 	 * @brief Emits when IP address was selected in `comboBox_interfaces`.
