@@ -19,7 +19,6 @@
 #define STUN_IPV4 0x0001
 #define STUN_IPV6 0x0002
 
-#define STUN_PORT 3478
 
 #define FAMILY_SELECT(family, ipv4, ipv6) if (family == STUN_IPV4) {ipv4} else if (family == STUN_IPV6) {ipv6}
 

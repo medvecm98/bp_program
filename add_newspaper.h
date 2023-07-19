@@ -3,6 +3,9 @@
 
 #include <QWidget>
 #include <QTreeWidget>
+#include <QRegularExpression>
+#include <QRegularExpressionMatch>
+
 #include "programcontext.h"
 
 namespace Ui {

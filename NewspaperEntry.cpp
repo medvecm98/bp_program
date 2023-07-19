@@ -23,7 +23,7 @@ NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& seria
 	for(const np2ps::SerializedArticle& gpb_articles : serialized_ne.articles()) {
 		add_article(gpb_articles.article().main_hash(), Article(gpb_articles));
 	}
-	for (auto f : serialized_ne.readers()) {
+	for (auto f : serialized_ne.entry().readers()) {
 		add_reader(f);
 	}
 	set_newspaper_public_key(
@@ -59,9 +59,9 @@ NewspaperEntry::NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& ser
 			serialized_ne.network_info().rsa_public_key()
 		)
 	);
-	// for(const np2ps::Article& gpb_articles : serialized_ne.articles()) {
-	// 	add_article(gpb_articles.main_hash(), Article(gpb_articles));
-	// }
+	for (auto f : serialized_ne.entry().readers()) {
+		add_reader(f);
+	}
 }
 
 NewspaperEntry::NewspaperEntry(const std::string& path, DisconnectedUsersLazy* disconnected_users_lazy) {
@@ -78,6 +78,7 @@ void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
 	articles_.emplace(article_hash, article);
 	time_created_sorted_articles_.emplace(article.creation_time(), article_hash);
 	time_modified_sorted_articles_.emplace(article.modification_time(), article_hash);
+	std::cout << "Added article: " << article.heading() << std::endl;
 }
 
 bool NewspaperEntry::remove_article(hash_t article_hash) {
@@ -127,9 +128,19 @@ article_data_vec NewspaperEntry::get_articles_for_time_span(my_clock::time_point
 	return rv;
 }
 
-timed_article_map_pair NewspaperEntry::get_newest_articles(int count) {
-	timed_article_map_iter bit = time_created_sorted_articles_.rbegin();
-	timed_article_map_iter eit = time_created_sorted_articles_.rend();
+timed_article_map_pair NewspaperEntry::get_newest_articles(int count, ArticleListSort sort_type) {
+	timed_article_map_iter bit, eit;
+	if (sort_type == ArticleListSort::Created){
+		bit = time_created_sorted_articles_.rbegin();
+		eit = time_created_sorted_articles_.rend();
+	}
+	else if (sort_type == ArticleListSort::Modified) {
+		bit = time_modified_sorted_articles_.rbegin();
+		eit = time_modified_sorted_articles_.rend();
+	}
+	else {
+		throw std::logic_error("Invalid article sort type/");
+	}
 
 	if (count <= 0) {
 		return { bit, eit };
@@ -146,9 +157,19 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(int count) {
 	return { bit, it };
 }
 
-timed_article_map_pair NewspaperEntry::get_newest_articles(int from, int to) {
-	timed_article_map_iter bit = time_created_sorted_articles_.rbegin();
-	timed_article_map_iter eit = time_created_sorted_articles_.rend();
+timed_article_map_pair NewspaperEntry::get_newest_articles(int from, int to, ArticleListSort sort_type) {
+	timed_article_map_iter bit, eit;
+	if (sort_type == ArticleListSort::Created){
+		bit = time_created_sorted_articles_.rbegin();
+		eit = time_created_sorted_articles_.rend();
+	}
+	else if (sort_type == ArticleListSort::Modified) {
+		bit = time_modified_sorted_articles_.rbegin();
+		eit = time_modified_sorted_articles_.rend();
+	}
+	else {
+		throw std::logic_error("Invalid article sort type/");
+	}
 
 	if (to - from <= 0) {
 		return { bit, eit };
@@ -184,15 +205,18 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(int from, int to) {
  * @param count Number to newset articles to get.
  * @param timestamp Get only newer articles than defined timestamp.
  */
-void NewspaperEntry::get_newest_articles(article_container& articles, int count, timestamp_t timestamp) {
-	auto [bit, eit] = get_newest_articles(count);
+void NewspaperEntry::get_newest_articles(article_container& articles, article_container& only_readers_articles, int count, timestamp_t timestamp, ArticleListSort sort_type) {
+	std::size_t articles_in_timestamp = 0;
+	auto [bit, eit] = get_newest_articles(count, sort_type);
 
 	for(; bit != eit; bit++) {
 		article_ptr article = &get_article(bit->second);
-		if (timestamp != 0 && article->creation_time() < timestamp) {
-			break;
+		if (article->modification_time() >= timestamp) {
+			articles.emplace(article);
 		}
-		articles.emplace(article);
+		else {
+			only_readers_articles.emplace(article);
+		}
 	}
 }
 
@@ -206,15 +230,18 @@ void NewspaperEntry::get_newest_articles(article_container& articles, int count,
  * @param to Offset of articles to finish loading.
  * @param timestamp Get only newer articles than defined timestamp.
  */
-void NewspaperEntry::get_newest_articles(article_container& articles, int from, int to, timestamp_t timestamp) {
-	auto [bit, eit] = get_newest_articles(from, to);
+void NewspaperEntry::get_newest_articles(article_container& articles, article_container& only_readers_articles, int from, int to, timestamp_t timestamp, ArticleListSort sort_type) {
+	std::size_t articles_in_timestamp = 0;
+	auto [bit, eit] = get_newest_articles(from, to, sort_type);
 
 	for(; bit != eit; bit++) {
 		article_ptr article = &get_article(bit->second);
-		if (timestamp != 0 && article->creation_time() < timestamp) {
-			break;
+		if (article->modification_time() > timestamp) {
+			articles.emplace(article);
 		}
-		articles.emplace(article);
+		else {
+			only_readers_articles.emplace(article);
+		}
 	}
 }
 
@@ -254,19 +281,30 @@ timed_article_map_pair NewspaperEntry::get_newest_articles(QDate date, int count
 	return { bit, it };
 }
 
-const user_container& NewspaperEntry::get_readers() {
+const std::vector<pk_t>& NewspaperEntry::get_readers() {
 	return readers_;
 }
 
 void NewspaperEntry::remove_reader(pk_t id) {
-	auto it = readers_.find(id);
-	if (it != readers_.end()) {
-		readers_.erase(it);
+	auto it = std::find(readers_.begin(), readers_.end(), id);
+	if (it == std::end(readers_)) {
+		return;
 	}
+	readers_.erase(it);
 }
 
 void NewspaperEntry::add_reader(pk_t id) {
-	readers_.emplace(id);
+	if (!find_reader(id)) {
+		readers_.push_back(id);
+	}
+}
+
+void NewspaperEntry::randomize_readers() {
+	std::random_shuffle(readers_.begin(), readers_.end());
+}
+
+bool NewspaperEntry::find_reader(pk_t reader) {
+	return std::find(readers_.begin(), readers_.end(), reader) != std::end(readers_);
 }
 
 Article& NewspaperEntry::get_article(hash_t id) {
@@ -305,12 +343,9 @@ void NewspaperEntry::serialize_entry(np2ps::NewspaperEntry* entry) const {
 	entry->set_news_id(news_id_);
 }
 
-void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper, pk_t id) const {
+void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper, pk_t id, std::int16_t article_count) const {
 	serialize_entry(nserialized_ne->mutable_entry());
-	for (auto& [hash, art] : articles_) {
-		np2ps::Article* pa = nserialized_ne->add_articles();
-		art.network_serialize_article(pa);
-	}
+
 	IpWrapper& my_wrapper = id == 0 ? news_wrapper.my_ip() : news_wrapper.get_wrapper_ref(id);
 	nserialized_ne->mutable_network_info()->set_ipv4(my_wrapper.ipv4.toIPv4Address());
 	nserialized_ne->mutable_network_info()->set_port(my_wrapper.port);
@@ -325,6 +360,9 @@ void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEn
 		auto* gpb_wrapper = nserialized_ne->add_journalists();
 		j_wrapper.serialize_wrapper(gpb_wrapper, false);
 	}
+	for (pk_t reader : readers_) {
+		nserialized_ne->mutable_entry()->add_readers(reader);
+	}
 	nserialized_ne->mutable_entry()->set_last_updated(last_updated_);
 }
 
@@ -337,7 +375,7 @@ void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry*
 		}
 	}
 	for (auto&& reader : readers_) {
-		lserialized_ne->add_readers(reader);
+		lserialized_ne->mutable_entry()->add_readers(reader);
 	}
 	if (has_newspaper_public_key()) {
 		lserialized_ne->mutable_network_info()->set_rsa_public_key(
@@ -533,7 +571,9 @@ std::size_t NewspaperEntry::get_article_limit_unread() {
 	return config_.article_limit_unread;
 }
 
-void NewspaperEntry::clear_abundant_articles() {
+void NewspaperEntry::clear_abundant_articles(
+	std::function<void(pk_t, pk_t, hash_t)> remove_article_callback
+) {
 	std::size_t found_read = 0, found_unread = 0;
 	std::set<hash_t> articles_to_remove;
 	for (auto&& [article_hash, article] : get_all_articles()) {

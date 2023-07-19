@@ -16,13 +16,44 @@ add_newspaper::~add_newspaper()
 void add_newspaper::clear_all_lineEdit() {
 	ui->lineEdit_name->clear();
 	ui->lineEdit_ip->clear();
+	ui->lineEdit_np2ps_port->clear();
+	ui->lineEdit_stun_port->clear();
+}
+
+bool check_ip_valid(const QString& ipAddress)
+{
+    QRegularExpression ipRegex("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$");
+    QRegularExpressionMatch match = ipRegex.match(ipAddress);
+    return match.hasMatch();
 }
 
 void add_newspaper::on_buttonBox_accepted() {
-	ctx->peer.identify_newspaper(
-		QHostAddress(ui->lineEdit_ip->text()),
-		ui->lineEdit_name->text().toStdString()
-	);
+	auto text_address_port = ui->lineEdit_ip->text();
+    auto text_address = ui->lineEdit_ip->text();
+    auto text_port = ui->lineEdit_np2ps_port->text();
+    auto text_stun_port = ui->lineEdit_stun_port->text();
+	port_t np2ps_port = PORT;
+	port_t stun_port = STUN_PORT;
+	if (!text_port.trimmed().isEmpty()) {
+		np2ps_port = (std::uint16_t)std::stoi(text_port.toStdString());
+	}
+	if (!text_stun_port.trimmed().isEmpty()) {
+		stun_port = (std::uint16_t)std::stoi(text_stun_port.toStdString());
+	}
+	if (check_ip_valid(text_address)) {
+		ctx->peer.identify_newspaper(
+			QHostAddress(text_address),
+            np2ps_port,
+            stun_port,
+			ui->lineEdit_name->text().toStdString()
+		);
+	}
+	else {
+		ctx->peer.identify_newspaper(
+			text_address,
+			ui->lineEdit_name->text().toStdString()
+		);
+	}
 
 	clear_all_lineEdit();
 	this->hide();

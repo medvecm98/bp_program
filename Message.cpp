@@ -258,11 +258,23 @@ shared_ptr_message MFW::ReqArticleHeaderFactory(shared_ptr_message&& msg, Articl
 	return std::move(msg);
 }
 
-shared_ptr_message MFW::RespArticleListFactory(shared_ptr_message&& msg, article_container& articles) { 
+shared_ptr_message MFW::RespArticleListFactory(
+	shared_ptr_message&& msg,
+	article_container& articles,
+	pk_t news_id,
+	article_container& articles_readers_only,
+	bool first_in_batch)
+{
 	for(auto&& article : articles) {
 		auto a = msg->mutable_article_list()->add_response();
 		article->network_serialize_article(a);
 	}
+	for (auto&& article_only_readers : articles_readers_only) {
+			auto a = msg->mutable_article_list()->add_response_readers();
+			article_only_readers->network_serialize_readers(a);
+	}
+	msg->mutable_article_list()->set_first_in_batch(first_in_batch);
+	msg->mutable_article_list()->set_newspaper_id(news_id);
 	msg->set_msg_ctx(np2ps::RESPONSE);
 	return std::move(msg);
 }
@@ -397,21 +409,22 @@ shared_ptr_message MFW::NewspaperEntryFactory(
 	return msg;
 }
 
-shared_ptr_message MFW::NewspaperListFactory(pk_t from, pk_t to) {
+shared_ptr_message MFW::NewspaperListFactory(pk_t from, pk_t to, std::int16_t article_count) {
 	auto msg = upm_factory();
 	set_from_to(msg, from, to);
 
 	msg->set_msg_type(np2ps::NEWSPAPER_LIST);
+	msg->mutable_newspaper_list()->set_article_count(article_count);
 
 	return msg;
 }
 
-shared_ptr_message MFW::RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news_db, IpMap& networking_map) {
+shared_ptr_message MFW::RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news_db, IpMap& networking_map, std::int16_t article_count_) {
 	msg->set_msg_ctx(np2ps::RESPONSE);
 
 	for (auto&& [nid, news] : news_db) {
 		np2ps::NetworkSerializedNewspaperEntry* gpb_news = msg->mutable_newspaper_list()->add_news();
-		news.network_serialize_entry(gpb_news, networking_map, nid);
+		news.network_serialize_entry(gpb_news, networking_map, nid, article_count_);
 	}
 
 	return msg;

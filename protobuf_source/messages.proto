@@ -46,10 +46,16 @@ enum ArticleAction {
 	AUPDATE = 20;
 }
 
+enum ArticleListTimestamp {
+	AL_CREATED = 0;
+	AL_MODIFIED = 10;
+}
+
 message Message {
 	uint64 from = 1;
 	uint64 to = 2;
 	uint64 seq = 5;
+	int32 failed_to_send_counter = 6;
 	MessageType msg_type = 3;
 	MessageContext msg_ctx = 4;
 	oneof message_oneof {
@@ -94,14 +100,18 @@ message ArticleHeader {
 }
 
 message ArticleList {
-	bool all_articles = 1;
 	// request
+	bool all_articles = 1;
 	repeated string categories = 2;
-	uint64 newspaper_id = 5;
 	int32 count = 4;
 	int64 timestamp = 7;
+	ArticleListTimestamp timestamp_sort_type = 8;
+	// request, response
+	uint64 newspaper_id = 5;
 	// response
+	bool first_in_batch = 9;
 	repeated Article response = 3;
+	repeated Article response_readers = 10;
 }
 
 message ArticleSolicitation {

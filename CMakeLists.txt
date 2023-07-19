@@ -48,8 +48,8 @@ add_executable(news_p2p_sharing main.cpp newarticleform.h newarticleform.cpp new
 	LifetimeAttribute.hpp LifetimeAttribute.cpp XorRelayedAddress.hpp XorRelayedAddress.cpp 
 	PublicIdentifierAttribute.hpp PublicIdentifierAttribute.cpp StunTags.hpp CryptoUtils.hpp CryptoUtils.cpp
 	DataAttribute.hpp DataAttribute.cpp PublicKeyAttribute.hpp PublicKeyAttribute.cpp LazyWrappers.hpp
-        RelayedPublicIdentifierAttribute.hpp RelayedPublicIdentifierAttribute.cpp addmargin.h addmargin.cpp addmargin.ui
-        editarticle.h editarticle.cpp editarticle.ui)
+        RelayedPublicIdentifierAttribute.hpp RelayedPublicIdentifierAttribute.cpp addmargin.h addmargin.cpp addmargin.ui viewmargin.h viewmargin.cpp viewmargin.ui
+        editarticle.h editarticle.cpp editarticle.ui newspaperlistview.h newspaperlistview.cpp newspaperlistview.ui)
 if (UNIX)
 	target_link_libraries(news_p2p_sharing stdc++fs proto_msg proto_art proto_nee proto_per proto_ipm ${PROTOBUF_LIBRARIES} ${CryptoPP} ${Boost_LIBRARIES}
 		Qt5::Widgets Qt5::Network Qt5::Core)

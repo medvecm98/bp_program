@@ -12,6 +12,7 @@ message NewspaperConfig {
 message NewspaperEntry {
     uint64 news_id = 1;
     string news_name = 2;
+    repeated uint64 readers = 3;
     int64 last_updated = 6;
 }
 
@@ -33,7 +34,6 @@ message LocalSerializedNewspaperEntry {
     IpWrapper network_info = 4;
     optional string private_key = 5;
     repeated SerializedArticle articles = 2;
-    repeated uint64 readers = 3;
     repeated uint64 journalists = 7;
     NewspaperConfig config = 8;
 }
@@ -41,4 +41,5 @@ message LocalSerializedNewspaperEntry {
 message NewspaperList {
     repeated NetworkSerializedNewspaperEntry news = 1;
     repeated uint64 requested_ids = 2;
+    int32 article_count = 3;
 }

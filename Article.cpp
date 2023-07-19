@@ -255,6 +255,13 @@ std::string Article::crypto_hash() {
 	return crypto_hash_;
 }
 
+void Article::network_serialize_readers(np2ps::Article* art) const {
+	art->set_main_hash(_main_hash);
+	for (pk_t reader : const_readers()) {
+		art->add_readers(reader);
+	}
+}
+
 void Article::network_serialize_article(np2ps::Article* art) const {
 	art->set_author_id(_author_id);
 	art->set_author_name(_author_name);
@@ -374,4 +381,17 @@ void Article::set_flag_value(ArticleFlags flag, bool value) {
 		set_flag(flag);
 	else
 		reset_flag(flag);
+}
+
+void Article::update_readers_from_gpb(np2ps::Article readers__, pk_t sender, pk_t news_id, pk_t author_id) {
+	if (sender == news_id) {
+		readers_.clear();
+	}
+	for (auto reader = readers__.readers().begin(); reader != readers__.readers().end(); reader++) {
+		readers_.emplace(*reader);
+	}
+}
+
+Margin& Article::get_margin(pk_t id) {
+	return _margins[id];
 }

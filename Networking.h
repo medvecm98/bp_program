@@ -103,7 +103,7 @@ public slots:
 	 * 
 	 * @param address Address of server to start listening on.
 	 */
-	void start_server(QHostAddress address);
+	void start_server(QHostAddress address, std::uint16_t port);
 
 	/**
 	 * @brief Receives message.
@@ -251,10 +251,20 @@ public slots:
 	 */
 	void handle_connection_error();
 
+
+	/**
+	 * @brief Slot for when connection to host times out via QTimer::timeout.
+	 * 
+	 * When connection times out, we will try to relay the message via STUN.
+	 * 
+	 */
+	void handle_connection_timeout();
+
 private:
 	QTcpSocket* tcp_socket_ = nullptr;
 	CryptoPP::AutoSeededRandomPool prng_;
 	networking_ptr networking_;
+	QTimer* connection_timeout_timer = NULL;
 
 	/* Message and IpWrapper when waiting to be connected. */
 	shared_ptr_message message_waiting_for_connection;
@@ -473,16 +483,30 @@ public:
 	void remove_waiting_stun_message(pk_t final_receiver);
 	void resend_stun_message(pk_t final_receiver);
 	void stun_message_success(pk_t final_receiver);
-	void resend_messages_waiting_for_connection();
+	void resend_np2ps_messages_waiting_for_peer_online();
+	void resend_np2ps_messages_waiting_for_peer_online_long_term(pk_t peer);
+	void clean_long_term_np2ps_messages();
+	void check_message_side_effect(
+		stun_header_ptr header_waiting_to_connect,
+		IpWrapper& connectee_wrapper);
+	
 
-	IpMap ip_map_; //map of all IPs, ports and RSA public keys
-	std::map<hash_t, std::vector<pk_t>> soliciting_articles; //articles waiting to be found in the network
-	message_mmap waiting_symmetric_exchange; //messages waiting to be sent while symmetric key is exchanged
-	message_map waiting_symmetric_key_messages;
-	message_mmap messages_waiting_for_credentials;
-	std::vector<shared_ptr_message> messages_waiting_for_connection;
-	stun_message_mmap stun_messages_waiting_for_success;
-	std::map<quint32, std::string> newspapers_awaiting_identification;
+	IpMap ip_map_; // map of all IPs, ports and RSA public keys
+	std::map<hash_t, std::vector<pk_t>> soliciting_articles; // articles waiting to be found in the network
+
+	message_mmap np2ps_waiting_symmetric_exchange; // messages waiting to be sent while symmetric key is exchanged
+	message_map waiting_symmetric_key_messages; // messages containing symmetric keys waiting for publick key
+	message_mmap np2ps_messages_waiting_for_credentials;
+	std::list<std::tuple<IpWrapper, shared_ptr_message>> np2ps_messages_waiting_for_connection;
+	bool np2ps_sending_in_progress = false;
+	std::vector<shared_ptr_message> np2ps_messages_waiting_for_peer_online_short_term;
+	std::list<std::tuple<timestamp_t, shared_ptr_message>> np2ps_messages_waiting_for_peer_online_long_term;
+
+	stun_message_mmap stun_messages_waiting_for_success_send;
+	std::list<std::tuple<QHostAddress, uint16_t, stun_header_ptr, pk_t, bool>> stun_messages_waiting_for_connection;
+	bool stun_sending_in_progress = false;
+
+	std::map<quint32, std::tuple<std::string, std::uint16_t, std::uint16_t>> newspapers_awaiting_identification;
 	DisconnectedUsersLazy disconnected_readers_lazy_remove;
 
 public slots:
@@ -546,7 +570,7 @@ signals:
 	 * @param newspaper_name Name of the newspaper
 	 * @param newspaper_ip_domain IP of the newspaper
 	 */
-	void newspaper_identified(pk_t id, my_string newspaper_name, std::string newspaper_ip_domain);
+	void newspaper_identified(pk_t id, my_string newspaper_name, std::string newspaper_ip_domain, port_t np2ps_port, port_t stun_port);
 
 	/**
 	 * @brief Emitted, when all network interfaces and their addresses were gathered.
@@ -554,6 +578,8 @@ signals:
 	 * @param addresses_and_interfaces 
 	 */
 	void got_network_interfaces(address_vec_ptr addresses_and_interfaces);
+
+	void got_article_all_rejection(shared_ptr_message np2ps_message);
 
 private:
 	const int port_ = PORT;
