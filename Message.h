@@ -123,7 +123,7 @@ public:
 	/* Responses: */
 	static shared_ptr_message RespArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header, std::string&& article);
 	static shared_ptr_message RespArticleHeaderFactory(shared_ptr_message&& msg, article_ptr article_header);
-	static shared_ptr_message RespArticleListFactory(shared_ptr_message&& msg, article_container& articles);
+	static shared_ptr_message RespArticleListFactory(shared_ptr_message&& msg, article_container& articles, pk_t news_id, article_container& articles_readers_only, bool first_in_batch);
 	static shared_ptr_message RespUserIsMemberFactory(shared_ptr_message&& msg, bool is_member, level_t req_level);
 	static shared_ptr_message RespCredentialsFactory(
 		shared_ptr_message&& msg,
@@ -142,7 +142,7 @@ public:
 	static shared_ptr_message ErrorArticleDownloadFactory(shared_ptr_message&& msg, hash_t article_hash);
 	static shared_ptr_message ErrorJournalistFactory(shared_ptr_message&& msg);
 
-	static shared_ptr_message RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news, IpMap& news_networking);
+	static shared_ptr_message RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news, IpMap& news_networking, std::int16_t article_count_ = -1);
 	static shared_ptr_message OneWayCredentialsFactory(
 		shared_ptr_message&& msg,
 		rsa_public_optional public_key,
@@ -168,7 +168,7 @@ public:
 	static shared_ptr_message CredentialsFactory(pk_t from, pk_t to);
 	static shared_ptr_message PublicKeyFactory(pk_t from, pk_t to, CryptoPP::RSA::PublicKey& key);
 	static shared_ptr_message NewspaperEntryFactory(pk_t from, pk_t to, pk_t newspaper_id, const std::string& name);
-	static shared_ptr_message NewspaperListFactory(pk_t from, pk_t to);
+	static shared_ptr_message NewspaperListFactory(pk_t from, pk_t to, std::int16_t article_count = -1);
 	static shared_ptr_message JournalistFactory(pk_t from, pk_t to);
 	static shared_ptr_message PingFactory(pk_t from, pk_t to);
 

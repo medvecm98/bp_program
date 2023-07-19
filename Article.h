@@ -32,7 +32,7 @@ using string_hash = std::hash<std::string>;
 using category_container = std::set<my_string>;
 using category_container_const_ref = const category_container&;
 using category_container_const_iter = category_container::const_iterator;
-using margin_container = std::unordered_multimap<pk_t, Margin>;
+using margin_container = std::map<pk_t, Margin>;
 using margin_vector = std::vector<Margin>;
 
 /**
@@ -279,6 +279,8 @@ public:
 		_margins.erase(what);
 	}
 
+	Margin& get_margin(pk_t margin_id);
+
 	/**
 	 * @brief Gets the iterators for margins from given author.
 	 * 
@@ -297,6 +299,10 @@ public:
 
 	std::string crypto_hash();
 
+	void set_creation_time(std::uint64_t c_time) {
+		creation_time_ = c_time;
+	}
+
 	std::uint64_t creation_time() {
 		return creation_time_;
 	}
@@ -308,6 +314,7 @@ public:
 	std::string read_contents();
 
 	void network_serialize_article(np2ps::Article* art) const;
+	void network_serialize_readers(np2ps::Article* art) const;
 
 	void local_serialize_article(np2ps::SerializedArticle* art) const;
 
@@ -389,6 +396,55 @@ public:
 
 	void set_flag_value(ArticleFlags flag, bool value);
 
+	void update_readers_from_gpb(np2ps::Article readers, pk_t sender, pk_t news_id, pk_t author_id);
+
+	void add_article_download(pk_t id, bool direct) {
+		if (direct) {
+			peers_to_ask_for_article.push_front(id);
+		}
+		else {
+			peers_to_ask_for_article.push_back(id);
+		}
+	}
+
+	pk_t get_one_article_download() {
+		if (peers_to_ask_for_article.size() == 0)
+		{
+			return 0;
+		}
+		else {
+			return peers_to_ask_for_article.front();
+		}
+	}
+
+	pk_t remove_one_article_download() {
+		if (peers_to_ask_for_article.size() == 0)
+		{
+			return 0;
+		}
+		else {
+			auto rv = peers_to_ask_for_article.front();
+			peers_to_ask_for_article.pop_front();
+			return rv;
+		}
+	}
+
+	int failed_peers() {
+		return failed_peers_;
+	}
+
+	void inc_failed_peers() {
+		failed_peers_++;
+	}
+
+	void reset_failed_peers() {
+		failed_peers_ = 0;
+	}
+
+	void article_downloaded() {
+		reset_failed_peers();
+		peers_to_ask_for_article.clear();
+	}
 
 private:
 	my_string _author_name; //network, local
@@ -412,6 +468,9 @@ private:
 	std::size_t version_;
 	hash_t ancestor_;
 	std::size_t flags_ = 0;
+
+	std::list<pk_t> peers_to_ask_for_article;
+	int failed_peers_ = 0;
 };
 
 using article_ptr = Article*;

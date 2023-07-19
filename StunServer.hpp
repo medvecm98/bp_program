@@ -6,7 +6,7 @@
 #include <vector>
 #include <set>
 
-#include "GlobalUsing.h"
+#include "CryptoUtils.hpp"
 #include "XorMappedAddressAttribute.hpp"
 #include "ErrorCodeAttribute.hpp"
 #include "UnknownAttributesAttribute.hpp"
@@ -46,6 +46,16 @@ public:
      */
     StunServer(Networking* networking_);
 
+    /**
+     * @brief Handles received message.
+     * 
+     * Based on message type and class, message is processed and changes are
+     * made to networking, peer and other objects, if neccesary.
+     * 
+     * @param stun_message STUN message to handle
+     */
+    void handle_received_message(stun_header_ptr stun_message, QTcpSocket* socket);
+
 public slots:
     /**
      * @brief Starts the STUN server with provided address.
@@ -54,7 +64,7 @@ public slots:
      * 
      * @param address Address to listen on.
      */
-    void start_server(QHostAddress address);
+    void start_server(QHostAddress address, std::uint16_t port);
 
 private slots:
     /**
@@ -130,7 +140,7 @@ private:
      * @param lifetime Lifetime of allocation.
      * @param socket Socket that received Allocate request.
      */
-    void create_response_success_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint32_t lifetime, QTcpSocket* socket);
+    void create_response_success_allocate(stun_header_ptr message_orig, stun_header_ptr message_new, std::uint32_t lifetime, IpWrapper& socket);
 
     /**
      * @brief Create Identify success response.
@@ -142,7 +152,7 @@ private:
      * @param port Server port.
      * @param key Public key of identification target.
      */
-    void create_response_success_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id, QHostAddress client_ipv4, std::uint16_t port, CryptoPP::RSA::PublicKey& key);
+    void create_response_success_identify(stun_header_ptr message_orig, stun_header_ptr message_new, pk_t public_id, QHostAddress client_ipv4, std::uint16_t port, port_t stun_port, CryptoPP::RSA::PublicKey& key);
 
     /**
      * @brief Create Identify error response.
@@ -185,14 +195,14 @@ private:
      */
     void send_stun_message(QTcpSocket* socket , stun_header_ptr stun_message);
     
-    QTcpServer* tcp_server_;
+    QTcpServer* tcp_server_ = NULL;
     QTcpSocket* tcp_socket_;
     QDataStream in_stream;
     stun_attr_type_vec unknown_cr_attributes;
     std::set<quint16> known_cr_attributes;
     factory_map stun_attribute_factories;
     //std::map<pk_t, TurnAllocation> allocations;
-    Networking* networking_;
+    Networking* networking_ = NULL;
     bool server_started = false;
 };
 

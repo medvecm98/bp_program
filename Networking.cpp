@@ -37,15 +37,11 @@ void send_message_using_turn(networking_ptr networking_, QByteArray &msg, pk_t t
 		networking_->add_waiting_stun_message(to, new_stun_message);
 		networking_->get_stun_client()->send_stun_message(
 			new_stun_message,
-			networking_->ip_map_.get_wrapper_ref(to).get_relay_stun_server()
+			to_wrapper.get_relay_stun_server()
 		);
 	}
 	else {
-		networking_->add_waiting_stun_message(to, new_stun_message);
-		networking_->get_stun_client()->send_stun_message(
-			new_stun_message,
-			networking_->ip_map_.get_wrapper_ref(to).preferred_stun_server
-		);
+		networking_->get_stun_client()->identify_and_wait(to, new_stun_message);
 	}
 }
 
@@ -120,7 +116,7 @@ shared_ptr_message Networking::sign_and_encrypt_key(CryptoPP::ByteQueue &key_que
 void Networking::identify_peer_save_message(shared_ptr_message msg)
 {
 	std::cout << "requesting IP and public key for pid: " << msg->to() << std::endl;
-	stun_client->identify(msg->to());	// use STUN for IP and RSA public
+	stun_client->identify(msg->to());
 	waiting_ip.emplace(msg->to(), msg); // store message for later, when IP and RSA will arrive
 	std::cout << "User " << msg->to() << " was not found in IPMap" << std::endl;
 }
@@ -231,14 +227,16 @@ void Networking::send_message_with_credentials(shared_ptr_message msg, bool send
 	try
 	{
 		IpWrapper &ipw = ip_map().get_wrapper_ref(msg->to());
+		ipw.print_relay_state("a");
 
 		std::cout << "User " << msg->to() << " found in IP MAP database; Networking::send_message(shared_ptr_message msg)" << std::endl;
 
-		if (!ipw.has_ipv4())
+		if (!ipw.has_ipv4() && ipw.relay_state == RelayState::Direct)
 		{ // no IP
 			identify_peer_save_message(msg);
 			return;
 		}
+		ipw.print_relay_state("b");
 
 		if (msg->msg_type() == np2ps::PUBLIC_KEY)
 		{ // I'm requesting public key
@@ -246,6 +244,7 @@ void Networking::send_message_with_credentials(shared_ptr_message msg, bool send
 			sender_->message_send(std::move(msg), ipw);
 			return;
 		}
+		ipw.print_relay_state("c");
 
 		if (!ipw.has_rsa())
 		{ // no public key
@@ -255,27 +254,30 @@ void Networking::send_message_with_credentials(shared_ptr_message msg, bool send
 						msg->from(), msg->to()),
 					false, false, true, true, 0,
 					{}, {}, ip_map_.my_ip().get_rsa(), {}, {});
-			messages_waiting_for_credentials.emplace(msg->to(), msg); // save message for when exchange is finished
+			np2ps_messages_waiting_for_credentials.emplace(msg->to(), msg); // save message for when exchange is finished
+			ipw.print_relay_state("c1");
 
 			credentials_msg->mutable_credentials()->set_req_eax_key(true);
 			credentials_msg->mutable_credentials()->set_req_rsa_public_key(true);
+			ipw.print_relay_state("d");
 
 			sender_->message_send(std::move(credentials_msg), ipw);
 			return;
 		}
+		ipw.print_relay_state("e");
 
 		if (!ipw.has_eax())
 		{
 			// if (!send_credentials) {
 			// 	shared_ptr_message key_msg = generate_symmetric_key_message(msg);
-			// 	waiting_symmetric_exchange.emplace(msg->to(), msg);
+			// 	np2ps_waiting_symmetric_exchange.emplace(msg->to(), msg);
 			// 	sender_->message_send(key_msg, ipw);
 			// 	return;
 			// }
 			// else {
 			// 	// shared_ptr_message credentials_msg =
 			// 	shared_ptr_message key_msg = generate_symmetric_key_message(msg);
-			// 	waiting_symmetric_exchange.emplace(msg->to(), msg);
+			// 	np2ps_waiting_symmetric_exchange.emplace(msg->to(), msg);
 			// 	shared_ptr_message creds = MFW::CredentialsFactory(peer_public_id, msg->to());
 
 			// 	creds->set_msg_ctx(np2ps::ONE_WAY);
@@ -293,7 +295,7 @@ void Networking::send_message_with_credentials(shared_ptr_message msg, bool send
 			// 	sender_->message_send(creds, ipw);
 			// 	return;
 			// }
-			messages_waiting_for_credentials.emplace(msg->to(), msg);
+			np2ps_messages_waiting_for_credentials.emplace(msg->to(), msg);
 			shared_ptr_message credentials_msg =
 				MFW::ReqCredentialsFactory(
 					MFW::CredentialsFactory(
@@ -301,10 +303,12 @@ void Networking::send_message_with_credentials(shared_ptr_message msg, bool send
 					false, false, false, true, 0,
 					{}, {}, ip_map_.my_ip().get_rsa(), {}, {});
 			sender_->message_send(credentials_msg, ipw);
+			ipw.print_relay_state("f");
 			return;
 		}
 
 		std::cout << "	Message ready to be normally sent." << std::endl;
+		ipw.print_relay_state("g");
 		sender_->message_send(std::move(msg), ipw);
 	}
 	catch (user_not_found_in_database &e)
@@ -324,16 +328,20 @@ void check_ip(QTcpSocket *tcp_socket, pk_t pk_id, IpMap &ip_map_, bool ignore_ex
 {
 	try
 	{
-		if (ignore_existing || !ip_map_.have_ip4(pk_id))
+		IpWrapper& wrapper = ip_map_.get_wrapper_ref(pk_id);
+		if (ignore_existing || !wrapper.has_ipv4())
 		{
 			std::cout << "Updating NP2PS IP: " << tcp_socket->peerAddress().toString().toStdString() << ", port: " << tcp_socket->peerPort() << std::endl;
-			ip_map_.update_ip(pk_id, tcp_socket->peerAddress(), tcp_socket->peerPort());
+			if (!GlobalMethods::ip_address_is_private(tcp_socket->peerAddress()) || !wrapper.has_ipv4()) {
+				wrapper.ipv4 = tcp_socket->peerAddress();
+			}
+			wrapper.port = tcp_socket->peerPort();
 		}
 	}
 	catch (user_not_found_in_database &unf)
 	{
 		std::cout << "Updating NP2PS IP: " << tcp_socket->peerAddress().toString().toStdString() << ", port: " << tcp_socket->peerPort() << std::endl;
-		ip_map_.update_ip(pk_id, tcp_socket->peerAddress(), tcp_socket->peerPort());
+		ip_map_.add_to_ip_map(pk_id, IpWrapper(tcp_socket->peerAddress(), tcp_socket->peerPort()));
 	}
 }
 
@@ -435,27 +443,30 @@ void Networking::init_sender_receiver(news_database *nd)
 
 PeerReceiver::PeerReceiver(networking_ptr net) : networking_(net) {}
 
-void PeerReceiver::start_server(QHostAddress address)
+void PeerReceiver::start_server(QHostAddress address, std::uint16_t port)
 {
-	if (!server_started)
-	{
+	if (!tcp_server_) {
 		tcp_server_ = new QTcpServer(this);
-		if (!tcp_server_->listen(QHostAddress::AnyIPv4, PORT))
-		{
-			QTextStream(stdout)
-				<< "Failed to start the server "
-				<< tcp_server_->errorString()
-				<< '\n';
-			tcp_server_->close();
-			return;
-		}
-		else
-		{
-			QTextStream(stdout) << "NP2PS server listening on: " << address.toString() << " and port: " << PORT << '\n';
-		}
-		QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &PeerReceiver::prepare_for_message_receive);
-		server_started = true;
 	}
+	if (tcp_server_->isListening()) {
+		tcp_server_->close();
+	}
+	if (!tcp_server_->listen(QHostAddress::AnyIPv4, port))
+	{
+		QTextStream(stdout)
+			<< "Failed to start the server "
+			<< tcp_server_->errorString()
+			<< '\n';
+		tcp_server_->close();
+		return;
+	}
+	else
+	{
+		QTextStream(stdout) << "NP2PS server listening on: " << address.toString() << " and port: " << port << '\n';
+	}
+	tcp_server_->disconnect();
+	QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &PeerReceiver::prepare_for_message_receive);
+	server_started = true;
 }
 
 shared_ptr_message decrypt_message_using_symmetric_key(
@@ -646,19 +657,28 @@ void PeerReceiver::process_received_np2ps_message(QDataStream &msg, QTcpSocket *
 				auto message = decrypt_message_using_symmetric_key(e_msg, iv, ipw, networking_, np2ps_socket);
 
 				bool updated_socket = false;
-				networking_->ip_map_.enroll_new_np2ps_tcp_socket(pid, np2ps_socket, &updated_socket); // enroll NP2PS socket for peers, that are not enrolled yet
 				// we can check now, if the IP of sender is already in database and if not, we will add it
-				check_ip(np2ps_socket, pid, networking_->ip_map_, updated_socket);
 				
 				if (!np2ps_socket)
 				{
-					networking_->ip_map().check_or_add_to_ip_map_relayed(pid, relayer);
+					networking_->ip_map().check_or_add_to_ip_map_relayed(
+						pid, relayer, RelayState::Relayed
+					);
+					networking_->resend_np2ps_messages_waiting_for_peer_online_long_term(
+						message->from()
+					);
+				}
+				else {
+					networking_->ip_map_.enroll_new_np2ps_tcp_socket(pid, np2ps_socket, &updated_socket); // enroll NP2PS socket for peers, that are not enrolled yet
+					check_ip(np2ps_socket, pid, networking_->ip_map_, updated_socket);
 				}
 
 				networking_->add_to_received(message);
 			}
 			else
 			{
+				/* we don't have symmetric key for this peer generated yet */
+
 				bool updated_socket = false;
 				networking_->ip_map_.enroll_new_np2ps_tcp_socket(pid, np2ps_socket, &updated_socket); // enroll NP2PS socket for peers, that are not enrolled yet
 				// we can check now, if the IP of sender is already in database and if not, we will add it
@@ -745,7 +765,8 @@ void PeerReceiver::process_received_np2ps_message(QDataStream &msg, QTcpSocket *
 				}
 				else
 				{
-					networking_->ip_map().add_to_ip_map_relayed(m->from(), relayer);
+					networking_->ip_map().check_or_add_to_ip_map_relayed(m->from(), relayer, RelayState::Relayed);
+					networking_->resend_np2ps_messages_waiting_for_peer_online_long_term(m->from());
 				}
 				networking_->add_to_received(std::move(m));
 			}
@@ -754,7 +775,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream &msg, QTcpSocket *
 				throw other_error("Public key should be exchanged in credentials or using STUN.");
 			}
 		}
-		std::cout << "\nRecived message consumed." << std::endl;
+		std::cout << "\nReceived message consumed." << std::endl;
 		if (!np2ps_socket)
 		{
 			break;
@@ -774,86 +795,134 @@ PeerSender::PeerSender(networking_ptr net)
 
 void PeerSender::try_connect(shared_ptr_message msg, IpWrapper &connectee)
 {
-	if (connectee.np2ps_tcp_socket_ &&
-		connectee.np2ps_tcp_socket_->isValid())
-	{
-		/* Peer is online, send message directly. */
-		connectee.set_relay_state(RelayState::Direct);
-		message_send(connectee.np2ps_tcp_socket_, msg, connectee, false);
+	if (networking_->np2ps_sending_in_progress) {
+		networking_->np2ps_messages_waiting_for_connection.push_back(
+			std::make_tuple(connectee, msg)
+		);
 	}
-	else if (connectee.get_relay_state() == RelayState::Relayed)
-	{
-		/* Relay message to peer, who is accessible via relaying. */
-		message_send(NULL, msg, connectee, true);
-	}
-	else
-	{
-		/* Trying to establish new connection. */
-		QTcpSocket *socket_ = new QTcpSocket(this);
+	else {
+		connectee.print_relay_state();
+		networking_->np2ps_sending_in_progress = true;
+		if (connectee.np2ps_tcp_socket_ &&
+			connectee.np2ps_tcp_socket_->isValid())
+		{
+			/* Peer is online, send message directly. */
+			connectee.set_relay_state(RelayState::Direct);
+			message_send(connectee.np2ps_tcp_socket_, msg, connectee, false);
+		}
+		else if (connectee.get_relay_state() == RelayState::Relayed)
+		{
+			/* Relay message to peer, who is accessible via relaying. */
+			message_send(NULL, msg, connectee, true);
+		}
+		else
+		{
+			/* Trying to establish new connection. */
+			QTcpSocket *socket_ = new QTcpSocket(this);
 
-		QObject::connect(
-			socket_, &QAbstractSocket::connected,
-			this, &PeerSender::host_connected);
-		QObject::connect(
-			socket_, &QAbstractSocket::errorOccurred,
-			this, &PeerSender::handle_connection_error);
-		QObject::connect(
-			socket_, &QAbstractSocket::disconnected,
-			socket_, &QObject::deleteLater);
-		QObject::connect(
-			socket_, &QAbstractSocket::readyRead,
-			networking_->get_peer_receiver(), &PeerReceiver::message_receive_connected);
+			if (!connection_timeout_timer) {
+				connection_timeout_timer = new QTimer(this);
+			}
+			else {
+				connection_timeout_timer->disconnect();
+			}
 
-		message_waiting_for_connection = msg;
-		connectee_waiting_for_connection = connectee;
+			QObject::connect(
+				connection_timeout_timer, &QTimer::timeout,
+				socket_, &QTcpSocket::disconnectFromHost
+			);
+			QObject::connect(
+				connection_timeout_timer, &QTimer::timeout,
+				this, &PeerSender::handle_connection_timeout
+			);
 
-		std::cout << "Connecting to host: "
-				  << connectee.ipv4.toString().toStdString()
-				  << " and port "
-				  << connectee.port
-				  << std::endl; // try to connect to peer directly
-		socket_->connectToHost(connectee.ipv4, connectee.port);
+			QObject::connect(
+				socket_, &QAbstractSocket::connected,
+				this, &PeerSender::host_connected);
+			QObject::connect(
+				socket_, &QAbstractSocket::errorOccurred,
+				this, &PeerSender::handle_connection_error);
+			QObject::connect(
+				socket_, &QAbstractSocket::disconnected,
+				socket_, &QObject::deleteLater);
+			QObject::connect(
+				socket_, &QAbstractSocket::readyRead,
+				networking_->get_peer_receiver(), &PeerReceiver::message_receive_connected);
+
+			networking_->np2ps_messages_waiting_for_connection.push_front(
+				std::make_tuple(connectee, msg)
+			);
+
+			std::cout << "Connecting to host: "
+					<< connectee.ipv4.toString().toStdString()
+					<< " and port "
+					<< connectee.port
+					<< std::endl; // try to connect to peer directly
+			socket_->connectToHost(connectee.ipv4, connectee.port);
+
+			connection_timeout_timer->start(std::chrono::milliseconds(1000));
+		}
 	}
 }
 
 void PeerSender::host_connected()
 {
-	std::cout << "Host successfuly connected:" << std::endl; // connection to host was successful
+	connection_timeout_timer->stop();
 	QTcpSocket *socket_ = (QTcpSocket *)QObject::sender();
+	auto message_waiting = networking_->np2ps_messages_waiting_for_connection.front();
+	IpWrapper connectee = std::get<IpWrapper>(message_waiting);
+	std::cout << "Host successfuly connected:" << std::endl; // connection to host was successful
 	std::cout << '\t' << socket_->peerAddress().toString().toStdString() << ' ' << socket_->peerPort() << std::endl;
 
-	auto mtemp = message_waiting_for_connection;
-	auto itemp = connectee_waiting_for_connection;
+	shared_ptr_message msg = std::get<shared_ptr_message>(message_waiting);
+	networking_->np2ps_messages_waiting_for_connection.pop_front();
 
-	message_waiting_for_connection.reset();
-	connectee_waiting_for_connection = IpWrapper();
-
-	networking_->ip_map().enroll_new_np2ps_tcp_socket(mtemp->to(), socket_);
-	message_send(socket_, mtemp, itemp, false); // send message directly
+	networking_->ip_map().enroll_new_np2ps_tcp_socket(msg->to(), socket_);
+	message_send(socket_, msg, connectee, false); // send message directly
 }
+
+#define FILTER_OUT_NON_RELAYING_MESSAGE(msg) \
+	(msg != np2ps::MessageType::PING && \
+	 msg != np2ps::MessageType::GOSSIP)
+
+#define FILTER_IN_NON_RELAYING_MESSAGE(msg) \
+	(msg == np2ps::MessageType::PING && \
+	 msg == np2ps::MessageType::GOSSIP)
 
 void PeerSender::handle_connection_error()
 {
-
+	connection_timeout_timer->stop();
 	QTcpSocket *socket_ = (QTcpSocket *)QObject::sender();
-
+	std::cout << "NP2PS peer connection failed. " << socket_->errorString().toStdString() << " " << socket_->error() << std::endl;
+	if (networking_->np2ps_messages_waiting_for_connection.empty()) {
+		return;
+	}
+	auto message_waiting = networking_->np2ps_messages_waiting_for_connection.front();
+	IpWrapper connectee = std::get<IpWrapper>(message_waiting);
 	if (socket_->error() == QAbstractSocket::SocketError::ConnectionRefusedError ||
-		socket_->error() == QAbstractSocket::SocketError::SocketTimeoutError)
+		socket_->error() == QAbstractSocket::SocketError::SocketTimeoutError || 
+		socket_->error() == QAbstractSocket::SocketError::NetworkError)
 	{
-		std::cout << "NP2PS peer connection failed." << std::endl;
-		auto mtemp = message_waiting_for_connection;
-		IpWrapper connectee = connectee_waiting_for_connection;
+		shared_ptr_message mtemp = std::get<shared_ptr_message>(message_waiting);
 
-		message_waiting_for_connection.reset();
-		connectee_waiting_for_connection = IpWrapper();
+		networking_->np2ps_messages_waiting_for_connection.pop_front();
+
+		np2ps::MessageType message_type = mtemp->msg_type();
 		if (connectee.relay_state == RelayState::Direct)
 		{
-			if (connectee.has_relay_stun_servers()) {
+			if (connectee.has_relay_stun_servers() &&
+				FILTER_OUT_NON_RELAYING_MESSAGE(message_type))
+			{
 				/* We will relay if and only if there are direct relay STUN servers. */
 				message_send(socket_, mtemp, connectee, true);
+				return;
 			}
 			/* We will store this for later use -- peer may be just offline. */
-			networking_->store_message_waiting_for_connection(message_waiting_for_connection);
+			networking_->store_message_waiting_for_connection(mtemp);
+		}
+		else if (FILTER_IN_NON_RELAYING_MESSAGE(message_type))
+		{
+			/* we will skip relaying non-relayable messages, they are just dropped */
 		}
 		else if (
 			connectee.relay_state == RelayState::Relayed ||
@@ -861,11 +930,72 @@ void PeerSender::handle_connection_error()
 		{
 			/* We will (try) to relay to given peer. */
 			message_send(socket_, mtemp, connectee, true);
+			return;
 		}
 		else
 		{
 			throw unknown_relay_state("Peer is in unhandled or unknown relay state.");
 		}
+	}
+	else {
+		std::cout << socket_->errorString().toStdString() << " " << socket_->error() << std::endl;
+	}
+
+	networking_->np2ps_sending_in_progress = false;
+	if (!networking_->np2ps_messages_waiting_for_connection.empty()) {
+		auto [connectee, message] = networking_->np2ps_messages_waiting_for_connection.front();
+		networking_->np2ps_messages_waiting_for_connection.pop_front();
+		try_connect(message, connectee);
+	}
+}
+
+void PeerSender::handle_connection_timeout() {
+	connection_timeout_timer->stop();
+	std::cout << "NP2PS peer connection timed out. " << std::endl;
+	if (networking_->np2ps_messages_waiting_for_connection.empty()) {
+		return;
+	}
+	auto message_waiting = networking_->np2ps_messages_waiting_for_connection.front();
+	IpWrapper connectee = std::get<IpWrapper>(message_waiting);
+	shared_ptr_message mtemp = std::get<shared_ptr_message>(message_waiting);
+
+	networking_->np2ps_messages_waiting_for_connection.pop_front();
+
+	np2ps::MessageType message_type = mtemp->msg_type();
+	if (connectee.relay_state == RelayState::Direct)
+	{
+		if (connectee.has_relay_stun_servers() &&
+			FILTER_OUT_NON_RELAYING_MESSAGE(message_type))
+		{
+			/* We will relay if and only if there are direct relay STUN servers. */
+			message_send(NULL, mtemp, connectee, true);
+			return;
+		}
+		/* We will store this for later use -- peer may be just offline. */
+		networking_->store_message_waiting_for_connection(mtemp);
+	}
+	else if (FILTER_IN_NON_RELAYING_MESSAGE(message_type))
+	{
+		/* we will skip relaying non-relayable messages, they are just dropped */
+	}
+	else if (
+		connectee.relay_state == RelayState::Relayed ||
+		connectee.relay_state == RelayState::Unknown)
+	{
+		/* We will (try) to relay to given peer. */
+		message_send(NULL, mtemp, connectee, true);
+		return;
+	}
+	else
+	{
+		throw unknown_relay_state("Peer is in unhandled or unknown relay state.");
+	}
+
+	networking_->np2ps_sending_in_progress = false;
+	if (!networking_->np2ps_messages_waiting_for_connection.empty()) {
+		auto [connectee, message] = networking_->np2ps_messages_waiting_for_connection.front();
+		networking_->np2ps_messages_waiting_for_connection.pop_front();
+		try_connect(message, connectee);
 	}
 }
 
@@ -931,10 +1061,19 @@ void PeerSender::message_send(QTcpSocket *socket, shared_ptr_message msg, IpWrap
 	}
 
 	// send message
-	if (!relay)
+	if (!relay) {
 		send_message_using_socket(socket, length_plus_msg_block);
-	else
+	}
+	else {
 		send_message_using_turn(networking_, length_plus_msg_block, msg->to(), ipw);
+	}
+
+	networking_->np2ps_sending_in_progress = false;
+	if (!networking_->np2ps_messages_waiting_for_connection.empty()) {
+		auto [connectee, message] = networking_->np2ps_messages_waiting_for_connection.front();
+		networking_->np2ps_messages_waiting_for_connection.pop_front();
+		try_connect(message, connectee);
+	}
 }
 
 void PeerSender::message_send(shared_ptr_message msg, IpWrapper &ipw)
@@ -961,11 +1100,11 @@ void Networking::decrypt_encrypted_messages(pk_t original_sender)
 
 void Networking::symmetric_exchanged(pk_t other_peer)
 {
-	auto [mapib, mapie] = waiting_symmetric_exchange.equal_range(other_peer);
+	auto [mapib, mapie] = np2ps_waiting_symmetric_exchange.equal_range(other_peer);
 	for (; mapib != mapie; mapib++)
 	{
 		auto msg_ptr = mapib->second;
-		waiting_symmetric_exchange.erase(mapib->first);
+		np2ps_waiting_symmetric_exchange.erase(mapib->first);
 		enroll_message_to_be_sent(msg_ptr); // enroll all messages for that given peer
 		break;
 	}
@@ -1021,17 +1160,8 @@ void Networking::get_network_interfaces()
 
 void Networking::start_servers_with_first_ip()
 {
-	QList<QHostAddress> ipAddressesList = QNetworkInterface::allAddresses();
-	for (int i = 0; i < ipAddressesList.size(); ++i)
-	{
-		if (ipAddressesList.at(i) != QHostAddress::LocalHost &&
-			ipAddressesList.at(i).toIPv4Address())
-		{
-			receiver_->start_server(QHostAddress(ipAddressesList.at(i)));
-			stun_server->start_server(QHostAddress(ipAddressesList.at(i)));
-			break;
-		}
-	}
+	receiver_->start_server(QHostAddress::Any, PORT);
+	stun_server->start_server(QHostAddress::Any, STUN_PORT);
 }
 
 bool Networking::add_to_ip_map(pk_t id, QHostAddress &&address)
@@ -1100,30 +1230,81 @@ void Networking::add_stun_server(pk_t pid, IpWrapper &wrapper)
 
 void Networking::store_message_waiting_for_connection(shared_ptr_message message)
 {
-	messages_waiting_for_connection.push_back(message);
+	np2ps_messages_waiting_for_peer_online_short_term.push_back(message);
+	if (message->failed_to_send_counter() == 10) {
+		np2ps_messages_waiting_for_peer_online_long_term.push_back(std::make_tuple(GlobalMethods::get_time_now(), message));
+		return;
+	}
+	message->set_failed_to_send_counter(message->failed_to_send_counter() + 1);
 }
 
 void Networking::add_waiting_stun_message(pk_t final_receiver, stun_header_ptr stun_message)
 {
-	stun_messages_waiting_for_success.emplace(
+	stun_messages_waiting_for_success_send.emplace(
 		final_receiver, stun_message
 	);
 }
 
 void Networking::remove_waiting_stun_message(pk_t final_receiver)
 {
-	stun_messages_waiting_for_success.erase(final_receiver);
+	stun_messages_waiting_for_success_send.erase(final_receiver);
+}
+
+void Networking::check_message_side_effect(
+	stun_header_ptr header_waiting_to_connect,
+	IpWrapper& connectee_wrapper)
+{
+	DataAttribute* data;
+    for (auto&& attr : header_waiting_to_connect->attributes) {
+        if (attr->attribute_type == StunAttributeEnum::data) {
+            data = (DataAttribute*)attr.get();
+            break;
+        }
+    }
+    std::string np2ps_message = data->get_np2ps_messsage();
+    QByteArray msg(np2ps_message.c_str(), np2ps_message.length());
+    QDataStream stream(msg);
+    quint16 msg_version, msg_class;
+    stream >> msg_version;
+    stream >> msg_class;
+    if (msg_class == ENCRYPTED_MESSAGE)
+    {
+        quint64 pid, iv_size, msg_size;
+        stream >> pid;
+        stream >> iv_size;
+        QByteArray iv_array, msg_array;
+        stream >> iv_array;
+		stream >> msg_size;
+        stream >> msg_array;
+        std::string message = msg_array.toStdString();
+        std::string iv_str = iv_array.toStdString();
+        CryptoPP::SecByteBlock iv(
+            reinterpret_cast<const CryptoPP::byte *>(&iv_str[0]), iv_str.size()
+        );
+        shared_ptr_message np2ps_message = decrypt_message_using_symmetric_key(
+            message, iv, connectee_wrapper, NULL, NULL
+        );
+        if (np2ps_message->msg_ctx() == np2ps::REQUEST &&
+            np2ps_message->msg_type() == np2ps::ARTICLE_ALL) 
+        {
+            emit got_article_all_rejection(np2ps_message);
+        }
+    }
 }
 
 void Networking::resend_stun_message(pk_t final_receiver) {
-	auto [messages, messages_end] = stun_messages_waiting_for_success.equal_range(final_receiver);
+	auto [messages, messages_end] = stun_messages_waiting_for_success_send.equal_range(
+		final_receiver
+	);
 	IpWrapper& wrapper = ip_map().get_wrapper_ref(final_receiver);
 	try {
 		wrapper.next_relay_stun_server();
 	}
 	catch (no_more_relay_stun_servers nmrss) {
 		wrapper.end_relay_stun_server_tracking();
+		check_message_side_effect(messages->second, wrapper);
 		remove_waiting_stun_message(messages->first);
+		return;
 	}
 	for (; messages != messages_end; messages++) {
 		get_stun_client()->send_stun_message(
@@ -1134,20 +1315,64 @@ void Networking::resend_stun_message(pk_t final_receiver) {
 }
 
 void Networking::stun_message_success(pk_t final_receiver) {
-	stun_messages_waiting_for_success.erase(final_receiver);
 	IpWrapper& receiver_wrapper = ip_map().get_wrapper_ref(final_receiver);
 	receiver_wrapper.end_relay_stun_server_tracking();
+	stun_messages_waiting_for_success_send.erase(final_receiver);
 }
 
-void Networking::resend_messages_waiting_for_connection() {
-	std::vector<shared_ptr_message> backup_messages_waiting_for_connection;
-	backup_messages_waiting_for_connection.insert(
-		backup_messages_waiting_for_connection.end(),
-		std::make_move_iterator(messages_waiting_for_connection.begin()),
-		std::make_move_iterator(messages_waiting_for_connection.end())
+void Networking::resend_np2ps_messages_waiting_for_peer_online() {
+	std::vector<shared_ptr_message> backup_np2ps_messages_waiting_for_peer_online;
+	backup_np2ps_messages_waiting_for_peer_online.insert(
+		backup_np2ps_messages_waiting_for_peer_online.end(),
+		std::make_move_iterator(np2ps_messages_waiting_for_peer_online_short_term.begin()),
+		std::make_move_iterator(np2ps_messages_waiting_for_peer_online_short_term.end())
 	);
-	messages_waiting_for_connection.clear();
-	for (auto&& message : backup_messages_waiting_for_connection) {
+	np2ps_messages_waiting_for_peer_online_short_term.clear();
+	for (auto&& message : backup_np2ps_messages_waiting_for_peer_online) {
 		enroll_message_to_be_sent(message);
+	}
+}
+
+void Networking::resend_np2ps_messages_waiting_for_peer_online_long_term(pk_t peer) {
+	shared_ptr_message message;
+	timestamp_t time;
+	for (int i = 0; i < np2ps_messages_waiting_for_peer_online_long_term.size(); i++) {
+		message = std::get<shared_ptr_message>(
+			np2ps_messages_waiting_for_peer_online_long_term.front()
+		);
+		time = std::get<timestamp_t>(
+			np2ps_messages_waiting_for_peer_online_long_term.front()
+		);
+		np2ps_messages_waiting_for_peer_online_long_term.pop_front();
+		if (message->to() == peer) {
+			enroll_message_to_be_sent(message);
+		}
+		else {
+			np2ps_messages_waiting_for_peer_online_long_term.push_back(
+				std::make_tuple(time, message)
+			);
+		}
+	}
+}
+
+void Networking::clean_long_term_np2ps_messages() {
+	shared_ptr_message message;
+	timestamp_t time;
+	timestamp_t time_period = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::hours(24 * 14)
+	).count();
+	for (int i = 0; i < np2ps_messages_waiting_for_peer_online_long_term.size(); i++) {
+		message = std::get<shared_ptr_message>(
+			np2ps_messages_waiting_for_peer_online_long_term.front()
+		);
+		time = std::get<timestamp_t>(
+			np2ps_messages_waiting_for_peer_online_long_term.front()
+		);
+		np2ps_messages_waiting_for_peer_online_long_term.pop_front();
+		if (GlobalMethods::get_time_now() - time < time_period) {
+			np2ps_messages_waiting_for_peer_online_long_term.push_back(
+				std::make_tuple(time, message)
+			);
+		}
 	}
 }

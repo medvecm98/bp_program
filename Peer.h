@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include "Message.h"
 #include <functional>
+#include <QHostInfo>
 #include <QtNetwork/QHostAddress>
 #include <QObject>
 
@@ -67,7 +68,7 @@ public:
 				newspaper_name_ = ne.entry().news_name();
 			}
 		}
-		
+
 		deserialize_config(peer_serialized.config());
 		init_timers();
 		qobject_connect_peer();
@@ -91,22 +92,60 @@ public:
 		QObject::connect(networking_->get_stun_client().get(), &StunClient::confirmed_newspaper_pk,
 						 this, &Peer::newspaper_confirm_public_key);
 
+		QObject::connect(&(*networking_), &Networking::got_article_all_rejection,
+						 this, &Peer::article_all_send_more_message);
+
 		QObject::connect(networking_.get(), &Networking::newspaper_identified,
 						 this, &Peer::newspaper_identified);
 		QObject::connect(
 			auto_update_timer, &QTimer::timeout,
-			this, &Peer::generate_article_list_message_all_news
-		);
+			this, &Peer::generate_article_list_message_all_news);
+		QObject::connect(
+			waiting_messages_timer, &QTimer::timeout,
+			networking_.get(), &Networking::resend_np2ps_messages_waiting_for_peer_online);
+		QObject::connect(
+			gossip_timer, &QTimer::timeout,
+			this, &Peer::generate_gossip_one_way_all);
+		QObject::connect(
+			gossip_timer, &QTimer::timeout,
+			this, &Peer::inform_coworkers);
+		QObject::connect(
+			clear_articles_timer, &QTimer::timeout,
+			this, &Peer::clear_abundant_articles);
+		QObject::connect(
+			clear_articles_timer, &QTimer::timeout,
+			networking_.get(), &Networking::clean_long_term_np2ps_messages);
 		auto_update_timer->start(
 			std::chrono::duration_cast<std::chrono::milliseconds>(
-				std::chrono::minutes(20)
-			)
-		);
+				std::chrono::minutes(20)));
+		waiting_messages_timer->start(
+			std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::minutes(10)));
+		gossip_timer->start(
+			std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::minutes(5)));
+		clear_articles_timer->start(
+			std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::hours(1)));
 	}
 
-	void init_timers() {
-		if (!auto_update_timer) {
+	void init_timers()
+	{
+		if (!auto_update_timer)
+		{
 			auto_update_timer = new QTimer(this);
+		}
+		if (!waiting_messages_timer)
+		{
+			waiting_messages_timer = new QTimer(this);
+		}
+		if (!gossip_timer)
+		{
+			gossip_timer = new QTimer(this);
+		}
+		if (!clear_articles_timer)
+		{
+			clear_articles_timer = new QTimer(this);
 		}
 	}
 
@@ -140,8 +179,8 @@ public:
 	void add_new_newspaper(pk_t newspaper_pid, const my_string &newspaper_name, const std::string &newspaper_ip, bool allocate_now = true);
 	void add_new_newspaper(pk_t newspaper_pid, const my_string &newspaper_name, pk_t sender);
 	void add_new_newspaper(pk_t destination, pk_t news_id, my_string news_name);
-	NewspaperEntry& add_new_newspaper(pk_t newspaper_pid, const my_string &newspaper_name, QHostAddress &&newspaper_ip_domain, bool allocate_now = false);
-	NewspaperEntry& add_new_newspaper(NewspaperEntry&& newspaper_entry, QHostAddress&& address, bool allocate_now = false);
+	NewspaperEntry &add_new_newspaper(pk_t newspaper_pid, const my_string &newspaper_name, QHostAddress &&newspaper_ip_domain, port_t np2ps_port, port_t stun_port, bool allocate_now = false);
+	NewspaperEntry &add_new_newspaper(NewspaperEntry &&newspaper_entry, QHostAddress &&address, port_t np2ps_port, port_t stun_port, bool allocate_now = false);
 	void add_new_newspaper_from_file(const std::string &path);
 	void add_new_newspaper_pk(pk_t pid);
 	size_t list_all_articles_by_me(article_container &articles, const std::set<category_t> &categories, pk_t news_id = 0);
@@ -204,6 +243,7 @@ public:
 	void handle_user_info_message_one_way_response(shared_ptr_message message);
 	void handle_new_journalist_one_way(shared_ptr_message message);
 	void handle_gossip_one_way(shared_ptr_message message);
+	void handle_ping_one_way(shared_ptr_message message);
 
 	/* error */
 
@@ -224,17 +264,22 @@ public:
 	void generate_article_list_message_all_news();
 	void generate_newspaper_entry_request(pk_t destination, pk_t newspaper_id);
 	void generate_newspaper_list_request();
+	void generate_newspaper_list_request_connected();
 	void generate_newspaper_list_request(pk_t destination);
 	void generate_successful_download_message(pk_t reader, pk_t recv_article_id);
-	void generate_successful_download_message_all_readers(const user_container& readers, pk_t from, pk_t recv_article_id);
+	void generate_successful_download_message_all_readers(const user_container &readers, pk_t from, pk_t recv_article_id);
 	void generate_new_journalist(pk_t pid);
 	void generate_journalist_request(pk_t news_id);
 	void generate_user_info_message(pk_t to);
 	void generate_gossip_request(pk_t to);
 	void generate_gossip_one_way(pk_t to);
-	void generate_gossip_one_way();
+	void generate_gossip_one_way_all();
 	void generate_news_refresh();
 	void generate_ping_one_way(pk_t to);
+	void generate_article_removed_message(pk_t news, pk_t author, hash_t article_id);
+
+	void article_all_send(Article &article);
+	void article_all_send_more(Article &article);
 
 	void inform_coworkers();
 	void ping_direct_peers();
@@ -263,7 +308,7 @@ public:
 	pk_t get_public_id();
 	my_string get_name();
 
-	my_string& name();
+	my_string &name();
 
 	void print_contents();
 
@@ -275,7 +320,8 @@ public:
 	void stun_allocate();
 	bool remove_article(hash_t hash);
 	bool remove_article(hash_t hash, pk_t &newspaper_id);
-	void identify_newspaper(QHostAddress address, const std::string &newspaper_name);
+	void identify_newspaper(QString address, const std::string &newspaper_name);
+	void identify_newspaper(QHostAddress address, port_t np2ps_port, port_t stun_port, const std::string &newspaper_name);
 	void upload_external_article(Article a);
 	void add_journalist(pk_t j);
 	void remove_journalist(pk_t j);
@@ -294,26 +340,47 @@ public:
 	bool add_friend(pk_t id, QHostAddress ip);
 
 	void allocate_next_newspaper();
-	NewspaperEntry& get_my_newspaper();
+	NewspaperEntry &get_my_newspaper();
 	void remove_news(pk_t to_remove);
 
-	void serialize_config(np2ps::PeerConfig* serialized_peer);
-	void deserialize_config(const np2ps::PeerConfig& serialized_peer) {
+	void serialize_config(np2ps::PeerConfig *serialized_peer);
+	void deserialize_config(const np2ps::PeerConfig &serialized_peer)
+	{
 		config.gossip_randoms = serialized_peer.gossip_randoms();
 		config.list_size_default = serialized_peer.list_size_default();
 		config.list_size_first = serialized_peer.list_size_first();
 	}
 
-	user_container& get_journalist_of() {
+	user_container &get_journalist_of()
+	{
 		return journalist_of_;
 	}
 
-	std::map<std::string, pk_t>& get_pending_journalists();
+	std::map<std::string, pk_t> &get_pending_journalists();
 
 	void load_news_from_file(std::string path);
 	void save_news_to_file(std::string path, pk_t news_id, QHostAddress address);
+	void clear_abundant_articles();
+
+	ArticleListSort get_article_list_sort_config()
+	{
+		return config.sort_type;
+	}
+
+	void set_article_list_sort_config(ArticleListSort sort_type)
+	{
+		config.sort_type = sort_type;
+	}
+
+	void store_newspaper_potential(pk_t news_id, news_potential_tuple entry);
+
+	void clear_newspaper_potential();
+
+	news_potential_db& get_newspaper_potential();
 
 public slots:
+	void article_all_send_more_message(shared_ptr_message message);
+
 	void update_article(pk_t news_id, hash_t article_hash, std::string new_text);
 
 	void handle_message(shared_ptr_message message);
@@ -324,7 +391,7 @@ public slots:
 
 	void newspaper_confirm_public_key(pk_t pid, rsa_public_optional public_key);
 
-	void newspaper_identified(pk_t newspaper_pid, my_string newspaper_name, std::string newspaper_ip_domain);
+	void newspaper_identified(pk_t newspaper_pid, my_string newspaper_name, std::string newspaper_ip_domain, port_t np2ps_port, port_t stun_port);
 
 	void slot_add_new_newspaper_from_file(QString path)
 	{
@@ -368,6 +435,10 @@ public slots:
 
 	int slot_get_config_news_no_read_articles(pk_t news_id);
 	int slot_get_config_news_no_unread_articles(pk_t news_id);
+
+	void slot_dns_result(const QHostInfo &host);
+
+	void slot_newspaper_from_list_added(pk_t news_id);
 
 signals:
 	void newspaper_list_received();
@@ -421,19 +492,23 @@ signals:
 
 	void signal_article_updated();
 
-	void new_journalist_request(pk_t pid, std::string name);
+	void signal_new_journalist_request(pk_t pid, std::string name);
+	
+	void signal_journalism_approved(pk_t pid);
+
+	void signal_newspaper_updated();
 
 private:
 	PeerConfig config;
 
 	// reader part
-	pk_t public_identifier_;				 // public identifier of my peer
-	my_string name_;						 // name of my peer
+	pk_t public_identifier_;	// public identifier of my peer
+	my_string name_;			// name of my peer
 	networking_ptr networking_; // networking, for handling sending and receiving
-	news_database news_;					 // list of all downloaded articles, mapped by their Newspapers
-	user_container friends_;				 // friends, sharing their newspaper entries with you
+	news_database news_;		// list of all downloaded articles, mapped by their Newspapers
+	user_container friends_;	// friends, sharing their newspaper entries with you
 
-	std::unordered_multimap<hash_t, Margin> margins_added_;					   // multimap of Article -> Margins, that this peer added, or requested to add
+	std::unordered_multimap<hash_t, Margin> margins_added_;						// multimap of Article -> Margins, that this peer added, or requested to add
 	std::unordered_map<pk_t, NewspaperEntry> newspapers_awaiting_confirmation_; // newspaper that we want to add, but that haven't yet confirmed their existence
 
 	// journalist part
@@ -441,14 +516,19 @@ private:
 	user_container journalist_of_;
 
 	// chief editor
-	my_string newspaper_name_;						  // my newspaper name
-	pk_t newspaper_id_;								  // public identifier of my newspaper
-	user_container journalists_;					  // list of journalists
+	my_string newspaper_name_;	 // my newspaper name
+	pk_t newspaper_id_;			 // public identifier of my newspaper
+	user_container journalists_; // list of journalists
 	std::unordered_set<hash_t> downloading_articles;
 	std::unordered_set<pk_t> getting_article_list;
 	std::map<std::string, pk_t> pending_journalist_requests;
+	std::map<QString, std::string> waiting_dns_newspapers;
+	news_potential_db news_potential;
 
-	QTimer* auto_update_timer = NULL;
+	QTimer *auto_update_timer = NULL;
+	QTimer *waiting_messages_timer = NULL;
+	QTimer *gossip_timer = NULL;
+	QTimer *clear_articles_timer = NULL;
 
 	article_optional find_article_in_database(hash_t article_hash);
 };

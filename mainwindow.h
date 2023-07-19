@@ -15,6 +15,7 @@
 #include <fstream>
 #include "GlobalUsing.h"
 #include <QTextBlock>
+#include <QRegularExpression>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -76,7 +77,7 @@ public:
 	void newspaper_updated(pk_t nid);
 	void article_list_regenerate(pk_t nid);
 	void article_list_create(pk_t nid);
-	void article_list_create_category(pk_t nid, std::string category);
+	void article_list_create_category(pk_t nid, std::string category, QString pattern);
 	void display_article(pk_t news_id, hash_t article);
 	void checked_display_article(pk_t news_id, hash_t article);
 
@@ -168,6 +169,8 @@ public slots:
 	void new_peer_creation_cancelled();
 	void save_peer();
 	void load_peer();
+	void slot_new_journalist_request(pk_t id, std::string name);
+	void slot_journalism_approved(pk_t news_id);
 
 private slots:
     void on_pushButton_loadFromFile_clicked();
@@ -327,6 +330,22 @@ private slots:
 
     void on_spinBox_listSizeDefault_autodownload_valueChanged(int arg1);
 
+    void on_radioButton_sort_created_clicked();
+
+    void on_radioButton_sort_modified_clicked();
+
+    void on_pushButton_2_clicked();
+
+    void on_pushButton_search_articles_clicked();
+
+    void on_lineEdit_search_articles_textChanged(const QString &arg1);
+
+    void on_lineEdit_search_articles_returnPressed();
+
+    void on_listWidget_pending_journalists_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
+
+    void on_pushButton_set_ip_clicked();
+
 signals:
 	/**
 	 * @brief Emits when Add article button is clicked and file is selected
@@ -343,7 +362,16 @@ signals:
 	 * 
 	 * @param address Address on which will server listen.
 	 */
-	void start_server(QHostAddress address);
+	void start_server_np2ps(QHostAddress address, std::uint16_t port);
+
+	/**
+	 * @brief Emits when IP address was selected in `comboBox_interfaces`.
+	 * 
+	 * Starts the STUN server and NP2PS receiver.
+	 * 
+	 * @param address Address on which will server listen.
+	 */
+	void start_server_stun(QHostAddress address, std::uint16_t port);
 
 	/**
 	 * @brief Emits when Add margin was clicked.
@@ -353,6 +381,8 @@ signals:
 	 * @param article 
 	 */
 	void add_margin(article_ptr article);
+
+	void view_margin(hash_t article, pk_t news);
 
 	void signal_add_new_newspaper_from_file(QString path);
 

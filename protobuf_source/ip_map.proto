@@ -12,6 +12,7 @@ message IpWrapper {
     uint64 publicID = 5; //for IpMap `map_`
     uint32 ipv4 = 10;
     uint32 port = 20;
+    uint32 stun_port = 22;
     optional RelayState relay_state = 25;
     optional string eax_key = 30;
     optional string rsa_public_key = 40;

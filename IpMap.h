@@ -59,11 +59,23 @@ public:
 	 * 
 	 * @param id Public identifier of peer, whose IP will be updated
 	 * @param ip New IP.
+	 * @return true If update took place.
+	 * @return false Otherwise.
+	 */
+	bool update_ip(pk_t id, const QHostAddress& ip);
+
+	/**
+	 * @brief Updates the IPv4 for given peer.
+	 * 
+	 * Insertion will take place even if peer wasn't enrolled in ip_map_ before.
+	 * 
+	 * @param id Public identifier of peer, whose IP will be updated
+	 * @param ip New IP.
 	 * @param port New port.
 	 * @return true If update took place.
 	 * @return false Otherwise.
 	 */
-	bool update_ip(pk_t id, const QHostAddress& ip, std::uint16_t port = PORT);
+	bool update_ip(pk_t id, const QHostAddress& ip, std::uint16_t port, port_t stun_port);
 
 	/**
 	 * @brief Updates the STUN IPv4 for given peer.
@@ -301,7 +313,7 @@ public:
 	void add_to_ip_map(pk_t pid, const IpWrapper& wrapper);
 	void add_to_ip_map(pk_t pid, IpWrapper&& wrapper);
 	void add_to_ip_map_relayed(pk_t pid, pk_t relay_by_);
-	void check_or_add_to_ip_map_relayed(pk_t pid, pk_t relay_by_);
+	void check_or_add_to_ip_map_relayed(pk_t pid, pk_t relay_by_, RelayState state);
 	void check_and_remove_relayed(pk_t pid, pk_t relay_by_);
 
 	void add_or_update_to_ip_map(pk_t pid, const IpWrapper& wrapper);

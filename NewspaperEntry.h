@@ -26,10 +26,10 @@ public:
 	explicit NewspaperEntry(const std::string& path, DisconnectedUsersLazy* disconnected_users_lazy);
 	void deserialize_config(const np2ps::NewspaperConfig& config);
 	void add_article(hash_t article_hash, Article&& article);
-	timed_article_map_pair get_newest_articles(int count);
-	timed_article_map_pair get_newest_articles(int from, int to);
-	void get_newest_articles(article_container& articles, int count, timestamp_t timestamp);
-	void get_newest_articles(article_container& articles, int from, int to, timestamp_t timestamp);
+	timed_article_map_pair get_newest_articles(int count, ArticleListSort sort_type);
+	timed_article_map_pair get_newest_articles(int from, int to, ArticleListSort sort_type);
+	void get_newest_articles(article_container& articles, article_container& only_readers_articles, int count, timestamp_t timestamp, ArticleListSort sort_type);
+	void get_newest_articles(article_container& articles,  article_container& only_readers_articles, int from, int to, timestamp_t timestamp, ArticleListSort sort_type);
 	timed_article_map_pair get_newest_articles(QDate date, int count);
 	bool remove_article(hash_t article_hash);
 	std::optional<article_ptr> find_article_header(hash_t article_hash);
@@ -37,9 +37,11 @@ public:
 	database_iterator_t get_iterator_database_end();
 	article_data_vec get_articles_for_time_span(my_clock::time_point time_span_begin, my_clock::time_point time_span_end);
 	void add_reader(pk_t id);
-	const user_container& get_readers();
+	const std::vector<pk_t>& get_readers();
+	bool find_reader(pk_t reader);
 	std::size_t reader_count() const;
 	void remove_reader(pk_t id);
+	void randomize_readers();
 	Article& get_article(hash_t id);
 	std::size_t get_article_count();
 	void deserialize(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne);
@@ -54,7 +56,7 @@ public:
 
 	void serialize_entry(np2ps::NewspaperEntry* entry) const;
 
-	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper, pk_t id) const;
+	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper, pk_t id, std::int16_t article_count = -1) const;
 
 	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne, bool serialize_articles = true) const;
 
@@ -121,13 +123,17 @@ public:
 
 	void update_metadata(NewspaperEntry& second_entry);
 
-	void clear_abundant_articles();
+	void clear_abundant_articles(std::function<void(pk_t, pk_t, hash_t)>remove_article_callback);
 
 	void set_config_read_articles_to_keep(int value);
 	void set_config_unread_articles_to_keep(int value);
 
 	int get_config_read_articles_to_keep();
 	int get_config_unread_articles_to_keep();
+
+	void clear_last_updated() {
+		last_updated_ = 0;
+	}
 
 private:
 	void init_coworkers();
@@ -139,7 +145,7 @@ private:
 	ArticleListWrapper article_list_wrapper_; //saving requested article list
 	timed_article_map time_created_sorted_articles_;
 	timed_article_map time_modified_sorted_articles_;
-	user_container readers_; //friends, that can share the articles with you
+	std::vector<pk_t> readers_; //friends, that can share the articles with you
 	user_container journalists_;
 	std::list<pk_t> coworkers_;
 	rsa_public_optional newspaper_public_key_; //newspaper public key to check article legitimacy
@@ -194,5 +200,8 @@ struct AllTheNews {
 		}
 	}
 };
+
+using news_potential_tuple = std::tuple<NewspaperEntry, QHostAddress, port_t, port_t>;
+using news_potential_db = std::map<pk_t, news_potential_tuple>;
 
 #endif //PROGRAM_NEWSPAPERENTRY_H

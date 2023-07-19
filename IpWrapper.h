@@ -13,7 +13,8 @@
 enum class RelayState {
 	Direct,
 	Relayed,
-	Unknown
+	Unknown,
+	Keep
 };
 
 /**
@@ -24,50 +25,73 @@ enum class RelayState {
 struct IpWrapper {
 	IpWrapper() = default;
 
-	explicit IpWrapper(const QHostAddress& ip4, std::uint16_t port = PORT) {
+	explicit IpWrapper(QHostAddress address) {
+		ipv4 = address;
+	}
+
+	explicit IpWrapper(const QHostAddress& ip4, std::uint16_t port, std::uint16_t stun_port) {
+		ipv4 = ip4;
+		this->port = port;
+		this->stun_port = stun_port;
+	}
+
+	IpWrapper (const QHostAddress& ip4, std::uint16_t port) {
 		ipv4 = ip4;
 		this->port = port;
 	}
 
-	IpWrapper (const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port = PORT) {
+	IpWrapper (const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port, std::uint16_t stun_port) {
+		ipv4 = ip4;
+		ipv6 = ip6;
+		this->port = port;
+		this->stun_port = stun_port;
+	}
+
+	IpWrapper (const QHostAddress& ip4, const QHostAddress& ip6, std::uint16_t port) {
 		ipv4 = ip4;
 		ipv6 = ip6;
 		this->port = port;
 	}
 
-	explicit IpWrapper(const std::string& ip4, std::uint16_t port = PORT) {
+	explicit IpWrapper(const std::string& ip4, std::uint16_t port, std::uint16_t stun_port) {
 		ipv4 = QHostAddress(QString(ip4.c_str()));
 		this->port = port;
+		this->stun_port = stun_port;
 	}
 
-	explicit IpWrapper(const QString& ip4, std::uint16_t port = PORT) {
+	explicit IpWrapper(const QString& ip4, std::uint16_t port, std::uint16_t stun_port) {
 		ipv4 = QHostAddress(ip4);
+		this->stun_port = stun_port;
 		this->port = port;
 	}
 
-	IpWrapper(const QString& ip4, const QString& ip6, std::uint16_t port = PORT) {
+	IpWrapper(const QString& ip4, const QString& ip6, std::uint16_t port, std::uint16_t stun_port) {
 		ipv4 = QHostAddress(ip4);
 		ipv6 = QHostAddress(ip6);
 		this->port = port;
+		this->stun_port = stun_port;
 	}
 
 	explicit IpWrapper(pk_t server) {
 		ipv4 = QHostAddress();
 		ipv6 = QHostAddress();
-		this->port = 0;
+		this->port = PORT;
+		this->stun_port = STUN_PORT;
 		preferred_stun_server = server;
 	}
 
 	explicit IpWrapper(const CryptoPP::RSA::PublicKey& public_id) {
 		ipv4 = QHostAddress();
 		ipv6 = QHostAddress();
-		this->port = 0;
+		this->port = PORT;
+		this->stun_port = STUN_PORT;
 		key_pair.first = {public_id};
 	}
 
 	explicit IpWrapper(const np2ps::IpWrapper& serialized_wrapper) : 
 		ipv4(QHostAddress(serialized_wrapper.ipv4())),
-		port(serialized_wrapper.port())
+		port(serialized_wrapper.port()),
+		stun_port(serialized_wrapper.stun_port())
 	{
 		if (serialized_wrapper.has_rsa_public_key()) { //deserialize RSA public
 			using namespace CryptoPP;
@@ -146,6 +170,13 @@ struct IpWrapper {
 		return stun_port;
 	}
 
+	void set_relay_state(RelayState state) {
+		if (state == RelayState::Keep) {
+			return;
+		}
+		relay_state = state;
+	}
+
 	void set_relay_state(bool relay) {
 		std::cout << "SETTING RELAY FLAG " << std::flush;
 		if (relay) {
@@ -158,8 +189,21 @@ struct IpWrapper {
 		}
 	}
 
-	void set_relay_state(RelayState relay_state_) {
-		relay_state = relay_state_;
+	void print_relay_state(std::string aaa = "") {
+		std::cout << "Wrapper relay state: " << std::flush;
+		switch (relay_state)
+		{
+		case RelayState::Relayed:
+			std::cout << " relayed" << std::flush;
+			break;
+		case RelayState::Direct:
+			std::cout << " direct" << std::flush;
+			break;
+		case RelayState::Unknown:
+			std::cout << " unknown" << std::flush;
+			break;
+		}
+		std::cout << " " << aaa << std::endl;
 	}
 
 	RelayState get_relay_state() {
@@ -280,35 +324,11 @@ struct IpWrapper {
 		return false;
 	}
 
-	bool ip_address_is_private(const QHostAddress& address) {
-		
-		quint32 address_number = address.toIPv4Address();
-
-		if (address_number >= QHostAddress("10.1.0.0").toIPv4Address() && 
-			address_number <= QHostAddress("10.1.255.255").toIPv4Address())
-		{
-			return true;
-		}
-
-		return false;
-
-		// if ((address_number >= QHostAddress("10.0.0.0").toIPv4Address() && 
-		// 	 address_number <= QHostAddress("10.255.255.255").toIPv4Address()) ||
-        // 	(address_number >= QHostAddress("172.16.0.0").toIPv4Address() &&
-		// 	 address_number <= QHostAddress("172.31.255.255").toIPv4Address()) ||
-        // 	(address_number >= QHostAddress("192.168.0.0").toIPv4Address() &&
-		// 	 address_number <= QHostAddress("192.168.255.255").toIPv4Address()))
-		// {
-        // 	return true;
-    	// }
-
-		// return false;
-	}
-
 	void serialize_wrapper(np2ps::IpWrapper* wrapper, bool local_serialize = true) {
-		if (local_serialize || !ip_address_is_private(ipv4)) {
+		if (local_serialize || !GlobalMethods::ip_address_is_private(ipv4)) {
 			wrapper->set_ipv4(ipv4.toIPv4Address());
 			wrapper->set_port(port);
+			wrapper->set_stun_port(stun_port);
 		}
 
 		if (key_pair.second.has_value() && local_serialize) {
@@ -354,9 +374,10 @@ struct IpWrapper {
 	}
 
 	pk_t next_relay_stun_server() {
+		std::cout << "Trying next STUN server" << std::endl;
 		relay_by.push(relay_by.front());
 		relay_by.pop();
-		if (first_relay_stun_server != 0 && first_relay_stun_server == relay_by.front()) {
+		if (relay_server_tracking && first_relay_stun_server == relay_by.front()) {
 			first_relay_stun_server = 0;
 			throw no_more_relay_stun_servers(
 				"All known relay STUN servers for this peer were used."
@@ -370,21 +391,23 @@ struct IpWrapper {
 	}
 
 	void begin_relay_stun_server_tracking() {
+		relay_server_tracking = true;
 		first_relay_stun_server = get_relay_stun_server();
 	}
 
 	void end_relay_stun_server_tracking() {
+		relay_server_tracking = false;
 		first_relay_stun_server = 0;
 	}
 
 	//for normal traversal
 	QHostAddress ipv4;
 	QHostAddress ipv6;
-	std::uint16_t port;
+	std::uint16_t port = PORT;
+	std::uint16_t stun_port = STUN_PORT;
 
 	//for STUN traversal
 	QHostAddress stun_address;
-	std::uint16_t stun_port;
 
 	//for TURN traversal
 	QTcpSocket* tcp_socket_ = NULL; //for STUN servers.
@@ -397,7 +420,9 @@ struct IpWrapper {
 	RelayState relay_state = RelayState::Unknown;
 	user_container relay_to;
 	std::queue<pk_t> relay_by;
+
 	pk_t first_relay_stun_server = 0;
+	bool relay_server_tracking = false;
 };
 
 using ip_map = std::unordered_map<pk_t, IpWrapper>;

@@ -1,6 +1,11 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
+#define TAB_BROWSER 0
+#define TAB_CHIEF_EDITOR 1
+#define TAB_JOURNALIST 2
+#define TAB_SETTINGS 3
+
 MainWindow::MainWindow(QWidget *parent)
 	: QMainWindow(parent)
 	, ui(new Ui::MainWindow)
@@ -75,7 +80,7 @@ void MainWindow::newspaper_updated(pk_t nid) {
 	std::multimap<my_string, Article&> categories;
 	std::set<my_string> category_names;
 
-	auto [bit, eit] = news_the_one.get_newest_articles(0);
+	auto [bit, eit] = news_the_one.get_newest_articles(0, ctx->peer.get_article_list_sort_config());
 
 	for (; bit != eit; bit++) {
 		Article& article = news_the_one.get_article(bit->second);
@@ -100,7 +105,7 @@ void MainWindow::article_list_create(pk_t nid) {
 	std::multimap<my_string, Article&> categories;
 	std::set<my_string> category_names;
 
-	auto [bit, eit] = news.get_newest_articles(0);
+	auto [bit, eit] = news.get_newest_articles(0, ctx->peer.get_article_list_sort_config());
 
 	ui->listWidget_articles->clear();
 	for (; bit != eit; bit++) {
@@ -118,18 +123,26 @@ void MainWindow::article_list_create(pk_t nid) {
 	}
 }
 
-void MainWindow::article_list_create_category(pk_t nid, std::string category) {
+void MainWindow::article_list_create_category(pk_t nid, std::string category, QString pattern) {
 	auto& news = ctx->peer.get_news(nid); //find requested new in database
+
+	QRegularExpression regex(pattern, QRegularExpression::CaseInsensitiveOption);
+	QRegularExpressionMatch match;
+
 	std::vector<std::reference_wrapper<Article>> category_articles;
-	auto [bit, eit] = news.get_newest_articles(0);
+	auto [bit, eit] = news.get_newest_articles(0, ctx->peer.get_article_list_sort_config());
 	for (; bit != eit; bit++) {
 		Article& article = news.get_article(bit->second);
 		for (auto&& cat : article.categories_ref()) {
-			if (cat == category) {
-				category_articles.push_back(article);
+			if (category == "All categories" || cat == category) {
+				if (pattern.trimmed().isEmpty() || regex.match(QString::fromStdString(article.heading())).hasMatch()) {
+					category_articles.push_back(article);
+					break;
+				}
 			}
 		}
 	}
+
 	ui->listWidget_articles->clear();
 	for (auto&& article : category_articles) {
 		QListWidgetItem* list_item =
@@ -146,11 +159,15 @@ void MainWindow::article_list_create_category(pk_t nid, std::string category) {
 
 void MainWindow::article_list_regenerate(pk_t nid) {
 	if (ui->comboBox_news_select->currentData().toULongLong() == nid) {
-		if (ui->comboBox_categories->currentText() == "All categories") {
+		if (ui->comboBox_categories->currentText() == "All categories" && ui->lineEdit_search_articles->text().trimmed().isEmpty()) {
 			article_list_create(nid);
 		}
 		else {
-			article_list_create_category(nid, ui->comboBox_categories->currentText().toStdString());
+			article_list_create_category(
+				nid,
+				ui->comboBox_categories->currentText().toStdString(),
+				ui->lineEdit_search_articles->text()
+			);
 		}
 	}
 }
@@ -168,8 +185,18 @@ void MainWindow::on_pushButton_add_article_released()
 
 void MainWindow::on_pushButton_set_ip_released()
 {
-	QHostAddress address(ui->comboBox_interfacs->currentText().split(':').last().trimmed()); //sets the IP from the comboBox
-	emit start_server(address); //starts the STUN and NP2PS servers
+	QString text_np2ps_port = ui->lineEdit_np2ps_port->text();
+	QString text_stun_port = ui->lineEdit_stun_port->text();
+	std::uint16_t np2ps_port = PORT;
+	std::uint16_t stun_port = STUN_PORT;
+	if (!text_np2ps_port.trimmed().isEmpty()) {
+		np2ps_port = std::stoi(text_np2ps_port.toStdString());
+	}
+	if (!text_stun_port.trimmed().isEmpty()) {	
+		stun_port = std::stoi(text_stun_port.toStdString());
+	}
+    emit start_server_np2ps(QHostAddress::AnyIPv4, np2ps_port); //starts the NP2PS server
+    emit start_server_stun(QHostAddress::AnyIPv4, stun_port); //starts the STUN server
 }
 
 void MainWindow::enable_add_news(){
@@ -287,41 +314,31 @@ void MainWindow::on_pushButton_view_margin_clicked()
 	// 		ui->plainTextEdit_margins->appendPlainText(QString::fromStdString(mb->second.content).append('\n'));
 	// 	}
 	// }
+	auto article_selected_hash = ui->listWidget_articles->currentItem()->data(Qt::UserRole).toULongLong();
+    auto news_id = ui->comboBox_news_select->currentData().toULongLong();
+	emit view_margin(article_selected_hash, news_id);
 }
 
 void MainWindow::on_pushButton_add_margin_clicked()
 {
-
-	// if (ui->treeWidget_newspaper->selectedItems().size() == 0) { //no item was selected
-	// 	std::cout << "Please, select one item, thank you." << std::endl;
-	// 	return;
-	// }
-	// else if (ui->treeWidget_newspaper->selectedItems().size() > 1) { //more than one item was selected
-	// 	std::cout << "Please, select only one item, thank you." << std::endl;
-	// 	return;
-	// }
-	// else if (ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent() == nullptr || //its a newspaper
-	// 		 ui->treeWidget_newspaper->selectedItems().begin().i->t()->parent()->parent() == nullptr) { //or its a category
-	// 	std::cout << "Please, select an article, thank you." << std::endl; //we want an article
-	// 	return;
-	// }
-	// else {
-	// 	auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong(); //gets article hash from Newspaper tree
-	// 	std::cout << "Adding margin for article: " << article_selected_hash << std::endl;
-	// 	auto article = ctx->peer.find_article( article_selected_hash); //article is found in newspaper database and margin is appended
-	// 	if (article.has_value()) {
-	// 		emit add_margin(article.value());
-	// 	}
-	// }
+//    if (ui->listWidget_articles->currentItem()
+//		&& ui->listWidget_articles->currentItem()->data(Qt::UserRole).toULongLong() == article
+//		&& ui->comboBox_news_select->currentData().toULongLong() == news_id
+//	) {
+//		display_article(news_id, article);
+//	}
+    auto article_selected_hash = ui->listWidget_articles->currentItem()->data(Qt::UserRole).toULongLong();
+    auto news_id = ui->comboBox_news_select->currentData().toULongLong();
+    std::cout << "Adding margin for article: " << article_selected_hash << std::endl;
+    auto& article = ctx->peer.get_news(news_id).get_article(article_selected_hash);
+    emit add_margin(&article);
 }
 
 void MainWindow::new_margin(std::string type, std::string contents) {
-	// auto article_selected_hash = ui->treeWidget_newspaper->selectedItems().begin().i->t()->text(2).toULongLong(); //gets article hash from Newspaper tree
-	// std::cout << "Adding margin for article: " << article_selected_hash << std::endl;
-	// auto article = ctx->peer.find_article( article_selected_hash); //find article in newspaper database
-	// if (article.has_value()) { //if article was found
-	// 	article.value()->add_margin(ctx->peer.get_public_id(), Margin(type, contents, ctx->peer.get_public_id())); //add the margin with provided type and contents
-	// }
+	auto article_selected_hash = ui->listWidget_articles->currentItem()->data(Qt::UserRole).toULongLong();
+    auto news_id = ui->comboBox_news_select->currentData().toULongLong();
+    auto& article = ctx->peer.get_news(news_id).get_article(article_selected_hash);
+	article.add_margin(ctx->peer.get_public_id(), Margin(type, contents)); //add the margin with provided type and contents
 }
 
 void MainWindow::on_pushButton_testPeer1_clicked()
@@ -408,11 +425,13 @@ void MainWindow::on_pushButton_save_clicked()
     np2ps::Peer serialized_peer;
     ctx->peer.serialize(&serialized_peer);
 
-	QString file_name = QStandardPaths::writableLocation(
-		QStandardPaths::AppDataLocation
-	).append(
-		tr("/user_info.nppsa")
-	);
+	// QString file_name = QStandardPaths::writableLocation(
+	// 	QStandardPaths::AppDataLocation
+	// ).append(
+	// 	tr("/user_info.nppsa")
+	// );
+
+	QString file_name = QString("../data/save").append(QString::number(ctx->peer.get_public_id()));
 
     std::ofstream file(file_name.toStdString());
     serialized_peer.SerializeToOstream(&file);
@@ -468,7 +487,8 @@ void MainWindow::on_comboBox_categories_activated(int index)
 		else {
 			article_list_create_category(
 				data.toULongLong(),
-				ui->comboBox_categories->currentText().toStdString()
+				ui->comboBox_categories->currentText().toStdString(),
+				ui->lineEdit_search_articles->text()
 			);
 		}
     }
@@ -542,6 +562,8 @@ void MainWindow::on_listWidget_articles_itemClicked(QListWidgetItem *item)
 		ui->comboBox_news_select->currentData().toULongLong(),
 		item->data(Qt::UserRole).toULongLong()
 	);
+	ui->pushButton_add_margin->setEnabled(true);
+	ui->pushButton_view_margin->setEnabled(true);
 }
 
 void MainWindow::on_pushButton_add_news_clicked()
@@ -568,7 +590,7 @@ void MainWindow::on_pushButton_informCoworkers_clicked()
 
 void MainWindow::on_pushButton_gossip_clicked()
 {
-	ctx->peer.generate_gossip_one_way();
+	ctx->peer.generate_gossip_one_way_all();
 }
 
 void MainWindow::on_toolButton_articleList_clicked()
@@ -584,6 +606,7 @@ void MainWindow::on_toolButton_articleList_clicked()
 			ctx->peer.generate_article_list_message(news.get_id());
 		}
 	}
+	ctx->peer.generate_newspaper_list_request_connected();
 }
 
 void MainWindow::set_config_from_app() {
@@ -592,6 +615,7 @@ void MainWindow::set_config_from_app() {
 }
 
 void MainWindow::fill_config_news() {
+	ui->comboBox_newsConfigSelect->clear();
 	for (auto&& [news_pid, news] : ctx->peer.get_news()) {
 		ui->comboBox_newsConfigSelect->addItem(tr(news.get_name().c_str()), QVariant((qulonglong) news_pid));
 	}
@@ -612,20 +636,20 @@ void MainWindow::fill_spinboxes() {
 
 void MainWindow::on_tabWidget_currentChanged(int index)
 {
-	if (index == 0) { // newspaper browser tab
+	if (index == TAB_BROWSER) { // newspaper browser tab
 		QVariant data = ui->comboBox_news_select->currentData();
         newspaper_updated(data.toULongLong());
 	}
-	if (index == 1) { // chief editor tab
+	if (index == TAB_CHIEF_EDITOR) { // chief editor tab
 		fill_pending_journalists();
 	}
-	if (index == 2) { //journalist tab
+	if (index == TAB_JOURNALIST) { //journalist tab
 		fill_journalist_news();
 		print_journalist_articles();
         ui->pushButton_edit_article->setEnabled(false);
 		// ui->pushButton_request_journalism->setEnabled(false);
 	}
-	if (index == 3) { //settings tab
+	if (index == TAB_SETTINGS) { //settings tab
 		fill_config_news();
 		set_config_from_app();
 	}
@@ -705,7 +729,7 @@ void MainWindow::fill_journalist_news() {
 void MainWindow::print_journalist_articles() {
 	NewspaperEntry& news = ctx->peer.get_news(ui->comboBox_news_journalist->currentData().toULongLong());
 	ui->listWidget_journalist_articles->clear();
-	auto [articles, articles_end] = news.get_newest_articles(0);
+	auto [articles, articles_end] = news.get_newest_articles(0, ctx->peer.get_article_list_sort_config());
 	for (; articles != articles_end; articles++) {
 		Article& article = news.get_article(articles->second);
 		if (article.author_id() == ctx->peer.get_public_id()) {
@@ -775,7 +799,9 @@ void MainWindow::on_pushButton_confirm_journalist_clicked()
 	qulonglong journalist_id = ui->listWidget_pending_journalists->currentItem()->data(Qt::UserRole).toULongLong();
 	ctx->peer.generate_new_journalist(journalist_id);
 	remove_pending_journalist(journalist_id);
-	fill_pending_journalists();
+    fill_pending_journalists();
+    ui->pushButton_confirm_journalist->setEnabled(false);
+    ui->pushButton_remove_journalist->setEnabled(false);
 }
 
 void MainWindow::on_pushButton_remove_journalist_clicked()
@@ -799,8 +825,13 @@ void MainWindow::on_pushButton_export_my_news_clicked()
 
 void MainWindow::on_toolButton_import_news_clicked()
 {
-	QString file_name = QFileDialog::getOpenFileName(this, tr("Load File"), QDir::homePath(), tr("NP2PS news entry (*.ne.npps)"));
-	ctx->peer.load_news_from_file(file_name.toStdString());
+	QString file_name = QFileDialog::getOpenFileName(this, tr("Load Newspaper Entry File"), QDir::homePath(), tr("NP2PS news entry (*.ne.npps)"));
+    if (file_name.trimmed().size() > 0 && std::filesystem::is_regular_file(
+		std::filesystem::path(file_name.toStdString())
+	))
+	{
+        ctx->peer.load_news_from_file(file_name.toStdString());
+    }
 }
 
 void MainWindow::on_spinBox_listSizeFirst_autodownload_valueChanged(int arg1)
@@ -843,4 +874,72 @@ void MainWindow::load_peer() {
 	if (std::filesystem::exists(path)) {
 		emit signal_add_new_newspaper_from_file(archive_path);
 	}
+}
+
+void MainWindow::on_radioButton_sort_created_clicked()
+{
+	ctx->peer.set_article_list_sort_config(ArticleListSort::Created);
+	article_list_regenerate(ui->comboBox_news_select->currentData().toULongLong());
+}
+
+void MainWindow::on_radioButton_sort_modified_clicked()
+{
+	ctx->peer.set_article_list_sort_config(ArticleListSort::Modified);
+	article_list_regenerate(ui->comboBox_news_select->currentData().toULongLong());
+}
+
+void MainWindow::on_pushButton_2_clicked()
+{
+    quint64 whom_to_identify = ui->lineEdit_custom_identify->text().toULongLong();
+    ctx->peer.get_networking()->get_stun_client()->identify(whom_to_identify);
+}
+
+void MainWindow::on_pushButton_search_articles_clicked()
+{
+    article_list_regenerate(
+        ui->comboBox_news_select->currentData().toULongLong()
+    );
+}
+
+void MainWindow::on_lineEdit_search_articles_textChanged(const QString &arg1)
+{
+    if (arg1.trimmed().isEmpty()) {
+        article_list_regenerate(
+            ui->comboBox_news_select->currentData().toULongLong()
+        );
+    }
+}
+
+
+void MainWindow::on_lineEdit_search_articles_returnPressed()
+{
+    article_list_regenerate(
+        ui->comboBox_news_select->currentData().toULongLong()
+    );
+}
+
+void MainWindow::slot_new_journalist_request(pk_t id, std::string name) {
+	if (ui->tabWidget->currentIndex() == TAB_CHIEF_EDITOR) {
+		fill_pending_journalists();
+	}
+}
+
+void MainWindow::slot_journalism_approved(pk_t news_id) {
+	if (ui->tabWidget->currentIndex() == TAB_JOURNALIST) {
+		fill_journalist_news();
+		print_journalist_articles();
+		ui->pushButton_edit_article->setEnabled(false);
+	}
+}
+
+void MainWindow::on_listWidget_pending_journalists_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+{
+    ui->pushButton_confirm_journalist->setEnabled(true);
+    ui->pushButton_remove_journalist->setEnabled(true);
+}
+
+
+void MainWindow::on_pushButton_set_ip_clicked()
+{
+
 }

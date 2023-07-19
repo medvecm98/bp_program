@@ -95,13 +95,24 @@ void IpMap::enroll_new_np2ps_tcp_socket(pk_t id, QTcpSocket* socket, bool* updat
 	}
 }
 
-bool IpMap::update_ip(pk_t public_id, const QHostAddress& ip, std::uint16_t port /*= PORT*/) {
+bool IpMap::update_ip(pk_t public_id, const QHostAddress& ip) {
 	if (map_.find(public_id) == map_.end()) {
-		return map_.emplace(public_id, IpWrapper(ip, port)).second;
+		return map_.emplace(public_id, IpWrapper(ip)).second;
+	}
+	else {
+		map_.at(public_id).ipv4 = ip;
+		return true;
+	}
+}
+
+bool IpMap::update_ip(pk_t public_id, const QHostAddress& ip, std::uint16_t port /*= PORT*/, port_t stun_port) {
+	if (map_.find(public_id) == map_.end()) {
+		return map_.emplace(public_id, IpWrapper(ip, port, stun_port)).second;
 	}
 	else {
 		map_.at(public_id).ipv4 = ip;
 		map_.at(public_id).port = port;
+		map_.at(public_id).stun_port = stun_port;
 		return true;
 	}
 }
@@ -362,16 +373,28 @@ void IpMap::add_to_ip_map(pk_t pid, IpWrapper&& wrapper) {
 }
 
 void IpMap::add_to_ip_map_relayed(pk_t pid, pk_t relay_by_) {
+	if (relay_by_ == my_public_id) {
+		return;
+	}
 	IpWrapper wrapper;
 	wrapper.set_relay_state(true);
-	wrapper.relay_by.push(relay_by_);
-	map_.emplace(pid, wrapper);
+	try {
+		IpWrapper& relayer_wrapper = get_wrapper_ref(relay_by_);
+		if (relayer_wrapper.relay_state == RelayState::Direct) {
+			wrapper.relay_by.push(relay_by_);
+			map_.emplace(pid, std::move(wrapper));
+		}
+	}
+	catch (user_not_found_in_database e) {}
 }
 
-void IpMap::check_or_add_to_ip_map_relayed(pk_t pid, pk_t relay_by_) {
+void IpMap::check_or_add_to_ip_map_relayed(pk_t pid, pk_t relay_by_, RelayState state) {
 	try {
 		IpWrapper& wrapper = get_wrapper_ref(pid);
-		wrapper.relay_by.push(relay_by_);
+		if (pid != relay_by_) {
+			wrapper.set_relay_state(state);
+			wrapper.relay_by.push(relay_by_);
+		}
 	}
 	catch(user_not_found_in_database e) {
 		add_to_ip_map_relayed(pid, relay_by_);
@@ -401,7 +424,7 @@ std::list<std::pair<pk_t, IpWrapper>> IpMap::select_connected_randoms(int count)
 	std::vector<std::pair<pk_t, IpWrapper>> connected;
 	for (auto&& wrapper : map_) {
 		if (wrapper.second.np2ps_socket_connected()) {
-			connected.push_back({wrapper.first, IpWrapper(wrapper.second.ipv4)});
+			connected.push_back({wrapper.first, IpWrapper(wrapper.second.ipv4, wrapper.second.port)});
 		}
 	}
 	std::random_device dev;

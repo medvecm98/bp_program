@@ -66,6 +66,13 @@ public:
      * @brief Identify given peer.
      * 
      * @param who Whom to identify.
+     */
+    void identify_and_wait(pk_t who, stun_header_ptr msg);
+
+    /**
+     * @brief Identify given peer.
+     * 
+     * @param who Whom to identify.
      * @param where Where to ask.
      */
     void identify(pk_t who, pk_t where);
@@ -77,7 +84,7 @@ public:
      * 
      * @param address Address to use when sending.
      */
-    void identify(QHostAddress& address);
+    void identify(QHostAddress& address, std::uint16_t port);
 
     /**
      * @brief Sends provided STUN message to provided STUN client.
@@ -165,6 +172,20 @@ public:
      */
     pk_t process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message);
 
+    /**
+     * @brief Handles received message.
+     * 
+     * Based on message type and class, message is processed and changes are
+     * made to networking, peer and other objects, if neccesary.
+     * 
+     * @param stun_message STUN message to handle
+     */
+    void handle_received_message(stun_header_ptr stun_message_header, QTcpSocket* socket);
+
+    void check_message_side_effect(
+        stun_header_ptr header_waiting_to_connect, IpWrapper& connectee_wrapper
+    );
+
 signals:
     /**
      * @brief Newspapers were confirmed through response success allocate.
@@ -175,11 +196,18 @@ signals:
 
     void confirmed_newspaper_pk(pk_t pid, rsa_public_optional public_id);
 
+    void got_article_all_rejection(shared_ptr_message message);
+
 private slots:
     /**
      * @brief Error handler.
      */
     void error(QAbstractSocket::SocketError socketError);
+
+    /**
+     * @brief Connection timeout handler.
+     */
+    void connection_timeout();
 
     /**
      * @brief Receives new message when `readyRead` was emitted.
@@ -204,16 +232,6 @@ private:
      * @param stun_message 
      */
     void init_client(QHostAddress address, std::uint16_t port = 3478);
-
-    /**
-     * @brief Handles received message.
-     * 
-     * Based on message type and class, message is processed and changes are
-     * made to networking, peer and other objects, if neccesary.
-     * 
-     * @param stun_message STUN message to handle
-     */
-    void handle_received_message(stun_header_ptr stun_message_header, QTcpSocket* socket);
 
     /**
      * @brief Creates Identify request.
@@ -306,13 +324,8 @@ private:
     std::queue<pk_t> stun_servers;
     factory_map stun_attribute_factories;
     Networking* networking_;
+    std::multimap<pk_t, stun_header_ptr> peers_waiting_for_relays;
 
-    QHostAddress address_waiting_to_connect;
-    std::uint16_t port_waiting_to_connect;
-    stun_header_ptr header_waiting_to_connect;
-    pk_t connecting_to = 0;
-    bool message_waiting_to_connect = false;
-    bool save_socket = false;
     int failed_connections = 0;
     std::map<pk_t, int> failed_connections_per_server;
 
@@ -320,7 +333,19 @@ private:
 
     bool nat_active_flag = false;
 
-    
+private:
+    void reset_connection_timer(QTcpSocket* socket);
+
+    void continue_message_sending(
+        std::tuple<QHostAddress, uint16_t, stun_header_ptr, pk_t, bool> waiting_stun_message
+    );
+
+    void check_for_another_server(
+        pk_t connecting_to,
+        stun_header_ptr header_waiting_to_connect
+    );
+
+    QTimer* stun_connection_timer = NULL;
 };
 using stun_client_ptr = std::shared_ptr<StunClient>;
 

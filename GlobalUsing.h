@@ -46,6 +46,7 @@
 #include <cstdlib>
 
 #define PORT 14128
+#define STUN_PORT 3478
 
 /* LOGGER */
 //
@@ -107,6 +108,11 @@ enum class ArticleFlags {
 	Read = 8
 };
 
+enum class ArticleListSort {
+	Modified = 1,
+	Created = 2
+};
+
 using address_vec = std::vector<std::pair<QString, QHostAddress>>;
 using address_vec_ptr = std::shared_ptr<address_vec>;
 
@@ -155,6 +161,7 @@ struct PeerConfig {
     int default_percent_autodownload = 50;
     int first_percent_autodownload = 25;
     int gossip_randoms = 4;
+	ArticleListSort sort_type = ArticleListSort::Created;
 };
 
 struct NewspaperGlobalConfig {
@@ -169,6 +176,31 @@ struct GlobalMethods {
                 std::chrono::system_clock::now().time_since_epoch()
             ).count();
     }
+
+	static bool ip_address_is_private(const QHostAddress& address) {
+		
+		quint32 address_number = address.toIPv4Address();
+
+		if (address_number >= QHostAddress("10.1.0.0").toIPv4Address() && 
+			address_number <= QHostAddress("10.1.255.255").toIPv4Address())
+		{
+			return true;
+		}
+
+		return false;
+
+		// if ((address_number >= QHostAddress("10.0.0.0").toIPv4Address() && 
+		// 	 address_number <= QHostAddress("10.255.255.255").toIPv4Address()) ||
+        // 	(address_number >= QHostAddress("172.16.0.0").toIPv4Address() &&
+		// 	 address_number <= QHostAddress("172.31.255.255").toIPv4Address()) ||
+        // 	(address_number >= QHostAddress("192.168.0.0").toIPv4Address() &&
+		// 	 address_number <= QHostAddress("192.168.255.255").toIPv4Address()))
+		// {
+        // 	return true;
+    	// }
+
+		// return false;
+	}
 };
 
 // pk_t string_to_pid(std::string input) {
@@ -217,7 +249,9 @@ using eax_optional = std::optional< CryptoPP::ByteQueue>;
 using rsa_eax_pair = std::pair< rsa_public_optional, eax_optional>;
 using rsa_pair = std::pair< rsa_public, rsa_private>;
 using pk_t_keys_map = std::unordered_map< pk_t, rsa_eax_pair>;
+using list_ptr = std::shared_ptr<std::list<pk_t>>;
 
+using port_t = std::uint16_t;
 
 
 
