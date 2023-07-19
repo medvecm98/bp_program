@@ -1021,10 +1021,17 @@ void Peer::handle_article_all_response(shared_ptr_message message) {
 					article.set_path(message->article_all().article_actual());
 
 					generate_successful_download_message(article.author_id(), article.main_hash());
-					generate_successful_download_message(article.news_id(), article.main_hash());
+					if (article.author_id() != article.news_id()) {
+						generate_successful_download_message(article.news_id(), article.main_hash());
+					}
 
 					for (auto&& reader : article.readers()) {
-						if (reader == get_public_id()) continue;
+						if (reader == get_public_id() ||
+							reader == article.author_id() ||
+							reader == article.news_id())
+						{
+							continue;
+						}
 						generate_successful_download_message(
 							reader, article.main_hash()
 						);

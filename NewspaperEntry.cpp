@@ -300,7 +300,9 @@ void NewspaperEntry::add_reader(pk_t id) {
 }
 
 void NewspaperEntry::randomize_readers() {
-	std::random_shuffle(readers_.begin(), readers_.end());
+	std::random_device rd;
+	std::mt19937 generator(rd());
+	std::shuffle(readers_.begin(), readers_.end(), generator);
 }
 
 bool NewspaperEntry::find_reader(pk_t reader) {
