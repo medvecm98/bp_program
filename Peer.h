@@ -36,13 +36,14 @@ public:
 	 * private keys are generated here as well.
 	 *
 	 */
-	Peer(pk_t public_id) : networking_(std::make_shared<Networking>(public_id))
+	Peer(pk_t public_id)
 	{
 		CryptoPP::AutoSeededRandomPool prng;
 		if (public_id == 0)
 			public_identifier_ = (std::uint64_t)prng.GenerateWord32() << 32 | (std::uint64_t)prng.GenerateWord32();
 		else
 			public_identifier_ = public_id;
+		networking_ = std::make_shared<Networking>(public_identifier_);
 		std::cout << "Public ID: " << public_identifier_ << std::endl;
 
 		auto key_pair = CryptoUtils::instance().generate_rsa_pair();
