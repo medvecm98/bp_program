@@ -29,7 +29,8 @@
 void load_articles_from_file(const std::string& path, std::shared_ptr<ProgramContext> ctx) {
 	std::ifstream file(path.c_str());
 	std::string line;
-	ctx->peer.peer_init("Test Peer", "Newspaper Test Peer");
+	ctx->peer.peer_init("Test Peer " + std::to_string(ctx->peer.get_public_id()),
+		"Newspaper Test Peer " + std::to_string(ctx->peer.get_public_id()));
 	int counter = ctx->peer.get_public_id() * 10;
 	while (std::getline(file, line)) { // loads articles from file, line after line
 		std::stringstream input_sstream(line);
@@ -84,29 +85,51 @@ int main(int argc, char *argv[]) {
 
 		std::cout << "FOUND PATH in arguments: " << path_string << std::endl;
 
-		if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
-			if (path.filename().string()[0] == '_') { // create new peer, for testing purposes
-				pk_t custom_id = 123;
-				if (QCoreApplication::arguments().size() > 2) {
-					QString custom_id_string = QCoreApplication::arguments().at(2);
-					custom_id = custom_id_string.toULongLong();
+		if (path_string == "_") {
+			ctx = std::make_shared<ProgramContext>();
+		}
+		else {
+			if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
+				if (path.filename().string()[0] == '_') { // create new peer, for testing purposes
+					pk_t custom_id = 123;
+					if (QCoreApplication::arguments().size() > 2) {
+						QString custom_id_string = QCoreApplication::arguments().at(2);
+						custom_id = custom_id_string.toULongLong();
+					}
+					ctx = std::make_shared<ProgramContext>(custom_id);
+					load_articles_from_file(path_string, ctx);
 				}
-				ctx = std::make_shared<ProgramContext>(custom_id);
-				load_articles_from_file(path_string, ctx);
+				else { // load peer from save file
+					std::cout << "Loading peer from save file" << std::endl;
+					np2ps::Peer serialized_peer;
+					std::ifstream ifile(path_string);
+					serialized_peer.ParseFromIstream(&ifile);
+					ctx = std::make_shared<ProgramContext>(serialized_peer);
+					ctx->peer.ping_direct_peers();
+				}
+				loaded = true;
 			}
-			else { // load peer from save file
-				std::cout << "Loading peer from save file" << std::endl;
-				np2ps::Peer serialized_peer;
-				std::ifstream ifile(path_string);
-				serialized_peer.ParseFromIstream(&ifile);
-				ctx = std::make_shared<ProgramContext>(serialized_peer);
-				ctx->peer.ping_direct_peers();
-			}
-			loaded = true;
 		}
 	}
 	else {
-		ctx = std::make_shared<ProgramContext>();
+		std::string path_string = QStandardPaths::writableLocation(
+				QStandardPaths::AppDataLocation
+			).append(
+				QString("/user_info.nppsa")
+			).toStdString();
+		std::filesystem::path path(path_string);
+		if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path)) {
+			std::cout << "Loading peer from save file" << std::endl;
+			np2ps::Peer serialized_peer;
+			std::ifstream ifile(path_string);
+			serialized_peer.ParseFromIstream(&ifile);
+			ctx = std::make_shared<ProgramContext>(serialized_peer);
+			ctx->peer.ping_direct_peers();
+			loaded = true;
+		}
+		else {
+			ctx = std::make_shared<ProgramContext>();
+		}
 	}
 	
 	w.setProgramContext(ctx.get()); //sets the program context for given window, for communication with peer
@@ -117,15 +140,14 @@ int main(int argc, char *argv[]) {
 	QObject::connect(&ctx->peer, &Peer::newspaper_list_received, nlv, &NewspaperListView::show_this);
 	QObject::connect(&ctx->peer, &Peer::new_article_list, &w, &MainWindow::article_list_regenerate);
 	QObject::connect(&ctx->peer, &Peer::checked_display_article, &w, &MainWindow::checked_display_article);
+	QObject::connect(&ctx->peer, &Peer::news_from_file_added, &w, &MainWindow::all_newspaper_updated);
 	QObject::connect(nlv, &NewspaperListView::signal_new_news, &ctx->peer, &Peer::slot_newspaper_from_list_added);
-	QObject::connect(ctx->peer.get_networking(), &Networking::got_network_interfaces, &w, &MainWindow::got_network_interfaces);
 	QObject::connect(&w, &MainWindow::start_server_np2ps, ctx->peer.get_networking()->get_peer_receiver(), &PeerReceiver::start_server);
 	QObject::connect(&w, &MainWindow::start_server_stun, ctx->peer.get_networking()->get_stun_server(), &StunServer::start_server);
 	QObject::connect(&ctx->peer, &Peer::check_selected_item, &w, &MainWindow::check_selected_item);
 	QObject::connect(&w, &MainWindow::signal_add_new_newspaper_from_file, &ctx->peer, &Peer::slot_add_new_newspaper_from_file);
 	QObject::connect(&w, &MainWindow::signal_add_new_newspaper_pk, &ctx->peer, &Peer::slot_add_new_newspaper_pk);
 
-	QObject::connect(f, &Form::enable_print_peer, &w, &MainWindow::enable_print_peer);
 	QObject::connect(f, &Form::enable_add_article, &w, &MainWindow::enable_add_article);
 	QObject::connect(f, &Form::enable_add_newspaper, &w, &MainWindow::enable_add_news);
 	QObject::connect(f, &Form::disable_new_peer, &w, &MainWindow::disable_new_peer);
@@ -163,7 +185,6 @@ int main(int argc, char *argv[]) {
 
 	if (loaded) {
 		w.all_newspaper_updated();
-		w.enable_print_peer();
 		w.enable_add_article();
 		w.enable_add_news();
 		w.disable_new_peer();

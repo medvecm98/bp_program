@@ -66,7 +66,7 @@ private slots:
      * 
 	 * Clears the lineEdit-s.
      */
-	void on_buttonBox_rejected();
+	void on_buttonBox_rejected();    
 
 signals:
 	/**

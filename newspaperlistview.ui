@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1101</width>
-    <height>524</height>
+    <width>704</width>
+    <height>371</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Add newspapers from list</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0">
@@ -26,12 +26,25 @@
         </widget>
        </item>
        <item>
-        <widget class="QListWidget" name="listWidget_subscribed"/>
+        <widget class="QListWidget" name="listWidget_available"/>
        </item>
       </layout>
      </item>
      <item>
       <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
        <item>
         <widget class="QPushButton" name="pushButton">
          <property name="sizePolicy">
@@ -42,31 +55,26 @@
          </property>
          <property name="font">
           <font>
-           <pointsize>15</pointsize>
+           <pointsize>26</pointsize>
           </font>
          </property>
          <property name="text">
-          <string>-&gt;</string>
+          <string>➔</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_unsub">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
-         <property name="font">
-          <font>
-           <pointsize>14</pointsize>
-          </font>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
          </property>
-         <property name="text">
-          <string>&lt;-</string>
-         </property>
-        </widget>
+        </spacer>
        </item>
       </layout>
      </item>
@@ -75,12 +83,12 @@
        <item>
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>Subscribe</string>
+          <string>Subscribed</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QListWidget" name="listWidget_available"/>
+        <widget class="QListWidget" name="listWidget_subscribed"/>
        </item>
       </layout>
      </item>

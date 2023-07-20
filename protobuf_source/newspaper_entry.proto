@@ -34,7 +34,7 @@ message LocalSerializedNewspaperEntry {
     IpWrapper network_info = 4;
     optional string private_key = 5;
     repeated SerializedArticle articles = 2;
-    repeated uint64 journalists = 7;
+    repeated IpWrapper journalists = 7;
     NewspaperConfig config = 8;
 }
 

@@ -206,18 +206,7 @@ void MainWindow::enable_add_article() {
 	ui->pushButton_add_article->setEnabled(true);
 }
 
-void MainWindow::enable_print_peer() {
-	ui->pushButton_print_peer->setEnabled(true);
-}
-
 void MainWindow::disable_new_peer(){
-}
-
-void MainWindow::set_article_related_buttons(bool state) {
-	ui->pushButton_add_margin->setEnabled(state);
-	ui->pushButton_view_margin->setEnabled(state);
-	ui->pushButton_delete_article->setEnabled(state);
-	ui->pushButton->setEnabled(state);
 }
 
 void MainWindow::set_newspaper_related_buttons(bool state) {
@@ -226,57 +215,16 @@ void MainWindow::set_newspaper_related_buttons(bool state) {
 void MainWindow::check_selected_item() {
 }
 
-void MainWindow::check_item(QTreeWidgetItem* item) {
-	if (item->text(1) == "Article") { //is article selected?
-		if (ctx->peer.get_downloading_articles().find(item->text(2).toULongLong()) != ctx->peer.get_downloading_articles().end()) { //check if there isn't already an article request pending
-			set_article_related_buttons(false);
-		}
-		else {
-			set_article_related_buttons(true);
-		}
-		set_newspaper_related_buttons(false);
-	}
-	else if (item->text(1) == "Newspaper") { //is newspaper selected?
-		if (ctx->peer.get_getting_article_list().find(item->text(2).toULongLong()) != ctx->peer.get_getting_article_list().end()) { //check if there isn't already an article list request pending
-			set_newspaper_related_buttons(false); //if yes, disable newspaper related buttons
-		}
-		else {
-			set_newspaper_related_buttons(true); //if no, enable newspaper related buttons
-		}
-		set_article_related_buttons(false);
-	}
-	else { //if neither article nor newspaper is selected, all the buttons for either articles or newspaper will be disabled
-		set_article_related_buttons(false);
-		set_newspaper_related_buttons(false);
-	}
-}
-
-void MainWindow::on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int column)
-{
-	check_item(item);
-}
-
 void MainWindow::on_pushButton_delete_article_clicked()
 {
 
 }
 
 
-void MainWindow::on_pushButton_addJournalist_clicked()
-{
-	std::size_t public_id = ui->lineEdit_addJournalist->text().toULongLong();
-	ctx->peer.add_journalist(public_id);
-}
-
 void MainWindow::newspaper_created() {
 	all_newspaper_updated();
 }
 
-void MainWindow::got_network_interfaces(address_vec_ptr addresses_and_interfaces) {
-	for (auto&& ai : *addresses_and_interfaces) { //append all interfaces to the comboBox_interfaces
-		ui->comboBox_interfacs->addItem(QString("Interface: ").append(ai.first).append(", address: ").append(ai.second.toString()));
-	}
-}
 
 void MainWindow::on_pushButton_clicked()
 {
@@ -341,85 +289,6 @@ void MainWindow::new_margin(std::string type, std::string contents) {
 	article.add_margin(ctx->peer.get_public_id(), Margin(type, contents)); //add the margin with provided type and contents
 }
 
-void MainWindow::on_pushButton_testPeer1_clicked()
-{
-	ctx->peer.set_name("OnePeer"); //set the name of the peer
-
-	ctx->peer.init_newspaper("OneNews"); //initializes new newspaper
-
-	/* enables or disables all the buttons */
-	enable_add_article();
-	disable_new_peer();
-	newspaper_created();
-
-	enable_add_news();
-	enable_print_peer();
-
-	std::set<std::string> categories;
-	categories.insert("politics");
-
-	QString path("../data/heger.md");
-	Article a;
-	a.initialize_article(categories, path.toStdString(), ctx->peer, ctx->peer.get_news_db().at(ctx->peer.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
-	ctx->peer.enroll_new_article(std::move(a), false); //insert new article into the map of my newspaper, including the article's contents
-
-	path = "../data/ecb.md";
-	categories.insert("economy");
-	Article a2;
-	a2.initialize_article(categories, path.toStdString(), ctx->peer, ctx->peer.get_news_db().at(ctx->peer.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
-	ctx->peer.enroll_new_article(std::move(a2), false); //insert new article into the map of my newspaper, including the article's contents
-
-	path = "../data/lorem.txt";
-	categories.clear();
-	categories.insert("txt");
-	Article a3;
-	a3.initialize_article(categories, path.toStdString(), ctx->peer, ctx->peer.get_news_db().at(ctx->peer.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
-	ctx->peer.enroll_new_article(std::move(a3), false); //insert new article into the map of my newspaper, including the article's contents
-
-	ui->pushButton_testPeer1->setEnabled(false);
-	ui->pushButton_testPeer2->setEnabled(false);
-}
-
-
-void MainWindow::on_pushButton_testPeer2_clicked()
-{
-	ctx->peer.set_name("TwoPeer"); //set the name of the peer
-
-	ctx->peer.init_newspaper("TwoNews"); //initializes new newspaper
-
-	/* enables or disables all the buttons */
-	enable_add_article();
-	disable_new_peer();
-	newspaper_created();
-
-	enable_add_news();
-	enable_print_peer();
-
-	std::set<std::string> categories;
-	categories.insert("sport");
-	QString path("../data/ferencvaros.md");
-	Article a;
-	a.initialize_article(categories, path.toStdString(), ctx->peer, ctx->peer.get_news_db().at(ctx->peer.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
-	ctx->peer.enroll_new_article(std::move(a), false); //insert new article into the map of my newspaper, including the article's contents
-
-	categories.clear();
-	categories.insert("economy");
-	path = "../data/kurenie.md";
-	Article a2;
-	a2.initialize_article(categories, path.toStdString(), ctx->peer, ctx->peer.get_news_db().at(ctx->peer.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
-	ctx->peer.enroll_new_article(std::move(a2), false); //insert new article into the map of my newspaper, including the article's contents
-
-	categories.insert("politics");
-	path = "../data/taliani.md";
-	Article a3;
-	a3.initialize_article(categories, path.toStdString(), ctx->peer, ctx->peer.get_news_db().at(ctx->peer.get_my_news_id())); //intializes the article (partly) using data from listWidget_categories
-	ctx->peer.enroll_new_article(std::move(a3), false); //insert new article into the map of my newspaper, including the article's contents
-
-	ui->pushButton_testPeer1->setEnabled(false);
-	ui->pushButton_testPeer2->setEnabled(false);
-}
-
-
 void MainWindow::on_pushButton_save_clicked()
 {
     np2ps::Peer serialized_peer;
@@ -451,18 +320,6 @@ void MainWindow::on_pushButton_loadFromFile_clicked()
 			tr("/user_info.nppsa")
 		)
 	);
-}
-
-void MainWindow::on_pushButtonFriends_clicked()
-{
-	QString ip_string = ui->lineEditFriends->text();
-	QString pid_string = ui->lineEditFriendID->text();
-	bool pid_cast_ok;
-	pk_t pid = pid_string.toULongLong(&pid_cast_ok);
-	if (!ctx->peer.add_friend(pid, ip_string) || !pid_cast_ok) {
-		throw other_error("Adding friend failed for some reason.");
-	}
-	ctx->peer.generate_newspaper_list_request(pid);
 }
 
 void MainWindow::on_comboBox_categories_currentIndexChanged(int index)
@@ -628,20 +485,45 @@ void MainWindow::fill_spinboxes() {
 	ui->spinBox_listSizeDefault_autodownload->setValue(ctx->peer.slot_get_config_peer_article_list_default_percent());
 	ui->spinBox_listSizeFirst_autodownload->setValue(ctx->peer.slot_get_config_peer_article_list_first_percent());
 
-	pk_t news_id = ui->comboBox_newsConfigSelect->currentData().toULongLong();
+	if (ui->comboBox_newsConfigSelect->count() > 0) {
+		pk_t news_id = ui->comboBox_newsConfigSelect->currentData().toULongLong();
 
-	ui->spinBox_readToKeep->setValue(ctx->peer.slot_get_config_news_no_read_articles(news_id));
-	ui->spinBox_unreadToKeep->setValue(ctx->peer.slot_get_config_news_no_unread_articles(news_id));
+		ui->spinBox_readToKeep->setValue(ctx->peer.slot_get_config_news_no_read_articles(news_id));
+		ui->spinBox_unreadToKeep->setValue(ctx->peer.slot_get_config_news_no_unread_articles(news_id));
+		ui->comboBox_newsConfigSelect->setEnabled(true);
+		ui->spinBox_readToKeep->setEnabled(true);
+		ui->spinBox_unreadToKeep->setEnabled(true);
+	}
+	else {
+		ui->comboBox_newsConfigSelect->setEnabled(false);
+		ui->spinBox_readToKeep->setEnabled(false);
+		ui->spinBox_unreadToKeep->setEnabled(false);
+	}
+}
+
+void check_new_news_inputs(ProgramContext* ctx, Ui::MainWindow* ui) {
+	try {
+		ctx->peer.get_news(ctx->peer.get_public_id());
+		ui->lineEdit_new_newspaper_name->setEnabled(false);
+		ui->pushButton_start_news->setEnabled(false);
+	}
+	catch(unknown_newspaper_error e) {
+		ui->lineEdit_new_newspaper_name->setEnabled(true);
+		ui->pushButton_start_news->setEnabled(true);
+	}
 }
 
 void MainWindow::on_tabWidget_currentChanged(int index)
 {
 	if (index == TAB_BROWSER) { // newspaper browser tab
-		QVariant data = ui->comboBox_news_select->currentData();
-        newspaper_updated(data.toULongLong());
+		if (ctx->peer.get_news_db().size() > 0) {
+			QVariant data = ui->comboBox_news_select->currentData();
+			all_newspaper_updated();
+		}
 	}
 	if (index == TAB_CHIEF_EDITOR) { // chief editor tab
 		fill_pending_journalists();
+		check_new_news_inputs(ctx, ui);
 	}
 	if (index == TAB_JOURNALIST) { //journalist tab
 		fill_journalist_news();
@@ -727,16 +609,21 @@ void MainWindow::fill_journalist_news() {
 }
 
 void MainWindow::print_journalist_articles() {
-	NewspaperEntry& news = ctx->peer.get_news(ui->comboBox_news_journalist->currentData().toULongLong());
-	ui->listWidget_journalist_articles->clear();
-	auto [articles, articles_end] = news.get_newest_articles(0, ctx->peer.get_article_list_sort_config());
-	for (; articles != articles_end; articles++) {
-		Article& article = news.get_article(articles->second);
-		if (article.author_id() == ctx->peer.get_public_id()) {
-			QListWidgetItem* item = new QListWidgetItem(article.heading().c_str());
-			item->setData(Qt::UserRole, QVariant((qulonglong)article.main_hash()));
-			ui->listWidget_journalist_articles->addItem(item);
+	try {
+		NewspaperEntry& news = ctx->peer.get_news(ui->comboBox_news_journalist->currentData().toULongLong());
+		ui->listWidget_journalist_articles->clear();
+		auto [articles, articles_end] = news.get_newest_articles(0, ctx->peer.get_article_list_sort_config());
+		for (; articles != articles_end; articles++) {
+			Article& article = news.get_article(articles->second);
+			if (article.author_id() == ctx->peer.get_public_id()) {
+				QListWidgetItem* item = new QListWidgetItem(article.heading().c_str());
+				item->setData(Qt::UserRole, QVariant((qulonglong)article.main_hash()));
+				ui->listWidget_journalist_articles->addItem(item);
+			}
 		}
+	}
+	catch (unknown_newspaper_error e) {
+
 	}
 }
 
@@ -747,7 +634,6 @@ void MainWindow::on_comboBox_news_journalist_currentIndexChanged(int index)
 		bool i_am_journalist = ctx->peer.get_journalist_of().count(ui->comboBox_news_journalist->currentData().toULongLong()) > 0;
 		ui->pushButton_request_journalism->setEnabled(!i_am_journalist);
 		ui->pushButton_add_article->setEnabled(i_am_journalist);
-		ui->pushButton_delete_article->setEnabled(i_am_journalist);
 	}
 }
 
@@ -820,7 +706,12 @@ void MainWindow::on_pushButton_export_my_news_clicked()
 {
 	QHostAddress address(ui->lineEdit_ip_export->text());
 	QString file_name = QFileDialog::getSaveFileName(this, tr("Save File"), QDir::homePath(), tr("NP2PS news entry (*.ne.npps)"));
-	ctx->peer.save_news_to_file(file_name.toStdString(), ctx->peer.get_public_id(), address);
+    if (file_name.trimmed().size() > 0 && std::filesystem::is_regular_file(
+        std::filesystem::path(file_name.toStdString())
+    ))
+    {
+        ctx->peer.save_news_to_file(file_name.toStdString(), ctx->peer.get_public_id(), address);
+    }
 }
 
 void MainWindow::on_toolButton_import_news_clicked()
@@ -888,12 +779,6 @@ void MainWindow::on_radioButton_sort_modified_clicked()
 	article_list_regenerate(ui->comboBox_news_select->currentData().toULongLong());
 }
 
-void MainWindow::on_pushButton_2_clicked()
-{
-    quint64 whom_to_identify = ui->lineEdit_custom_identify->text().toULongLong();
-    ctx->peer.get_networking()->get_stun_client()->identify(whom_to_identify);
-}
-
 void MainWindow::on_pushButton_search_articles_clicked()
 {
     article_list_regenerate(
@@ -942,4 +827,16 @@ void MainWindow::on_listWidget_pending_journalists_currentItemChanged(QListWidge
 void MainWindow::on_pushButton_set_ip_clicked()
 {
 
+}
+
+void MainWindow::on_pushButton_start_news_clicked()
+{
+    ctx->peer.init_newspaper(ui->lineEdit_new_newspaper_name->text().toStdString()); //initializes new newspaper
+    ui->lineEdit_new_newspaper_name->setEnabled(false);
+    ui->pushButton_start_news->setEnabled(false);
+}
+
+void MainWindow::on_pushButton_allocate_clicked()
+{
+	ctx->peer.check_stun_servers();
 }

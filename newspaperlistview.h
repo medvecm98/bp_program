@@ -34,8 +34,6 @@ private slots:
 
     void on_pushButton_clicked();
 
-    void on_pushButton_unsub_clicked();
-
 private:
     void recreate_lists();
     Ui::NewspaperListView *ui;

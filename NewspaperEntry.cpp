@@ -14,6 +14,29 @@ NewspaperEntry::NewspaperEntry(pk_t first_key, pk_t id, const my_string& name, D
 	news_name_= name;
 }
 
+NewspaperEntry::NewspaperEntry(
+	const np2ps::LocalSerializedNewspaperEntry& serialized_ne,
+	DisconnectedUsersLazy* disconnected_users_lazy,
+	IpMap& ip_map) : NewspaperEntry(serialized_ne, disconnected_users_lazy)
+{
+	for (auto&& journalist : serialized_ne.journalists()) {
+		std::cout << "Got journalist: " << journalist.publicid() << std::endl;
+		ip_map.add_to_ip_map(journalist.publicid(), IpWrapper(journalist));
+		emplace_journalist(journalist.publicid());
+	}
+}
+
+NewspaperEntry::NewspaperEntry(
+	const np2ps::NetworkSerializedNewspaperEntry& serialized_ne,
+	DisconnectedUsersLazy* disconnected_users_lazy,
+	IpMap& ip_map) : NewspaperEntry(serialized_ne, disconnected_users_lazy)
+{
+	for (auto&& journalist : serialized_ne.journalists()) {
+		ip_map.add_to_ip_map(journalist.publicid(), IpWrapper(journalist));
+		emplace_journalist(journalist.publicid());
+	}
+}
+
 NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy) : 
 	news_id_(serialized_ne.entry().news_id()),
 	news_name_(serialized_ne.entry().news_name()),
@@ -38,9 +61,7 @@ NewspaperEntry::NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& seria
 			)
 		);
 	}
-	for (auto&& journalist : serialized_ne.journalists()) {
-		emplace_journalist(journalist);
-	}
+	
 }
 
 void NewspaperEntry::deserialize_config(const np2ps::NewspaperConfig& serialized_config) {
@@ -358,7 +379,7 @@ void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEn
 		)
 	);
 	for (pk_t journalist : journalists_) {
-		IpWrapper j_wrapper = news_wrapper.get_wrapper_ref(journalist);
+		IpWrapper& j_wrapper = news_wrapper.get_wrapper_ref(journalist);
 		auto* gpb_wrapper = nserialized_ne->add_journalists();
 		j_wrapper.serialize_wrapper(gpb_wrapper, false);
 	}
@@ -368,7 +389,7 @@ void NewspaperEntry::network_serialize_entry(np2ps::NetworkSerializedNewspaperEn
 	nserialized_ne->mutable_entry()->set_last_updated(last_updated_);
 }
 
-void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne, bool serialize_articles) const {
+void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne, IpMap& news_wrapper, bool serialize_articles) const {
 	serialize_entry(lserialized_ne->mutable_entry());
 	if (serialize_articles) {
 		for (auto& [hash, art] : articles_) {
@@ -378,6 +399,12 @@ void NewspaperEntry::local_serialize_entry(np2ps::LocalSerializedNewspaperEntry*
 	}
 	for (auto&& reader : readers_) {
 		lserialized_ne->mutable_entry()->add_readers(reader);
+	}
+	for (auto&& journalist : journalists_) {
+		IpWrapper& wrapper = news_wrapper.get_wrapper_ref(journalist);
+		auto gpb_wrapper = lserialized_ne->add_journalists();
+		wrapper.serialize_wrapper(gpb_wrapper, false);
+		gpb_wrapper->set_publicid(journalist);
 	}
 	if (has_newspaper_public_key()) {
 		lserialized_ne->mutable_network_info()->set_rsa_public_key(
@@ -545,6 +572,7 @@ pk_t NewspaperEntry::get_next_coworker() {
 
 void NewspaperEntry::update_metadata(NewspaperEntry& second_entry) {
 	for (auto&& journalist : second_entry.get_journalists()) {
+		if (journalist == 0) continue;
 		emplace_journalist(journalist);
 	}
 

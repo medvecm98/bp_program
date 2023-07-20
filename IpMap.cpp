@@ -381,7 +381,7 @@ void IpMap::add_to_ip_map_relayed(pk_t pid, pk_t relay_by_) {
 	try {
 		IpWrapper& relayer_wrapper = get_wrapper_ref(relay_by_);
 		if (relayer_wrapper.relay_state == RelayState::Direct) {
-			wrapper.relay_by.push(relay_by_);
+			wrapper.add_relay_server(relay_by_);
 			map_.emplace(pid, std::move(wrapper));
 		}
 	}
@@ -393,7 +393,7 @@ void IpMap::check_or_add_to_ip_map_relayed(pk_t pid, pk_t relay_by_, RelayState 
 		IpWrapper& wrapper = get_wrapper_ref(pid);
 		if (pid != relay_by_) {
 			wrapper.set_relay_state(state);
-			wrapper.relay_by.push(relay_by_);
+			wrapper.add_relay_server(relay_by_);
 		}
 	}
 	catch(user_not_found_in_database e) {
@@ -407,9 +407,9 @@ void IpMap::check_and_remove_relayed(pk_t pid, pk_t relay_by_) {
 		pk_t temp = 0;
 		for (int i = 0; i < wrapper.relay_by.size(); i++) {
 			temp = wrapper.relay_by.front();
-			wrapper.relay_by.pop();
+			wrapper.relay_by.pop_front();
 			if (temp != relay_by_) {
-				wrapper.relay_by.push(temp);
+				wrapper.add_relay_server(temp);
 			}
 			else {
 				break;

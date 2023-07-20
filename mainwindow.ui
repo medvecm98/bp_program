@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1247</width>
-    <height>724</height>
+    <width>1186</width>
+    <height>736</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,10 +15,10 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="1">
+    <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>3</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_4">
        <attribute name="title">
@@ -30,40 +30,44 @@
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_18">
             <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_8">
+              <item>
+               <widget class="QToolButton" name="toolButton_addNewspaper">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>11</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Add newspaper</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QToolButton" name="toolButton_import_news">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Add newspaper from file</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
              <layout class="QVBoxLayout" name="verticalLayout_7">
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_12">
-                <item>
-                 <widget class="QToolButton" name="toolButton_addNewspaper">
-                  <property name="font">
-                   <font>
-                    <pointsize>16</pointsize>
-                   </font>
-                  </property>
-                  <property name="text">
-                   <string>+</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QToolButton" name="toolButton_import_news">
-                  <property name="text">
-                   <string>...</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QToolButton" name="toolButton_removeNewspaper">
-                  <property name="font">
-                   <font>
-                    <pointsize>16</pointsize>
-                   </font>
-                  </property>
-                  <property name="text">
-                   <string>−</string>
-                  </property>
-                 </widget>
-                </item>
                 <item>
                  <widget class="QComboBox" name="comboBox_news_select">
                   <property name="toolTip">
@@ -75,11 +79,11 @@
                  <widget class="QToolButton" name="toolButton_articleList">
                   <property name="font">
                    <font>
-                    <pointsize>16</pointsize>
+                    <pointsize>11</pointsize>
                    </font>
                   </property>
                   <property name="text">
-                   <string>⟳</string>
+                   <string>News list</string>
                   </property>
                  </widget>
                 </item>
@@ -107,42 +111,7 @@
                </layout>
               </item>
               <item>
-               <widget class="QListWidget" name="listWidget_articles">
-                <item>
-                 <property name="text">
-                  <string>Bruh</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Bruh 2: Electric boogaloo</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Bruh 3: The last crusade</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Bruh 4: The new hope</string>
-                 </property>
-                 <property name="background">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="128">
-                    <red>224</red>
-                    <green>27</green>
-                    <blue>36</blue>
-                   </color>
-                  </brush>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Bruh 5: Empire strikes back</string>
-                 </property>
-                </item>
-               </widget>
+               <widget class="QListWidget" name="listWidget_articles"/>
               </item>
               <item>
                <widget class="QComboBox" name="comboBox_categories">
@@ -175,25 +144,7 @@
              </layout>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_29">
-              <item>
-               <widget class="QPushButton" name="pushButton_informCoworkers">
-                <property name="text">
-                 <string>IC</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QDateTimeEdit" name="dateTimeEdit"/>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton_gossip">
-                <property name="text">
-                 <string>Gossip</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
+             <layout class="QHBoxLayout" name="horizontalLayout_29"/>
             </item>
            </layout>
           </item>
@@ -242,6 +193,24 @@
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_2">
             <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_7">
+              <item>
+               <widget class="QLineEdit" name="lineEdit_new_newspaper_name">
+                <property name="placeholderText">
+                 <string>Name your news here...</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_start_news">
+                <property name="text">
+                 <string>Start news</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
              <layout class="QHBoxLayout" name="horizontalLayout_5">
               <item>
                <widget class="QPushButton" name="pushButton_confirm_journalist">
@@ -259,7 +228,7 @@
                  <bool>false</bool>
                 </property>
                 <property name="text">
-                 <string>Remove journalist</string>
+                 <string>Deny journalist</string>
                 </property>
                </widget>
               </item>
@@ -268,71 +237,28 @@
             <item>
              <widget class="QListWidget" name="listWidget_pending_journalists"/>
             </item>
-           </layout>
-          </item>
-         </layout>
-        </item>
-        <item row="0" column="1">
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <widget class="QLineEdit" name="lineEdit_ip_export">
-            <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set exported IP&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-            </property>
-            <property name="placeholderText">
-             <string>Export my news with custom IP and port: IP:port</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="pushButton_export_my_news">
-            <property name="text">
-             <string>Export my news</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_article">
-            <property name="text">
-             <string>Article</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_7">
             <item>
-             <widget class="QPushButton" name="pushButton_print_peer">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>print Peer</string>
-              </property>
-             </widget>
+             <layout class="QVBoxLayout" name="verticalLayout">
+              <item>
+               <widget class="QLineEdit" name="lineEdit_ip_export">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Set exported IP&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="placeholderText">
+                 <string>Export my news with custom IP and port: IP:port</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_export_my_news">
+                <property name="text">
+                 <string>Export my news</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_margin">
-            <property name="text">
-             <string>Margin contents</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPlainTextEdit" name="plainTextEdit_margins"/>
           </item>
          </layout>
         </item>
@@ -346,7 +272,7 @@
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_10">
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="10,1,1,1,1">
+           <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="10,1,1,1">
             <item>
              <widget class="QComboBox" name="comboBox_news_journalist"/>
             </item>
@@ -374,22 +300,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_delete_article">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Delete article</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QPushButton" name="pushButton_request_journalism">
               <property name="text">
                <string>Request journalism</string>
@@ -400,70 +310,6 @@
           </item>
           <item>
            <widget class="QListWidget" name="listWidget_journalist_articles"/>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_9">
-          <item>
-           <widget class="QPushButton" name="pushButtonFriends">
-            <property name="text">
-             <string>Add friend</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="lineEditFriendID"/>
-          </item>
-          <item>
-           <widget class="QLineEdit" name="lineEditFriends"/>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_9">
-            <item>
-             <layout class="QVBoxLayout" name="verticalLayout_5">
-              <item>
-               <widget class="QPushButton" name="pushButton_load">
-                <property name="text">
-                 <string>Load</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton_testPeer2">
-                <property name="text">
-                 <string>Test Peer 2 create</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <layout class="QVBoxLayout" name="verticalLayout_4">
-              <item>
-               <widget class="QPushButton" name="pushButton_testPeer1">
-                <property name="text">
-                 <string>Test Peer 1 create</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton_save">
-                <property name="text">
-                 <string>Save</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton_loadFromFile">
-                <property name="text">
-                 <string>Load from file</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
           </item>
          </layout>
         </item>
@@ -478,8 +324,8 @@
          <rect>
           <x>10</x>
           <y>10</y>
-          <width>411</width>
-          <height>347</height>
+          <width>661</width>
+          <height>360</height>
          </rect>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_15">
@@ -759,6 +605,24 @@
              </item>
             </layout>
            </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_2">
+             <item>
+              <widget class="QPushButton" name="pushButton_config_save">
+               <property name="text">
+                <string>Save</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_config_cancel">
+               <property name="text">
+                <string>Cancel</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
           </layout>
          </item>
          <item>
@@ -768,193 +632,91 @@
            </property>
           </widget>
          </item>
-        </layout>
-       </widget>
-       <widget class="QPushButton" name="pushButton_config_save">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>360</y>
-          <width>151</width>
-          <height>27</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Save</string>
-        </property>
-       </widget>
-       <widget class="QPushButton" name="pushButton_config_cancel">
-        <property name="geometry">
-         <rect>
-          <x>166</x>
-          <y>360</y>
-          <width>151</width>
-          <height>27</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Cancel</string>
-        </property>
-       </widget>
-       <widget class="QWidget" name="layoutWidget_2">
-        <property name="geometry">
-         <rect>
-          <x>570</x>
-          <y>110</y>
-          <width>381</width>
-          <height>29</height>
-         </rect>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout" stretch="7">
          <item>
-          <widget class="QComboBox" name="comboBox_interfacs"/>
-         </item>
-        </layout>
-       </widget>
-       <widget class="QWidget" name="layoutWidget_3">
-        <property name="geometry">
-         <rect>
-          <x>570</x>
-          <y>140</y>
-          <width>381</width>
-          <height>30</height>
-         </rect>
-        </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <item>
-          <widget class="QLineEdit" name="lineEdit_addJournalist"/>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pushButton_addJournalist">
-           <property name="text">
-            <string>Add journalist</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-       <widget class="QLabel" name="label_2">
-        <property name="geometry">
-         <rect>
-          <x>570</x>
-          <y>30</y>
-          <width>106</width>
-          <height>31</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Set IP</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-       <widget class="QWidget" name="layoutWidget_4">
-        <property name="geometry">
-         <rect>
-          <x>550</x>
-          <y>200</y>
-          <width>599</width>
-          <height>91</height>
-         </rect>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
-         <item>
-          <widget class="QLabel" name="label_4">
-           <property name="text">
-            <string>Margins</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_8"/>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
-            <widget class="QLineEdit" name="lineEdit_margin"/>
+            <spacer name="verticalSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>40</height>
+              </size>
+             </property>
+            </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
+            <widget class="QLabel" name="label_2">
              <property name="text">
-              <string>Request margin</string>
+              <string>Set ports</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
              </property>
             </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="QLineEdit" name="lineEdit_np2ps_port">
+               <property name="placeholderText">
+                <string>Port</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="lineEdit_stun_port">
+               <property name="placeholderText">
+                <string>STUN port</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_set_ip">
+               <property name="text">
+                <string>Set ports</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <item>
+              <widget class="QPushButton" name="pushButton_informCoworkers">
+               <property name="text">
+                <string>IC</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_allocate">
+               <property name="text">
+                <string>Allocate</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_gossip">
+               <property name="text">
+                <string>Gossip</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_save">
+               <property name="text">
+                <string>Save</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
           </layout>
          </item>
         </layout>
-       </widget>
-       <widget class="QLineEdit" name="lineEdit_custom_identify">
-        <property name="geometry">
-         <rect>
-          <x>550</x>
-          <y>310</y>
-          <width>171</width>
-          <height>25</height>
-         </rect>
-        </property>
-        <property name="placeholderText">
-         <string>Identify</string>
-        </property>
-       </widget>
-       <widget class="QPushButton" name="pushButton_2">
-        <property name="geometry">
-         <rect>
-          <x>730</x>
-          <y>310</y>
-          <width>89</width>
-          <height>25</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Identify</string>
-        </property>
-       </widget>
-       <widget class="QLineEdit" name="lineEdit_np2ps_port">
-        <property name="geometry">
-         <rect>
-          <x>600</x>
-          <y>60</y>
-          <width>113</width>
-          <height>25</height>
-         </rect>
-        </property>
-        <property name="placeholderText">
-         <string>Port</string>
-        </property>
-       </widget>
-       <widget class="QLineEdit" name="lineEdit_stun_port">
-        <property name="geometry">
-         <rect>
-          <x>720</x>
-          <y>60</y>
-          <width>113</width>
-          <height>25</height>
-         </rect>
-        </property>
-        <property name="placeholderText">
-         <string>STUN port</string>
-        </property>
-       </widget>
-       <widget class="QPushButton" name="pushButton_set_ip">
-        <property name="geometry">
-         <rect>
-          <x>840</x>
-          <y>60</y>
-          <width>80</width>
-          <height>25</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>Set ports</string>
-        </property>
        </widget>
       </widget>
      </widget>

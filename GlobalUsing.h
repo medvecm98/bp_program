@@ -47,6 +47,7 @@
 
 #define PORT 14128
 #define STUN_PORT 3478
+#define ARTICLE_PEER_COUNT 2
 
 /* LOGGER */
 //
@@ -181,25 +182,25 @@ struct GlobalMethods {
 		
 		quint32 address_number = address.toIPv4Address();
 
-		if (address_number >= QHostAddress("10.1.0.0").toIPv4Address() && 
-			address_number <= QHostAddress("10.1.255.255").toIPv4Address())
-		{
-			return true;
-		}
-
-		return false;
-
-		// if ((address_number >= QHostAddress("10.0.0.0").toIPv4Address() && 
-		// 	 address_number <= QHostAddress("10.255.255.255").toIPv4Address()) ||
-        // 	(address_number >= QHostAddress("172.16.0.0").toIPv4Address() &&
-		// 	 address_number <= QHostAddress("172.31.255.255").toIPv4Address()) ||
-        // 	(address_number >= QHostAddress("192.168.0.0").toIPv4Address() &&
-		// 	 address_number <= QHostAddress("192.168.255.255").toIPv4Address()))
+		// if (address_number >= QHostAddress("10.1.0.0").toIPv4Address() && 
+		// 	address_number <= QHostAddress("10.1.255.255").toIPv4Address())
 		// {
-        // 	return true;
-    	// }
+		// 	return true;
+		// }
 
 		// return false;
+
+		if ((address_number >= QHostAddress("10.0.0.0").toIPv4Address() && 
+			 address_number <= QHostAddress("10.255.255.255").toIPv4Address()) ||
+        	(address_number >= QHostAddress("172.16.0.0").toIPv4Address() &&
+			 address_number <= QHostAddress("172.31.255.255").toIPv4Address()) ||
+        	(address_number >= QHostAddress("192.168.0.0").toIPv4Address() &&
+			 address_number <= QHostAddress("192.168.255.255").toIPv4Address()))
+		{
+        	return true;
+    	}
+
+		return false;
 	}
 };
 

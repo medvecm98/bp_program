@@ -506,6 +506,11 @@ void StunServer::start_server(QHostAddress address, std::uint16_t port) {
     tcp_server_->disconnect();
     QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &StunServer::new_connection);
     server_started = true;
+
+    if (port != STUN_PORT) {
+		IpWrapper& my_wrapper = networking_->ip_map().my_ip();
+		my_wrapper.stun_port = port;
+	}
 }
 
 void StunServer::create_response_error_allocate(stun_header_ptr message_orig, stun_header_ptr message_new) {

@@ -115,12 +115,6 @@ public slots:
 	void enable_add_news();
 
 	/**
-	 * @brief Enable Print peer button.
-	 * 
-	 */
-	void enable_print_peer();
-
-	/**
 	 * @brief Disable New peer button.
 	 * 
 	 */
@@ -132,13 +126,6 @@ public slots:
 	 * Refresh the Newspaper tree.
 	 */
 	void newspaper_created();
-
-	/**
-	 * @brief Network interfaces from Networking are available.
-	 * 
-	 * @param addresses_and_interfaces Pointer to vector of all interfaces and their addresses.
-	 */
-	void got_network_interfaces(address_vec_ptr addresses_and_interfaces);
 
 	/**
 	 * @brief New margin was created via Add margin window.
@@ -215,14 +202,6 @@ private slots:
 	void on_pushButton_set_ip_released();
 
 	/**
-	 * @brief Calls the `check_item` function for item that was selected in the
-	 * Newspaper tree.
-	 * 
-	 * @param item Item selected in Newspaper tree
-	 */
-	void on_treeWidget_newspaper_itemClicked(QTreeWidgetItem *item, int column);
-
-	/**
 	 * @brief Deletes article from database. Article entry is kept in the
 	 * `_readers` list.
 	 * 
@@ -230,13 +209,6 @@ private slots:
 	 * that published this article.
 	 */
 	void on_pushButton_delete_article_clicked();
-
-	/**
-	 * @brief Adds a public identifier read from `lineEdit_addJournalist` into
-	 * the `journalists_` list.
-	 * 
-	 */
-	void on_pushButton_addJournalist_clicked();
 
 	/**
 	 * @brief Requests margins for selected article.
@@ -261,12 +233,6 @@ private slots:
 	 * 
 	 */
 	void on_pushButton_add_margin_clicked();
-
-	void on_pushButton_testPeer1_clicked();
-
-	void on_pushButton_testPeer2_clicked();
-
-    void on_pushButtonFriends_clicked();
 
     void on_comboBox_categories_currentIndexChanged(int index);
 
@@ -334,8 +300,6 @@ private slots:
 
     void on_radioButton_sort_modified_clicked();
 
-    void on_pushButton_2_clicked();
-
     void on_pushButton_search_articles_clicked();
 
     void on_lineEdit_search_articles_textChanged(const QString &arg1);
@@ -345,6 +309,10 @@ private slots:
     void on_listWidget_pending_journalists_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous);
 
     void on_pushButton_set_ip_clicked();
+
+    void on_pushButton_start_news_clicked();
+
+    void on_pushButton_allocate_clicked();
 
 signals:
 	/**
@@ -391,27 +359,6 @@ signals:
 	void signal_edit_article(qulonglong news_pid, qulonglong article_hash);
 
 private:
-	/**
-	 * @brief Sets the buttons for given item in Newspaper tree.
-	 * 
-	 * When article is selected, all the article related buttons are enabled
-	 * and all the newspaper related buttons are disabled.
-	 * 
-	 * When article is selected but is downloading at the moment, all the 
-	 * article related buttons are disabled.
-	 * 
-	 * When newspaper is selected, all the newspaper related buttons are enabled
-	 * and all the article related buttons are disabled.
-	 * 
-	 * When there is already a process of getting an article list for given
-	 * newspaper happening, all the newspaper related buttons are disabled.
-	 * 
-	 * @param item Item, for which the buttons should be checked.
-	 */
-	void check_item(QTreeWidgetItem* item);
-
-	
-
 	/**
 	 * @brief Enables and disables the article buttons based on argument
 	 * 

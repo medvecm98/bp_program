@@ -120,7 +120,7 @@ struct IpWrapper {
 		}
 
 		for (auto&& serialized_relay_by : serialized_wrapper.relay_by()) {
-			relay_by.push(serialized_relay_by);
+			add_relay_server(serialized_relay_by);
 		}
 
 		for (auto&& serialized_relay_to : serialized_wrapper.relay_to()) {
@@ -341,27 +341,32 @@ struct IpWrapper {
 			wrapper->set_rsa_public_key(public_key_b64);
 		}
 
-		switch(relay_state) {
-			case RelayState::Direct:
-				wrapper->set_relay_state(np2ps::RelayState::Direct);
-				break;
-			case RelayState::Relayed:
-				wrapper->set_relay_state(np2ps::RelayState::Relayed);
-				break;
-			case RelayState::Unknown:
-				wrapper->set_relay_state(np2ps::RelayState::Unknown);
-				break;
-			default:
-				throw unsupported_feature("Serializing unknown relay state.");
+		if (local_serialize) {
+			switch(relay_state) {
+				case RelayState::Direct:
+					wrapper->set_relay_state(np2ps::RelayState::Direct);
+					break;
+				case RelayState::Relayed:
+					wrapper->set_relay_state(np2ps::RelayState::Relayed);
+					break;
+				case RelayState::Unknown:
+					wrapper->set_relay_state(np2ps::RelayState::Unknown);
+					break;
+				default:
+					throw unsupported_feature("Serializing unknown relay state.");
+			}
+		}
+		else {
+			wrapper->set_relay_state(np2ps::RelayState::Unknown);
 		}
 
 		if (local_serialize) {
 			pk_t temp = 0;
 			for (int i = 0; i < relay_by.size(); i++) {
 				temp = relay_by.front();
-				relay_by.pop();
+				relay_by.pop_front();
 				wrapper->add_relay_by(temp);
-				relay_by.push(temp);
+				add_relay_server(temp);
 			}
 			for (auto&& relay_to_peer : relay_to) {
 				wrapper->add_relay_to(relay_to_peer);
@@ -374,9 +379,9 @@ struct IpWrapper {
 	}
 
 	pk_t next_relay_stun_server() {
-		std::cout << "Trying next STUN server" << std::endl;
-		relay_by.push(relay_by.front());
-		relay_by.pop();
+		relay_by.push_back(relay_by.front());
+		relay_by.pop_front();
+		std::cout << "Trying next STUN server, tracking: " << relay_server_tracking << " first_relay_stun_server: " << first_relay_stun_server << " next: " << relay_by.front() << std::endl;
 		if (relay_server_tracking && first_relay_stun_server == relay_by.front()) {
 			first_relay_stun_server = 0;
 			throw no_more_relay_stun_servers(
@@ -400,6 +405,30 @@ struct IpWrapper {
 		first_relay_stun_server = 0;
 	}
 
+	bool find_relay_server(pk_t pid) {
+		pk_t server;
+		bool found = false;
+		for (int i = 0; i < relay_by.size(); i++) {
+			server = relay_by.front();
+			relay_by.pop_front();
+			if (server == pid) {
+				found = true;
+			}
+			relay_by.push_back(server);
+		}
+		return found;
+	}
+
+	bool add_relay_server(pk_t pid) {
+		pk_t server;
+		bool found = find_relay_server(pid);
+		if (!found) {
+			relay_by.push_front(pid);
+			return true;
+		}
+		return false;
+	}
+
 	//for normal traversal
 	QHostAddress ipv4;
 	QHostAddress ipv6;
@@ -419,10 +448,11 @@ struct IpWrapper {
 	
 	RelayState relay_state = RelayState::Unknown;
 	user_container relay_to;
-	std::queue<pk_t> relay_by;
+	std::deque<pk_t> relay_by;
 
 	pk_t first_relay_stun_server = 0;
 	bool relay_server_tracking = false;
+	bool new_relay_servers = false;
 };
 
 using ip_map = std::unordered_map<pk_t, IpWrapper>;

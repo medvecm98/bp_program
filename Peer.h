@@ -116,6 +116,10 @@ public:
 		QObject::connect(
 			clear_articles_timer, &QTimer::timeout,
 			networking_.get(), &Networking::clean_long_term_np2ps_messages);
+		QObject::connect(
+			stun_allocate_timer, &QTimer::timeout,
+			this, &Peer::check_stun_servers
+		);
 		auto_update_timer->start(
 			std::chrono::duration_cast<std::chrono::milliseconds>(
 				std::chrono::minutes(20)));
@@ -128,6 +132,9 @@ public:
 		clear_articles_timer->start(
 			std::chrono::duration_cast<std::chrono::milliseconds>(
 				std::chrono::hours(1)));
+		stun_allocate_timer->start(
+			std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::minutes(5)));
 	}
 
 	void init_timers()
@@ -147,6 +154,10 @@ public:
 		if (!clear_articles_timer)
 		{
 			clear_articles_timer = new QTimer(this);
+		}
+		if (!stun_allocate_timer)
+		{
+			stun_allocate_timer = new QTimer(this);
 		}
 	}
 
@@ -323,7 +334,7 @@ public:
 	bool remove_article(hash_t hash, pk_t &newspaper_id);
 	void identify_newspaper(QString address, const std::string &newspaper_name);
 	void identify_newspaper(QHostAddress address, port_t np2ps_port, port_t stun_port, const std::string &newspaper_name);
-	void upload_external_article(Article a);
+	void upload_external_article(Article a, Article* ancestor = NULL);
 	void add_journalist(pk_t j);
 	void remove_journalist(pk_t j);
 	Networking *get_networking();
@@ -378,6 +389,8 @@ public:
 	void clear_newspaper_potential();
 
 	news_potential_db& get_newspaper_potential();
+
+	void check_stun_servers();
 
 public slots:
 	void article_all_send_more_message(shared_ptr_message message);
@@ -442,6 +455,8 @@ public slots:
 	void slot_newspaper_from_list_added(pk_t news_id);
 
 signals:
+	void news_from_file_added();
+
 	void newspaper_list_received();
 
 	/**
@@ -530,6 +545,7 @@ private:
 	QTimer *waiting_messages_timer = NULL;
 	QTimer *gossip_timer = NULL;
 	QTimer *clear_articles_timer = NULL;
+	QTimer *stun_allocate_timer = NULL;
 
 	article_optional find_article_in_database(hash_t article_hash);
 };

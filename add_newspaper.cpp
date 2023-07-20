@@ -35,10 +35,16 @@ void add_newspaper::on_buttonBox_accepted() {
 	port_t np2ps_port = PORT;
 	port_t stun_port = STUN_PORT;
 	if (!text_port.trimmed().isEmpty()) {
-		np2ps_port = (std::uint16_t)std::stoi(text_port.toStdString());
+		try {
+			np2ps_port = (std::uint16_t)std::stoi(text_port.toStdString());
+		}
+		catch(std::invalid_argument) {}
 	}
 	if (!text_stun_port.trimmed().isEmpty()) {
-		stun_port = (std::uint16_t)std::stoi(text_stun_port.toStdString());
+		try {
+			stun_port = (std::uint16_t)std::stoi(text_stun_port.toStdString());
+		}
+		catch(std::invalid_argument) {}
 	}
 	if (check_ip_valid(text_address)) {
 		ctx->peer.identify_newspaper(

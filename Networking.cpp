@@ -467,6 +467,10 @@ void PeerReceiver::start_server(QHostAddress address, std::uint16_t port)
 	tcp_server_->disconnect();
 	QObject::connect(tcp_server_, &QTcpServer::newConnection, this, &PeerReceiver::prepare_for_message_receive);
 	server_started = true;
+	if (port != PORT) {
+		IpWrapper& my_wrapper = networking_->ip_map().my_ip();
+		my_wrapper.port = port;
+	}
 }
 
 shared_ptr_message decrypt_message_using_symmetric_key(
@@ -776,11 +780,7 @@ void PeerReceiver::process_received_np2ps_message(QDataStream &msg, QTcpSocket *
 			}
 		}
 		std::cout << "\nReceived message consumed." << std::endl;
-		if (!np2ps_socket)
-		{
-			break;
-		}
-	} while (np2ps_socket->bytesAvailable() > 0);
+	} while (np2ps_socket && np2ps_socket->bytesAvailable() > 0);
 	msg.commitTransaction();
 	std::cout << "All subsequent messages consumed.\n"
 			  << std::endl;

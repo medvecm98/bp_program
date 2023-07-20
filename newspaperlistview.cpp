@@ -19,7 +19,6 @@ void NewspaperListView::set_context(ProgramContext* ctx_) {
 
 void NewspaperListView::recreate_lists() {
     ui->pushButton->setEnabled(false);
-    ui->pushButton_unsub->setEnabled(false);
     ui->listWidget_subscribed->clear();
     ui->listWidget_available->clear();
 
@@ -55,7 +54,6 @@ void NewspaperListView::on_listWidget_available_currentItemChanged(QListWidgetIt
 
 void NewspaperListView::on_listWidget_subscribed_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
 {
-    ui->pushButton_unsub->setEnabled(true);
 }
 
 
@@ -64,12 +62,5 @@ void NewspaperListView::on_pushButton_clicked()
     auto item = ui->listWidget_available->currentItem();
     pk_t news_id = item->data(Qt::UserRole).toULongLong();
     emit signal_new_news(news_id);
-    recreate_lists();
-}
-
-
-void NewspaperListView::on_pushButton_unsub_clicked()
-{
-    auto item = ui->listWidget_subscribed->currentItem();
     recreate_lists();
 }

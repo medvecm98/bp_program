@@ -33,10 +33,6 @@ void printQByteArray(QByteArray& a) {
     }
 }
 
-void StunClient::send_stun_message(stun_header_ptr stun_message) {
-    send_stun_message(stun_message, get_stun_server_front());
-}
-
 void StunClient::reset_connection_timer(QTcpSocket* socket) {
     if (!stun_connection_timer) {
         stun_connection_timer = new QTimer(this);
@@ -55,7 +51,28 @@ void StunClient::reset_connection_timer(QTcpSocket* socket) {
     );
 }
 
+pk_t StunClient::extract_final_destination(stun_header_ptr stun_message ) {
+    if (stun_message->stun_method == StunMethodEnum::send && stun_message->stun_class == StunClassEnum::request) {
+        RelayedPublicIdentifierAttribute* final_dest_id = NULL;
+        for (auto&& attr : stun_message->attributes) {
+            if (attr->attribute_type == StunAttributeEnum::relayed_publid_identifier) {
+                final_dest_id = (RelayedPublicIdentifierAttribute*) attr.get();
+            }
+        }
+        if (!final_dest_id) {
+            throw other_error("Something went wrong with send request.");
+        }
+        return final_dest_id->get_public_identifier();
+    }
+    return 0;
+}
+
 void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id) {
+    pk_t final_destination = extract_final_destination(stun_message);
+    if (final_destination != 0) {
+        IpWrapper& final_destination_wrapper = networking_->ip_map().get_wrapper_ref(final_destination);
+        final_destination_wrapper.begin_relay_stun_server_tracking();
+    }
     IpWrapper& wrapper = networking_->ip_map_.get_wrapper_ref(public_id);
     if (networking_->stun_sending_in_progress) {
         networking_->stun_messages_waiting_for_connection.push_back(
@@ -99,6 +116,8 @@ void StunClient::send_stun_message(stun_header_ptr stun_message, pk_t public_id)
                 std::make_tuple(wrapper.ipv4, wrapper.stun_port, stun_message, public_id, true)
             );
 
+            std::cout << "Connecting to: " << addr.toString().toStdString() << " port: " << port << " id " << public_id << std::endl;
+
             socket->connectToHost(addr, port);
             stun_connection_timer->start(2000);
         }
@@ -136,6 +155,11 @@ void StunClient::send_stun_message_transport_address(stun_header_ptr stun_messag
 void StunClient::host_connected() {
     stun_connection_timer->stop();
     QTcpSocket *socket = (QTcpSocket*) QObject::sender();
+
+    if (networking_->stun_messages_waiting_for_connection.empty()) {
+        return;
+    }
+
     auto waiting_stun_message = networking_->stun_messages_waiting_for_connection.front();
 
     QHostAddress address_waiting_to_connect = std::get<0>(waiting_stun_message);
@@ -493,39 +517,50 @@ void StunClient::check_for_another_server(
     pk_t connecting_to,
     stun_header_ptr header_waiting_to_connect)
 {
-    if (connecting_to != 0) { // we need to know to whom are we connecting to
+    if (connecting_to != 0) { // we need to know who are we connecting to
         std::cout << "b" << std::endl;
         IpWrapper& connectee_wrapper = networking_->ip_map().get_wrapper_ref(connecting_to);
-        if (header_waiting_to_connect->stun_method == StunMethodEnum::send)
+        if (header_waiting_to_connect->stun_method == StunMethodEnum::send && 
+            header_waiting_to_connect->stun_class == StunClassEnum::request)
         {
+            pk_t final_dest_id = extract_final_destination(header_waiting_to_connect);
+            IpWrapper& final_dest_wrapper = networking_->ip_map().get_wrapper_ref(
+                final_dest_id
+            );
             std::cout << "c" << std::endl;
-            if (connectee_wrapper.has_relay_stun_servers())
+            if (final_dest_wrapper.has_relay_stun_servers())
             {
                 std::cout << "d" << std::endl;
                 networking_->stun_sending_in_progress = false;
                 try {
-                    connectee_wrapper.next_relay_stun_server();
-                    std::cout << "More relay STUN servers left." << std::endl;
-                    send_stun_message(header_waiting_to_connect, connectee_wrapper.get_relay_stun_server());
+                    final_dest_wrapper.next_relay_stun_server();
+                    std::cout << "More relay STUN servers left. " << final_dest_wrapper.get_relay_stun_server() << std::endl;
+                    send_stun_message(header_waiting_to_connect, final_dest_wrapper.get_relay_stun_server());
                     return;
                 }
                 catch (no_more_relay_stun_servers e) {
                     std::cout << "No more relay STUN servers left." << std::endl;
-                    connectee_wrapper.end_relay_stun_server_tracking();
-                    networking_->check_message_side_effect(
-                        header_waiting_to_connect,
-                        connectee_wrapper
+                    final_dest_wrapper.end_relay_stun_server_tracking();
+                    peers_waiting_for_relays.emplace(
+                        final_dest_id,
+                        header_waiting_to_connect
                     );
+                    identify(final_dest_id);
                 }
             }
             else {
                 std::cout << "e" << std::endl;
                 peers_waiting_for_relays.emplace(
-                    connecting_to,
+                    final_dest_id,
                     header_waiting_to_connect
                 );
-                identify(connecting_to);
+                identify(final_dest_id);
             }
+        }
+        else if (header_waiting_to_connect->stun_method == StunMethodEnum::allocate && 
+            header_waiting_to_connect->stun_class == StunClassEnum::request)
+        {
+            blocked_stun_servers.emplace(connecting_to);
         }
     }
 }
@@ -622,7 +657,7 @@ void StunClient::process_response_success_identify(stun_header_ptr stun_message)
 
     auto [waiting_message_for_relay_it, waiting_message_for_relay_eit] = peers_waiting_for_relays.equal_range(identified_peer->get_public_identifier());
     while (waiting_message_for_relay_it != waiting_message_for_relay_eit) {
-        send_stun_message(waiting_message_for_relay_it->second, identified_peer->get_public_identifier());
+        send_stun_message(waiting_message_for_relay_it->second, relayer_or_identifier->get_public_identifier());
         waiting_message_for_relay_it++;
         return;
     }
@@ -737,6 +772,9 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
     if (GlobalMethods::ip_address_is_private(my_wrapper.ipv4) || !GlobalMethods::ip_address_is_private(QHostAddress(xma->get_address()))) {
         networking_->ip_map_.my_ip().ipv4 = QHostAddress(xma->get_address());
     }
+
+    std::cout << "Response success allocate from: " << pia->get_public_identifier() << std::endl;
+
     add_stun_server(tcp_socket, pia->get_public_identifier());
     if (pka) {
         emit confirmed_newspaper_pk(pia->get_public_identifier(), rsa_public_optional(pka->get_value()));
@@ -766,10 +804,8 @@ void StunClient::process_response_success_binding(stun_header_ptr stun_message, 
 void StunClient::identify(pk_t who){
     auto msg = std::make_shared<StunMessageHeader>();
     create_request_identify(msg, who);
-    for (int i = 0; i < stun_servers.size(); i++) {
-        stun_servers.push(stun_servers.front());
-        send_stun_message(msg, stun_servers.front());
-        stun_servers.pop();
+    for (pk_t stun_server : stun_servers) {
+        send_stun_message(msg, stun_server);
     }
 }
 
@@ -817,21 +853,6 @@ void StunClient::identify(QHostAddress& address, std::uint16_t stun_port) {
     send_stun_message_transport_address(msg, address, stun_port);
 }
 
-pk_t StunClient::get_stun_server_any() {
-    return stun_servers.front();
-}
-
-pk_t StunClient::get_stun_server_front() {
-    return stun_servers.front();
-}
-
-pk_t StunClient::get_stun_server_next() {
-    pk_t first_stun_server = stun_servers.front();
-    stun_servers.pop();
-    stun_servers.push(first_stun_server);
-    return first_stun_server;
-}
-
 void StunClient::stun_server_connection_error() {
     std::cout << "STUN connection to " << stun_server_awaiting_confirmation << " failed." << std::endl;
 }
@@ -840,7 +861,7 @@ void StunClient::add_stun_server(QTcpSocket* tcp_socket_, pk_t pid) {
     networking_->ip_map_.update_stun_ip(pid, tcp_socket_->peerAddress(), tcp_socket_->peerPort());
     tcp_socket_->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
     networking_->ip_map_.set_tcp_socket(pid, tcp_socket_);
-    stun_servers.push(pid);
+    stun_servers.emplace(pid);
 }
 
 pk_t StunClient::process_indication_send(stun_header_ptr stun_message, std::string& np2ps_message) {
@@ -859,6 +880,8 @@ pk_t StunClient::process_indication_send(stun_header_ptr stun_message, std::stri
             data = (DataAttribute*) attr.get();
         }
     }
+
+    std::cout << "STUN Received send indication from: " << ria->get_public_identifier() << std::endl;
 
     np2ps_message = data->get_np2ps_messsage();
 
@@ -950,20 +973,18 @@ void StunClient::process_response_error_allocate(stun_header_ptr stun_message) {
 }
 
 void StunClient::add_stun_server(pk_t pid) {
-    stun_servers.push(pid);
+    stun_servers.emplace(pid);
 }
 
-void StunClient::clean_bad_stun_servers() {
-    for (int i = 0; i < stun_servers.size(); i++) {
-        pk_t audited_server = stun_servers.front();
-        stun_servers.pop();
-        if (failed_connections_per_server.count(audited_server) > 0) {
-            if (failed_connections_per_server[audited_server] <= 5) {
-                stun_servers.push(audited_server);
-            }
-            else {
-                failed_connections_per_server.erase(audited_server);
-            }
+void StunClient::check_stun_server(pk_t pid) {
+    try {
+        IpWrapper& wrapper = networking_->ip_map().get_wrapper_ref(pid);
+        if (wrapper.relay_state == RelayState::Direct &&
+            stun_servers.count(pid) == 0 &&
+            blocked_stun_servers.count(pid) == 0)
+        {
+            allocate_request(pid);
         }
     }
+    catch (user_not_found_in_database e) {}
 }

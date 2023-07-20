@@ -92,18 +92,6 @@ public:
      * Either new connection is established, or existing connection is used, if 
      * it exists.
      * 
-     * Selects next working STUN server.
-     * 
-     * @param stun_message Message to send.
-     */
-    void send_stun_message(stun_header_ptr stun_message);
-
-    /**
-     * @brief Sends provided STUN message to provided STUN client.
-     * 
-     * Either new connection is established, or existing connection is used, if 
-     * it exists.
-     * 
      * @param stun_message Message to send.
      * @param public_id Receiver of the STUN message.
      */
@@ -185,6 +173,9 @@ public:
     void check_message_side_effect(
         stun_header_ptr header_waiting_to_connect, IpWrapper& connectee_wrapper
     );
+    void check_stun_server(pk_t pid);
+
+    pk_t extract_final_destination(stun_header_ptr stun_message);
 
 signals:
     /**
@@ -216,6 +207,7 @@ private slots:
     void receive_msg();
 
     void delete_disconnected_users();
+
 
 private:
 
@@ -288,8 +280,6 @@ private:
      */
     void process_response_success_binding(stun_header_ptr stun_message, QTcpSocket* socket_);
 
-    
-
     void process_response_success_send(stun_header_ptr stun_message);
 
     void process_response_error_send(stun_header_ptr stun_message);
@@ -311,17 +301,13 @@ private:
      */
     void host_connected();
 
-    pk_t get_stun_server_any();
-    pk_t get_stun_server_front();
-    pk_t get_stun_server_next();
-
     void add_failed_connection_for_server(pk_t pid);
     void clean_failed_connection_for_server(pk_t pid);
-    void clean_bad_stun_servers();
 
     QDataStream in;
     CryptoPP::AutoSeededRandomPool rng;
-    std::queue<pk_t> stun_servers;
+    std::set<pk_t> stun_servers;
+    std::set<pk_t> blocked_stun_servers;
     factory_map stun_attribute_factories;
     Networking* networking_;
     std::multimap<pk_t, stun_header_ptr> peers_waiting_for_relays;

@@ -22,7 +22,9 @@ public:
 	NewspaperEntry(pk_t first_key, pk_t id, const my_string& name, DisconnectedUsersLazy* disconnected_users_lazy);
 	explicit NewspaperEntry(pk_t id, DisconnectedUsersLazy* disconnected_users_lazy);
 	explicit NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy);
+	explicit NewspaperEntry(const np2ps::LocalSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy, IpMap& ip_map);
 	explicit NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy);
+	explicit NewspaperEntry(const np2ps::NetworkSerializedNewspaperEntry& serialized_ne, DisconnectedUsersLazy* disconnected_users_lazy, IpMap& ip_map);
 	explicit NewspaperEntry(const std::string& path, DisconnectedUsersLazy* disconnected_users_lazy);
 	void deserialize_config(const np2ps::NewspaperConfig& config);
 	void add_article(hash_t article_hash, Article&& article);
@@ -58,7 +60,7 @@ public:
 
 	void network_serialize_entry(np2ps::NetworkSerializedNewspaperEntry* nserialized_ne, IpMap& news_wrapper, pk_t id, std::int16_t article_count = -1) const;
 
-	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne, bool serialize_articles = true) const;
+	void local_serialize_entry(np2ps::LocalSerializedNewspaperEntry* lserialized_ne, IpMap& news_wrapper, bool serialize_articles = true) const;
 
 	void serialize_entry_config(np2ps::NewspaperConfig* serialized_config) const;
 

@@ -26,7 +26,7 @@ if (WIN32)
 	find_package(cryptopp CONFIG REQUIRED)
 endif (WIN32)
 find_package(Qt5 COMPONENTS Core Network Widgets REQUIRED)
-#find_package(Doxygen REQUIRED dot)
+find_package(Doxygen REQUIRED dot)
 
 if (UNIX)
 	find_library(CryptoPP cryptopp)
@@ -58,11 +58,11 @@ if (WIN32)
 	target_link_libraries(news_p2p_sharing ${Protobuf_LIBRARIES} proto_msg proto_art proto_nee proto_per proto_ipm Qt5::Widgets Qt5::Network Qt5::Core cryptopp::cryptopp)
 endif (WIN32)
 
-#if (DOXYGEN_FOUND)
-#	doxygen_add_docs(news_p2p_sharing_docs
-#		${CMAKE_SOURCE_DIR}
-#		ALL
-#		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-#else (DOXYGEN_FOUND)
-#	message("Doxygen needs to be installed to generate the doxygen documentation.")
-#endif (DOXYGEN_FOUND)
+# if (DOXYGEN_FOUND)
+# 	doxygen_add_docs(news_p2p_sharing_docs
+# 		${CMAKE_SOURCE_DIR}
+# 		ALL
+# 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+# else (DOXYGEN_FOUND)
+# 	message("Doxygen needs to be installed to generate the doxygen documentation.")
+# endif (DOXYGEN_FOUND)
