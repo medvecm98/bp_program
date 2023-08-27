@@ -790,8 +790,8 @@ void Peer::handle_article_all_request(shared_ptr_message message) {
 		networking_->enroll_message_to_be_sent(
 			MFW::ErrorArticleDownloadFactory(
 				MFW::ArticleDownloadFactory(
-					message->from(),
 					public_identifier_,
+					message->from(),
 					NULL
 				),
 				message->article_all().header().news_id()
@@ -1512,7 +1512,7 @@ void Peer::removed_external_article(hash_t article, pk_t to) {
 void Peer::upload_external_article(Article article, Article* ancestor) {
 	NewspaperEntry& news = get_news(article.news_id());
 	for (auto&& coworker : news.get_coworkers()) {
-		if (coworker == public_identifier_ || news.find_reader(coworker)) {
+		if (coworker == public_identifier_) {
 			continue;
 		}
 		networking_->enroll_message_to_be_sent(
@@ -2349,7 +2349,7 @@ void Peer::handle_gossip_one_way(shared_ptr_message message) {
 			IpWrapper& wrapper = get_networking()->ip_map().get_wrapper_ref(gossip.publicid());
 			wrapper.port = gossip.port();
 			wrapper.stun_port = gossip.stun_port();
-			if (!GlobalMethods::ip_address_is_private(QHostAddress(gossip.ipv4()))) {
+			if (QHostAddress(gossip.ipv4()) != QHostAddress::AnyIPv4 && !GlobalMethods::ip_address_is_private(QHostAddress(gossip.ipv4()))) {
 				wrapper.ipv4 = QHostAddress(gossip.ipv4());
 			}
 		}

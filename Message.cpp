@@ -25,10 +25,12 @@ shared_ptr_message MFW::ArticleDownloadFactory(pk_t from, pk_t to, article_ptr a
 
 	msg->set_msg_type(np2ps::ARTICLE_ALL);
 
-	auto article_gpb = msg->mutable_article_all()->mutable_header();
-	article->network_serialize_article(article_gpb);
+	if (article) {
+		auto article_gpb = msg->mutable_article_all()->mutable_header();
+		article->network_serialize_article(article_gpb);
 
-	msg->mutable_article_all()->set_article_hash(article->main_hash());
+		msg->mutable_article_all()->set_article_hash(article->main_hash());
+	}
 
 	return std::move(msg);
 }

@@ -769,7 +769,7 @@ void StunClient::process_response_success_allocate(QTcpSocket* tcp_socket, stun_
         }
     }
     IpWrapper& my_wrapper = networking_->ip_map().my_ip();
-    if (GlobalMethods::ip_address_is_private(my_wrapper.ipv4) || !GlobalMethods::ip_address_is_private(QHostAddress(xma->get_address()))) {
+    if (my_wrapper.ipv4 == QHostAddress::AnyIPv4 || GlobalMethods::ip_address_is_private(my_wrapper.ipv4) || !GlobalMethods::ip_address_is_private(QHostAddress(xma->get_address()))) {
         networking_->ip_map_.my_ip().ipv4 = QHostAddress(xma->get_address());
     }
 

@@ -325,11 +325,11 @@ struct IpWrapper {
 	}
 
 	void serialize_wrapper(np2ps::IpWrapper* wrapper, bool local_serialize = true) {
-		if (local_serialize || !GlobalMethods::ip_address_is_private(ipv4)) {
+		// if (!GlobalMethods::ip_address_is_private(ipv4)) {
 			wrapper->set_ipv4(ipv4.toIPv4Address());
 			wrapper->set_port(port);
 			wrapper->set_stun_port(stun_port);
-		}
+		// }
 
 		if (key_pair.second.has_value() && local_serialize) {
 			std::string shared_key_b64 = get_eax_hex_string();

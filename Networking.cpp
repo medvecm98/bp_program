@@ -231,7 +231,7 @@ void Networking::send_message_with_credentials(shared_ptr_message msg, bool send
 
 		std::cout << "User " << msg->to() << " found in IP MAP database; Networking::send_message(shared_ptr_message msg)" << std::endl;
 
-		if (!ipw.has_ipv4() && ipw.relay_state == RelayState::Direct)
+		if ((!ipw.has_ipv4() && ipw.relay_state == RelayState::Direct) || (ipw.ipv4 == QHostAddress::AnyIPv4 && ipw.relay_state != RelayState::Relayed))
 		{ // no IP
 			identify_peer_save_message(msg);
 			return;
@@ -579,211 +579,221 @@ inline void socket_wait_for_read(QTcpSocket *np2ps_socket)
 
 void PeerReceiver::process_received_np2ps_message(QDataStream &msg, QTcpSocket *np2ps_socket, pk_t relayer)
 {
-	do
-	{
-		socket_wait_for_read<quint16>(np2ps_socket);
-		quint16 msg_version;
-		msg >> msg_version;
-
-		if (msg_version != VERSION)
-		{ // check version
-			throw other_error("Version mismatch");
-		}
-
-		socket_wait_for_read<quint16>(np2ps_socket);
-		quint16 msg_class;
-		msg >> msg_class;
-
-		if (msg_class == ENCRYPTED_MESSAGE)
+	try {
+		do
 		{
-			socket_wait_for_read<quint64>(np2ps_socket);
-			quint64 pid;
-			msg >> pid; // public identifier
+			socket_wait_for_read<quint16>(np2ps_socket);
+			quint16 msg_version;
+			msg >> msg_version;
 
-			socket_wait_for_read<quint64>(np2ps_socket);
-			quint64 iv_size;
-			msg >> iv_size;
+			if (msg_version != VERSION)
+			{ // check version
+				throw other_error("Version mismatch");
+			}
 
-			QByteArray iv_array;
-			qint64 read_size = 0;
-			if (np2ps_socket)
+			socket_wait_for_read<quint16>(np2ps_socket);
+			quint16 msg_class;
+			msg >> msg_class;
+
+			if (msg_class == ENCRYPTED_MESSAGE)
 			{
-				while (read_size < iv_size)
+				socket_wait_for_read<quint64>(np2ps_socket);
+				quint64 pid;
+				msg >> pid; // public identifier
+
+				socket_wait_for_read<quint64>(np2ps_socket);
+				quint64 iv_size;
+				msg >> iv_size;
+
+				QByteArray iv_array;
+				qint64 read_size = 0;
+				if (np2ps_socket)
 				{
-					iv_array += np2ps_socket->read(iv_size + 4);
-					read_size = iv_array.size();
-					if (read_size < iv_size)
+					while (read_size < iv_size)
 					{
-						np2ps_socket->waitForReadyRead();
+						iv_array += np2ps_socket->read(iv_size + 4);
+						read_size = iv_array.size();
+						if (read_size < iv_size)
+						{
+							np2ps_socket->waitForReadyRead();
+						}
 					}
 				}
-			}
-			else
-			{
-				msg >> iv_array;
-			}
-
-			auto iv = extract_init_vector(iv_array, (bool)np2ps_socket); // init. vector
-
-			socket_wait_for_read<quint64>(np2ps_socket);
-			quint64 msg_size;
-			msg >> msg_size;
-
-			std::cout << "Received message payload size: " << msg_size << std::endl;
-			read_size = 0;
-			QByteArray msg_array;
-			if (np2ps_socket)
-			{ // not relaying
-				while (read_size < msg_size)
+				else
 				{
-					msg_array += np2ps_socket->read(msg_size - read_size + 4);
-					read_size = msg_array.size();
-					if (read_size < msg_size)
+					msg >> iv_array;
+				}
+
+				auto iv = extract_init_vector(iv_array, (bool)np2ps_socket); // init. vector
+
+				socket_wait_for_read<quint64>(np2ps_socket);
+				quint64 msg_size;
+				msg >> msg_size;
+
+				std::cout << "Received message payload size: " << msg_size << std::endl;
+				read_size = 0;
+				QByteArray msg_array;
+				if (np2ps_socket)
+				{ // not relaying
+					while (read_size < msg_size)
 					{
-						np2ps_socket->waitForReadyRead();
+						msg_array += np2ps_socket->read(msg_size - read_size + 4);
+						read_size = msg_array.size();
+						if (read_size < msg_size)
+						{
+							np2ps_socket->waitForReadyRead();
+						}
 					}
 				}
-			}
-			else
-			{ // relaying
-				msg >> msg_array;
-			}
-
-			// msg.commitTransaction();
-
-			auto e_msg = extract_encrypted_message(msg_array, (bool)np2ps_socket); // encr. message
-
-			// decrypt
-			auto &[ipw_pk, ipw] = *(networking_->ip_map_.get_wrapper_for_pk(pid));
-			if (ipw.has_eax())
-			{
-
-				auto message = decrypt_message_using_symmetric_key(e_msg, iv, ipw, networking_, np2ps_socket);
-
-				bool updated_socket = false;
-				// we can check now, if the IP of sender is already in database and if not, we will add it
-				
-				if (!np2ps_socket)
-				{
-					networking_->ip_map().check_or_add_to_ip_map_relayed(
-						pid, relayer, RelayState::Relayed
-					);
-					networking_->resend_np2ps_messages_waiting_for_peer_online_long_term(
-						message->from()
-					);
+				else
+				{ // relaying
+					msg >> msg_array;
 				}
-				else {
+
+				// msg.commitTransaction();
+
+				auto e_msg = extract_encrypted_message(msg_array, (bool)np2ps_socket); // encr. message
+
+				// decrypt
+				auto &[ipw_pk, ipw] = *(networking_->ip_map_.get_wrapper_for_pk(pid));
+				if (ipw.has_eax())
+				{
+
+					auto message = decrypt_message_using_symmetric_key(e_msg, iv, ipw, networking_, np2ps_socket);
+
+					bool updated_socket = false;
+					// we can check now, if the IP of sender is already in database and if not, we will add it
+					
+					if (!np2ps_socket)
+					{
+						networking_->ip_map().check_or_add_to_ip_map_relayed(
+							pid, relayer, RelayState::Relayed
+						);
+						networking_->resend_np2ps_messages_waiting_for_peer_online_long_term(
+							message->from()
+						);
+					}
+					else {
+						networking_->ip_map_.enroll_new_np2ps_tcp_socket(pid, np2ps_socket, &updated_socket); // enroll NP2PS socket for peers, that are not enrolled yet
+						check_ip(np2ps_socket, pid, networking_->ip_map_, updated_socket);
+					}
+
+					networking_->add_to_received(message);
+				}
+				else
+				{
+					/* we don't have symmetric key for this peer generated yet */
+
+					bool updated_socket = false;
 					networking_->ip_map_.enroll_new_np2ps_tcp_socket(pid, np2ps_socket, &updated_socket); // enroll NP2PS socket for peers, that are not enrolled yet
+					// we can check now, if the IP of sender is already in database and if not, we will add it
 					check_ip(np2ps_socket, pid, networking_->ip_map_, updated_socket);
+
+					// common symmetric key for given sender isn't stored locally yet
+
+					std::cout << "Symmetric key missing for " << pid << "!!!" << std::endl;
+
+					auto cred_req = MFW::ReqCredentialsFactory(
+						MFW::CredentialsFactory(
+							networking_->ip_map_.my_public_id,
+							pid),
+						false, false, false, true, 0,
+						{}, {}, {}, {}, {});
+
+					// message will now wait until symmetric key is received
+					networking_->add_to_messages_to_decrypt(pid, EncryptedMessageWrapper(e_msg, iv, pid, ENCRYPTED_MESSAGE));
+
+					std::string cred_req_msg = cred_req->SerializeAsString();
+
+					QByteArray msg_key_sstream_block;
+					QDataStream msg_key_sstream(&msg_key_sstream_block, QIODevice::ReadWrite);
+					msg_key_sstream.setVersion(QDataStream::Qt_5_0);
+					write_plain_message(msg_key_sstream, cred_req_msg);
+					send_message_using_socket(np2ps_socket, msg_key_sstream_block);
+
+					// tcp_socket_->disconnectFromHost();
+				}
+			}
+			else if (msg_class == PLAIN_MESSAGE)
+			{
+				auto m = std::make_shared<proto_message>();
+
+				socket_wait_for_read<quint64>(np2ps_socket);
+				quint64 msg_size;
+				msg >> msg_size;
+
+				qint64 read_size = 0;
+				QByteArray msg_array;
+				if (np2ps_socket)
+				{
+					while (read_size < msg_size)
+					{
+						msg_array += np2ps_socket->read(4 + msg_size);
+						read_size = msg_array.size();
+						if (read_size < msg_size)
+						{
+							np2ps_socket->waitForReadyRead();
+						}
+					}
+					m->ParseFromString(msg_array.mid(4).toStdString());
+				}
+				else
+				{
+					msg >> msg_array;
+					m->ParseFromString(msg_array.toStdString());
 				}
 
-				networking_->add_to_received(message);
-			}
-			else
-			{
-				/* we don't have symmetric key for this peer generated yet */
+				print_message(m, "receiving");
 
-				bool updated_socket = false;
-				networking_->ip_map_.enroll_new_np2ps_tcp_socket(pid, np2ps_socket, &updated_socket); // enroll NP2PS socket for peers, that are not enrolled yet
-				// we can check now, if the IP of sender is already in database and if not, we will add it
-				check_ip(np2ps_socket, pid, networking_->ip_map_, updated_socket);
-
-				// common symmetric key for given sender isn't stored locally yet
-
-				std::cout << "Symmetric key missing for " << pid << "!!!" << std::endl;
-
-				auto cred_req = MFW::ReqCredentialsFactory(
-					MFW::CredentialsFactory(
-						networking_->ip_map_.my_public_id,
-						pid),
-					false, false, false, true, 0,
-					{}, {}, {}, {}, {});
-
-				// message will now wait until symmetric key is received
-				networking_->add_to_messages_to_decrypt(pid, EncryptedMessageWrapper(e_msg, iv, pid, ENCRYPTED_MESSAGE));
-
-				std::string cred_req_msg = cred_req->SerializeAsString();
-
-				QByteArray msg_key_sstream_block;
-				QDataStream msg_key_sstream(&msg_key_sstream_block, QIODevice::ReadWrite);
-				msg_key_sstream.setVersion(QDataStream::Qt_5_0);
-				write_plain_message(msg_key_sstream, cred_req_msg);
-				send_message_using_socket(np2ps_socket, msg_key_sstream_block);
-
-				// tcp_socket_->disconnectFromHost();
-			}
-		}
-		else if (msg_class == PLAIN_MESSAGE)
-		{
-			auto m = std::make_shared<proto_message>();
-
-			socket_wait_for_read<quint64>(np2ps_socket);
-			quint64 msg_size;
-			msg >> msg_size;
-
-			qint64 read_size = 0;
-			QByteArray msg_array;
-			if (np2ps_socket)
-			{
-				while (read_size < msg_size)
+				if (m->msg_type() == np2ps::SYMMETRIC_KEY)
 				{
-					msg_array += np2ps_socket->read(4 + msg_size);
-					read_size = msg_array.size();
-					if (read_size < msg_size)
+					if (networking_->ip_map_.have_rsa_public(m->from()))
+					{ // check if received symmetric key message is from someone we know
+						std::cout << "RSA public found for " << m->from() << std::endl;
+						check_ip(np2ps_socket, m->from(), networking_->ip_map_);
+						networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket);
+						networking_->add_to_received(std::move(m));
+					}
+					else
 					{
-						np2ps_socket->waitForReadyRead();
+						std::cout << "No public key and or ipv4 found for " << m->from() << "; needs to be identified" << std::endl;
+						networking_->waiting_symmetric_key_messages.emplace(m->from(), m); // we dont know the sender and so we needs to identify him first
+						networking_->get_stun_client()->identify(m->from());
 					}
 				}
-				m->ParseFromString(msg_array.mid(4).toStdString());
-			}
-			else
-			{
-				msg >> msg_array;
-				m->ParseFromString(msg_array.toStdString());
-			}
-
-			print_message(m, "receiving");
-
-			if (m->msg_type() == np2ps::SYMMETRIC_KEY)
-			{
-				if (networking_->ip_map_.have_rsa_public(m->from()))
-				{ // check if received symmetric key message is from someone we know
-					std::cout << "RSA public found for " << m->from() << std::endl;
-					check_ip(np2ps_socket, m->from(), networking_->ip_map_);
-					networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket);
+				else if (m->msg_type() == np2ps::CREDENTIALS)
+				{
+					if (np2ps_socket)
+					{
+						networking_->add_to_ip_map(m->from(), np2ps_socket->peerAddress());
+						networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket); // enroll NP2PS socket for peers, that are not enrolled yet
+					}
+					else
+					{
+						networking_->ip_map().check_or_add_to_ip_map_relayed(m->from(), relayer, RelayState::Relayed);
+						networking_->resend_np2ps_messages_waiting_for_peer_online_long_term(m->from());
+					}
 					networking_->add_to_received(std::move(m));
 				}
 				else
 				{
-					std::cout << "No public key and or ipv4 found for " << m->from() << "; needs to be identified" << std::endl;
-					networking_->waiting_symmetric_key_messages.emplace(m->from(), m); // we dont know the sender and so we needs to identify him first
-					networking_->get_stun_client()->identify(m->from());
+					throw other_error("Public key should be exchanged in credentials or using STUN.");
 				}
 			}
-			else if (m->msg_type() == np2ps::CREDENTIALS)
-			{
-				if (np2ps_socket)
-				{
-					networking_->add_to_ip_map(m->from(), np2ps_socket->peerAddress());
-					networking_->ip_map_.enroll_new_np2ps_tcp_socket(m->from(), np2ps_socket); // enroll NP2PS socket for peers, that are not enrolled yet
-				}
-				else
-				{
-					networking_->ip_map().check_or_add_to_ip_map_relayed(m->from(), relayer, RelayState::Relayed);
-					networking_->resend_np2ps_messages_waiting_for_peer_online_long_term(m->from());
-				}
-				networking_->add_to_received(std::move(m));
-			}
-			else
-			{
-				throw other_error("Public key should be exchanged in credentials or using STUN.");
-			}
+			std::cout << "\nReceived message consumed." << std::endl;
+		} while (np2ps_socket && np2ps_socket->bytesAvailable() > 0);
+		msg.commitTransaction();
+		std::cout << "All subsequent messages consumed.\n"
+				<< std::endl;
+	}
+	catch (other_error e) {
+		std::cout << "Version mismatch, flushing" << std::endl;
+		qint64 bytes_available = np2ps_socket->bytesAvailable();
+		while (bytes_available > 0) {
+			np2ps_socket->read(bytes_available);
+			bytes_available = np2ps_socket->bytesAvailable();
 		}
-		std::cout << "\nReceived message consumed." << std::endl;
-	} while (np2ps_socket && np2ps_socket->bytesAvailable() > 0);
-	msg.commitTransaction();
-	std::cout << "All subsequent messages consumed.\n"
-			  << std::endl;
+	}
 }
 
 PeerSender::PeerSender(networking_ptr net)

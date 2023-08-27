@@ -103,18 +103,23 @@ void NewspaperEntry::add_article(hash_t article_hash, Article&& article) {
 }
 
 bool NewspaperEntry::remove_article(hash_t article_hash) {
-	Article& article = get_article(article_hash);
-	auto it_time_created = time_created_sorted_articles_.find(article.creation_time());
-	while (it_time_created != time_created_sorted_articles_.end()) {
-		time_created_sorted_articles_.erase(it_time_created);
-		it_time_created = time_created_sorted_articles_.find(article.creation_time());
+	try {
+		Article& article = get_article(article_hash);
+		auto it_time_created = time_created_sorted_articles_.find(article.creation_time());
+		while (it_time_created != time_created_sorted_articles_.end()) {
+			time_created_sorted_articles_.erase(it_time_created);
+			it_time_created = time_created_sorted_articles_.find(article.creation_time());
+		}
+		auto it_time_modified = time_modified_sorted_articles_.find(article.modification_time());
+		while (it_time_modified != time_modified_sorted_articles_.end()) {
+			time_modified_sorted_articles_.erase(it_time_modified);
+			it_time_modified = time_modified_sorted_articles_.find(article.modification_time());
+		}
+		return articles_.erase(article_hash) > 0;
 	}
-	auto it_time_modified = time_modified_sorted_articles_.find(article.modification_time());
-	while (it_time_modified != time_modified_sorted_articles_.end()) {
-		time_modified_sorted_articles_.erase(it_time_modified);
-		it_time_modified = time_modified_sorted_articles_.find(article.modification_time());
+	catch (article_not_found_database anfd) {
+		return 0;
 	}
-	return articles_.erase(article_hash) > 0;
 }
 
 std::optional<article_ptr> NewspaperEntry::find_article_header(hash_t article_hash) {

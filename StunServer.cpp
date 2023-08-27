@@ -115,6 +115,9 @@ void StunServer::handle_received_message(stun_header_ptr stun_message, QTcpSocke
             try {
                 auto socket_sender = socket;
                 auto& wrapper = networking_->ip_map_.get_wrapper_ref(to);
+                if (wrapper.has_ipv4() && wrapper.ipv4 == QHostAddress::Any) {
+                    create_response_error_send(stun_message, stun_new, STUN_ERR_USE_OTHER_SERVER, to);
+                }
                 socket = wrapper.tcp_socket_;
                 if (wrapper.relay_state == RelayState::Relayed && wrapper.has_relay_stun_servers()) {
                     // networking_->add_waiting_stun_message(to, stun_new);
