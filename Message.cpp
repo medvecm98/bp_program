@@ -440,9 +440,10 @@ shared_ptr_message MFW::ErrorArticleDownloadFactory(shared_ptr_message&& msg, ar
 	return std::move(msg);
 }
 
-shared_ptr_message MFW::ErrorArticleDownloadFactory(shared_ptr_message&& msg, hash_t article_hash) {
+shared_ptr_message MFW::ErrorArticleDownloadFactory(shared_ptr_message&& msg, hash_t article_hash, pk_t news_id) {
 	msg->set_msg_ctx(np2ps::ERROR);
-	msg->mutable_article_all()->set_article_hash(article_hash);
+	msg->mutable_article_all()->mutable_header()->set_main_hash(article_hash);
+	msg->mutable_article_all()->mutable_header()->set_news_id(news_id);
 
 	return std::move(msg);
 }

@@ -794,6 +794,7 @@ void Peer::handle_article_all_request(shared_ptr_message message) {
 					message->from(),
 					NULL
 				),
+				message->article_all().header().main_hash(),
 				message->article_all().header().news_id()
 			)
 		);

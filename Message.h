@@ -139,7 +139,7 @@ public:
 
 	static shared_ptr_message ErrorArticleListFactory(shared_ptr_message&& msg, pk_t newspaper_id);
 	static shared_ptr_message ErrorArticleDownloadFactory(shared_ptr_message&& msg, article_ptr article_header);
-	static shared_ptr_message ErrorArticleDownloadFactory(shared_ptr_message&& msg, hash_t article_hash);
+	static shared_ptr_message ErrorArticleDownloadFactory(shared_ptr_message&& msg, hash_t article_hash, pk_t news_id);
 	static shared_ptr_message ErrorJournalistFactory(shared_ptr_message&& msg);
 
 	static shared_ptr_message RespNewspaperListFactory(shared_ptr_message&& msg, const news_database& news, IpMap& news_networking, std::int16_t article_count_ = -1);
